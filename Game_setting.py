@@ -3,7 +3,8 @@ from my_moduler import get_module_logger
 import util_ability
 from my_enum import *
 mylogger = get_module_logger(__name__)
-    
+
+
 class Game:
 
     def mulligan(self,Player1,Player2,virtual=False):

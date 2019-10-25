@@ -1,0 +1,80 @@
+__main__:((0, 0)):rate:0.5 first:0.38
+__main__:((0, 1)):rate:0.47 first:0.49
+__main__:((0, 2)):rate:0.55 first:0.59
+__main__:((0, 3)):rate:0.53 first:0.91
+__main__:((0, 4)):rate:0.5 first:0.96
+__main__:((0, 5)):rate:0.42 first:0.72
+__main__:((0, 6)):rate:0.52 first:0.66
+__main__:((0, 7)):rate:0.46 first:0.9
+__main__:((1, 1)):rate:0.52 first:0.46
+__main__:((1, 2)):rate:0.46 first:0.32
+__main__:((1, 3)):rate:0.46 first:0.68
+__main__:((1, 4)):rate:0.44 first:0.8
+__main__:((1, 5)):rate:0.42 first:0.22
+__main__:((1, 6)):rate:0.43 first:0.65
+__main__:((1, 7)):rate:0.47 first:0.91
+__main__:((2, 2)):rate:0.53 first:0.45
+__main__:((2, 3)):rate:0.54 first:0.94
+__main__:((2, 4)):rate:0.53 first:0.83
+__main__:((2, 5)):rate:0.51 first:0.33
+__main__:((2, 6)):rate:0.47 first:0.57
+__main__:((2, 7)):rate:0.51 first:0.93
+__main__:((3, 3)):rate:0.43 first:0.31
+__main__:((3, 4)):rate:0.48 first:0.38
+__main__:((3, 5)):rate:0.49 first:0.11
+__main__:((3, 6)):rate:0.52 first:0.1
+__main__:((3, 7)):rate:0.53 first:0.45
+__main__:((4, 4)):rate:0.47 first:0.57
+__main__:((4, 5)):rate:0.49 first:0.25
+__main__:((4, 6)):rate:0.51 first:0.19
+__main__:((4, 7)):rate:0.51 first:0.25
+__main__:((5, 5)):rate:0.63 first:0.55
+__main__:((5, 6)):rate:0.4 first:0.34
+__main__:((5, 7)):rate:0.57 first:0.85
+__main__:((6, 6)):rate:0.53 first:0.57
+__main__:((6, 7)):rate:0.48 first:0.82
+__main__:((7, 7)):rate:0.47 first:0.45
+__main__:2019-10-17 16:59:11.224996
+__main__:2019-10-17 16:59:46.814278
+__main__:0:00:35.589282
+
+
+__main__:((0, 0)):rate:0.512 first:0.436
+__main__:((0, 1)):rate:0.504 first:0.576
+__main__:((0, 2)):rate:0.489 first:0.581
+__main__:((0, 3)):rate:0.499 first:0.959
+__main__:((0, 4)):rate:0.492 first:0.906
+__main__:((0, 5)):rate:0.486 first:0.65
+__main__:((0, 6)):rate:0.505 first:0.621
+__main__:((0, 7)):rate:0.499 first:0.931
+__main__:((1, 1)):rate:0.519 first:0.365
+__main__:((1, 2)):rate:0.496 first:0.33
+__main__:((1, 3)):rate:0.51 first:0.654
+__main__:((1, 4)):rate:0.492 first:0.86
+__main__:((1, 5)):rate:0.52 first:0.216
+__main__:((1, 6)):rate:0.502 first:0.662
+__main__:((1, 7)):rate:0.484 first:0.888
+__main__:((2, 2)):rate:0.504 first:0.552
+__main__:((2, 3)):rate:0.503 first:0.897
+__main__:((2, 4)):rate:0.509 first:0.843
+__main__:((2, 5)):rate:0.47 first:0.35
+__main__:((2, 6)):rate:0.513 first:0.641
+__main__:((2, 7)):rate:0.496 first:0.924
+__main__:((3, 3)):rate:0.487 first:0.417
+__main__:((3, 4)):rate:0.518 first:0.426
+__main__:((3, 5)):rate:0.479 first:0.191
+__main__:((3, 6)):rate:0.498 first:0.128
+__main__:((3, 7)):rate:0.501 first:0.427
+__main__:((4, 4)):rate:0.505 first:0.479
+__main__:((4, 5)):rate:0.531 first:0.199
+__main__:((4, 6)):rate:0.518 first:0.192
+__main__:((4, 7)):rate:0.501 first:0.283
+__main__:((5, 5)):rate:0.472 first:0.562
+__main__:((5, 6)):rate:0.48 first:0.408
+__main__:((5, 7)):rate:0.497 first:0.817
+__main__:((6, 6)):rate:0.501 first:0.583
+__main__:((6, 7)):rate:0.488 first:0.788
+__main__:((7, 7)):rate:0.501 first:0.473
+__main__:2019-10-17 17:14:08.046338
+__main__:2019-10-17 17:20:38.959130
+__main__:0:06:30.912792

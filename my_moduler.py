@@ -12,10 +12,10 @@ def get_module_logger(modname):
     formatter = logging.Formatter('%(name)s:%(message)s')
     streamhandler.setFormatter(formatter)
     logger.addHandler(streamhandler)
-    filehandler = logging.FileHandler(filename='log/battle.log')
-    
-    filehandler.setFormatter(formatter)
-    logger.addHandler(filehandler)
+    #filehandler = logging.FileHandler(filename='log/battle.log')
+    # 
+    #filehandler.setFormatter(formatter)
+    #logger.addHandler(filehandler)
     #logger.addHandler(handler2)
     return logger
 

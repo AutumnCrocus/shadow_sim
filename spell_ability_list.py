@@ -232,6 +232,25 @@ def spell_ability_036(field,player,opponent,virtual,target,itself):
     field.remove_card([opponent.player_num,target],virtual=virtual)
 
 
+def spell_ability_037(field,player,opponent,virtual,target,itself):
+    """
+    Summon a Club Soldier, a Heart Guardian, and a Spade Raider.
+    """
+    summon_creature(field,player,virtual,name="Crab Soldier")
+    summon_creature(field,player,virtual,name="Heart Guardian")
+    summon_creature(field,player,virtual,name="Spade Raider")
+
+def spell_ability_038(field,player,opponent,virtual,target,itself):
+    """
+    Put 2 random Commanders that cost 3 play points from your deck into play.
+    """
+    condition=lambda card:card.card_category=="Creature" and card.trait.value==Trait["COMMANDER"].value and card.origin_cost==3
+    put_card_from_deck_in_play(field,player,virtual,condition=condition)
+    put_card_from_deck_in_play(field,player,virtual,condition=condition)
+
+
+
+
 
 
 def token_spell_ability_001(field,player,opponent,virtual,target,itself):
@@ -247,7 +266,7 @@ def token_spell_ability_001(field,player,opponent,virtual,target,itself):
 def token_spell_ability_002(field,player,opponent,virtual,target,itself):
     num=0
     for card in field.card_location[player.player_num]:
-        if card.trait.value == -2:#card.trait.name == "EARTH_SIGIL":
+        if card.trait.value == Trait["EARTH_SIGIL"].value:
             num+=1
     for i in range(num):
         earth_rite(field,player,virtual)
@@ -271,7 +290,7 @@ spell_ability_dict={1:spell_ability_001,2:spell_ability_002,3:spell_ability_003,
     21:spell_ability_021,22:spell_ability_022,23:spell_ability_023,24:spell_ability_024,25:spell_ability_025,\
     26:spell_ability_026,27:spell_ability_027,28:spell_ability_028,29:spell_ability_029,30:spell_ability_030,\
     31:spell_ability_031,32:spell_ability_032,33:spell_ability_033,34:spell_ability_034,35:spell_ability_035,\
-    36:spell_ability_036,\
+    36:spell_ability_036,37:spell_ability_037,38:spell_ability_038,\
     
     
     -1:token_spell_ability_001,-2:token_spell_ability_002}

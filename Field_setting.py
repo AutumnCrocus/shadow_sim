@@ -4,6 +4,7 @@ import math
 import copy
 from card_setting import *
 import collections 
+from collections import deque
 import itertools
 from my_moduler import get_module_logger
 
@@ -33,7 +34,8 @@ class Field:
         self.evo_flg=False
         self.ex_turn_count=[0,0]
         self.turn_player_num=0
-        self.stack=[]
+        #self.stack=[]
+        self.stack=deque()
         self.players_play_num=0
         self.state_log=[]
 
@@ -46,9 +48,14 @@ class Field:
         self.cost=field.cost[:]
         self.remain_cost=field.remain_cost[:]
         self.turn_end=field.turn_end
-        self.graveyard=copy.copy(field.graveyard)
+        self.graveyard=copy.deepcopy(field.graveyard)
+        self.play_cards=copy.deepcopy(field.play_cards)
         self.players[0]=field.players[0].get_copy(field)
         self.players[1]=field.players[1].get_copy(field)
+        self.players[0].field=self
+        self.players[1].field=self
+        self.update_hand_cost(player_num=0)
+        self.update_hand_cost(player_num=1)
         self.evo_point=field.evo_point[:]
         self.current_turn=field.current_turn[:]
         self.evo_flg=field.evo_flg
@@ -57,6 +64,7 @@ class Field:
         self.players_play_num=int(field.players_play_num)
 
     def solve_lastword_ability(self,virtual=False,player_num=0):
+        """
         while self.stack!=[] :
             (ability,player_num,itself)=self.stack.pop(0)
             if virtual==False:
@@ -64,10 +72,22 @@ class Field:
             ability(self,self.players[player_num],self.players[1-player_num],virtual,None,itself)
             if self.check_game_end()==True:
                 break
+        """
+        while len(self.stack)>0 :
+            (ability,player_num,itself)=self.stack.pop()
+            if virtual==False:
+                mylogger.info("{}'s ability actived".format(itself.name))
+            ability(self,self.players[player_num],self.players[1-player_num],virtual,None,itself)
+            if self.check_game_end()==True:
+                break
+        
             #if virtual==False:
             #    mylogger.info("rest_num={}".format(len(self.stack)))
     def solve_field_trigger_ability(self,virtual=False,player_num=0):
-
+        #if virtual==False:
+        #    mylogger.info("state_log:{}".format(self.state_log))
+        #    mylogger.info("state_log:{}".format([State_Code(self.state_log[i][0]).name for i in range(len(self.state_log))]))
+            
         index=0
         while True:
             if len(self.state_log)==0:
@@ -253,14 +273,16 @@ class Field:
             print("\n")
     
 
-    def battle(self,attack,defence,field,virtual=False):
+    def attack_to_follower(self,attack,defence,field,virtual=False):
 
         assert attack[1]<len(self.card_location[attack[0]]) and defence[1]< len(self.card_location[defence[0]])
         attacking_creature=self.card_location[attack[0]][attack[1]]
         if KeywordAbility.AMBUSH.value in attacking_creature.ability:
             attacking_creature.ability.remove(KeywordAbility.AMBUSH.value)
         defencing_creature=self.card_location[defence[0]][defence[1]]
-        assert attacking_creature.can_attack_to_creature() and defencing_creature.can_be_attacked()
+        assert attacking_creature.can_attack_to_follower() and defencing_creature.can_be_attacked(),\
+            "attack:{} defence:{}".format(attacking_creature.can_attack_to_follower(),defencing_creature.can_be_attacked())
+        attacking_creature.current_attack_num+=1
         if virtual==False:   
             if attacking_creature.is_tapped==True and attacking_creature.evolved==True:
                 mylogger.info("{}'s Evo_Attack!".format(self.players[attack[0]].name))     
@@ -271,13 +293,16 @@ class Field:
             ability(self,self.players[attack[0]],self.players[defence[0]],attacking_creature,defencing_creature,situation_num=[0,1,3],virtual=virtual)
         for ability in defencing_creature.in_battle_ability:
             ability(self,self.players[defence[0]],self.players[attack[0]],defencing_creature,attacking_creature,situation_num=[3],virtual=virtual)
-        self.state_log.append([State_Code.ATTACK_TO_FOLLOWER.value,attack[0]])#5はフォロワーに攻撃したとき
-        while self.stack!=[]:
+        self.state_log.append([State_Code.ATTACK_TO_FOLLOWER.value,attack[0],attacking_creature,defencing_creature])#5はフォロワーに攻撃したとき
+        #while self.stack!=[]:
+        #    self.solve_field_trigger_ability(virtual=virtual)
+        #    self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
+        while len(self.stack)>0:
             self.solve_field_trigger_ability(virtual=virtual)
             self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
         if attacking_creature.is_in_field!=True or defencing_creature.is_in_field!=True:
             return
-        attacking_creature.attacked_flg=True
+        #attacking_creature.attacked_flg=True
         amount=attacking_creature.get_damage(defencing_creature.power)
         if KeywordAbility.DRAIN.value in attacking_creature.ability:
             restore_player_life(self.players[attack[0]],virtual,num=amount)
@@ -297,16 +322,20 @@ class Field:
         if KeywordAbility.AMBUSH.value in attacking_creature.ability:
             attacking_creature.ability.remove(KeywordAbility.AMBUSH.value)
         assert attacking_creature.can_attack_to_player()
+        attacking_creature.current_attack_num+=1
         for ability in attacking_creature.in_battle_ability:
             ability(self,self.players[attacker[0]],defence_player,attacking_creature,defence_player,situation_num=[0,2],virtual=virtual)
         self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
-        self.state_log.append([State_Code.ATTACK_TO_PLAYER.value,attacker[0]])#5はプレイヤーに攻撃したとき
-        while self.stack!=[]:
+        self.state_log.append([State_Code.ATTACK_TO_PLAYER.value,attacker[0],attacking_creature])#5はプレイヤーに攻撃したとき
+        #while self.stack!=[]:
+        #    self.solve_field_trigger_ability(virtual=virtual,player_num=attacker[0])
+        #    self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
+        while len(self.stack)>0:
             self.solve_field_trigger_ability(virtual=virtual,player_num=attacker[0])
             self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
         if attacking_creature.is_in_field!=True:
             return
-        attacking_creature.attacked_flg=True
+        #attacking_creature.attacked_flg=True
         if visible==True:
             print("Player",attacker[0]+1,"'s",attacking_creature.name,\
                 "attacks directly Player",defence_player.player_num+1)
@@ -355,7 +384,8 @@ class Field:
             thing.down_count(num=1,virtual=virtual)
         self.check_death(player_num,virtual=virtual)
 
-        while self.stack!=[]:
+        #while self.stack!=[]:
+        while len(self.stack)>0:
             
             self.solve_lastword_ability(virtual=virtual,player_num=player_num)
             self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
@@ -400,7 +430,8 @@ class Field:
         if self.check_game_end()==True:
                 return
         self.check_death(player_num=player_num,virtual=virtual)
-        while self.stack!=[]:
+        #while self.stack!=[]:
+        while len(self.stack)>0:
             self.solve_lastword_ability(virtual=virtual,player_num=player_num)
             self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
         self.players_play_num=0
@@ -581,7 +612,7 @@ class Field:
             creature=self.card_location[player.player_num][i]
             if creature.can_attack_to_player():
                 if creature.player_attack_regulation!=None:
-                    if creature.player_attack_regulation(self,player)==True:
+                    if creature.player_attack_regulation(player):
                             able_to_attack.append(i)
                 else:
                     able_to_attack.append(i)
@@ -592,7 +623,7 @@ class Field:
 
         for i in self.get_creature_location()[player.player_num]:
             creature=self.card_location[player.player_num][i]
-            if creature.can_attack_to_creature():
+            if creature.can_attack_to_follower():
                 if creature.can_only_attack_target!=None:
                     if creature.can_only_attack_target(self,player)==True:
                         able_to_creature_attack.append(i)
@@ -852,7 +883,10 @@ class Field:
 
     def play_turn(self,turn_player_num,win,lose,lib_num,turn,virtual_flg):
             while(True):
-                #os.system('clear')
+                #if virtual_flg==False:
+                #    time.sleep(1)
+                #    os.system('clear')
+                    
                 #print('\x1b[0;0H', end='')
                 can_play=True
                 can_attack=True
@@ -886,13 +920,16 @@ class Field:
                     lib_num+=1
                     return win,lose,lib_num,turn,True
                 while True:
-                    #os.system('clear')
+                    #if virtual_flg==False:
+                    #    time.sleep(1)
+                    #    os.system('clear')
+                    
                     end_flg=self.players[turn_player_num].decide(\
                         self.players[turn_player_num],self.players[1-turn_player_num],self,virtual=virtual_flg)
                     if end_flg==True :
                             break
-                    #time.sleep(1)
-                #os.system('clear')
+                #if virtual_flg==False:
+                #    os.system('clear')
                     
                 if virtual_flg==False:
                     self.players[turn_player_num].show_hand()
@@ -951,6 +988,7 @@ class Graveyard:
     def __init__(self):
         self.graveyard=[[],[]]
         self.shadows=[0,0]
+        self.name_list=None
     def append(self,card_category,card_id,player_num):
         self.graveyard[player_num].append((card_category,card_id))
         self.shadows[player_num]+=1
@@ -969,25 +1007,51 @@ class Graveyard:
     def graveyard_set(self):
         
         set_of_graveyard=[None,None]
-        name_list=[None,None]
+        name_list=[{},{}]
         set_of_graveyard[0]=list(set(self.graveyard[0]))
         set_of_graveyard[1]=list(set(self.graveyard[1]))
         counter=[collections.Counter(self.graveyard[0]),collections.Counter(self.graveyard[1])]
         items=[dict(list(counter[0].items())),dict(list(counter[1].items()))]
-        #print(items[0])
-        #print(items[1])
-        name_list[0]=["{:<15}".format(creature_list[i][-1])+":"+str(items[0][i]) for i in set_of_graveyard[0]]
-        name_list[1]=["{:<15}".format(creature_list[i][-1])+":"+str(items[1][i]) for i in set_of_graveyard[1]]
-        print("Player1 graveyard")
-        list(map(print,name_list[0]))
-        print("\n")
-        print("Player2 graveyard")
-        list(map(print,name_list[1]))
+
+        for i in range(2):
+            for ele in set_of_graveyard[i]:
+                card_list=None
+                if ele[0]=="Creature":
+                    card_list=creature_list
+                elif ele[0]=="Spell":
+                    card_list=spell_list
+                elif ele[0]=="Amulet":
+                    card_list=amulet_list
+                else:
+                    assert False
+                if card_list[ele[1]][0] not in name_list[i]:
+                    name_list[i][card_list[ele[1]][0]]={}
+                if ele[0] not in name_list[i][card_list[ele[1]][0]]:
+                    name_list[i][card_list[ele[1]][0]][ele[0]]={}
+
+                name_list[i][card_list[ele[1]][0]][ele[0]][card_list[ele[1]][-1]]=items[i][ele]
+        self.name_list=name_list
+
+
+
+    def show_graveyard(self):
+        self.graveyard_set()
+        for i in range(2):        
+            print("Player{} graveyards".format(i+1))
+            for cost_key in sorted(list(self.name_list[i].keys())):
+                print("cost {}:".format(cost_key))
+                for category_key in sorted(list(self.name_list[i][cost_key].keys())):
+                    print("category:{}".format(category_key))
+                    for name_key in sorted(list(self.name_list[i][cost_key][category_key].keys())):
+                        print("{}×{}".format(name_key,self.name_list[i][cost_key][category_key][name_key]))
+            print("\n")
+
 
 
 class Play_Cards:
     def __init__(self):
         self.play_cards=[[],[]]
+        self.name_list=None
     def append(self,card_category,card_id,player_num):
         self.play_cards[player_num].append((card_category,card_id))
     
@@ -1005,18 +1069,45 @@ class Play_Cards:
     def play_cards_set(self):
         
         set_of_play_cards=[None,None]
-        name_list=[None,None]
+        name_list=[{},{}]
         set_of_play_cards[0]=list(set(self.play_cards[0]))
         set_of_play_cards[1]=list(set(self.play_cards[1]))
-        counter=[collections.Counter(self.v[0]),collections.Counter(self.play_cards[1])]
+        counter=[collections.Counter(self.play_cards[0]),collections.Counter(self.play_cards[1])]
         items=[dict(list(counter[0].items())),dict(list(counter[1].items()))]
-        name_list[0]=["{:<15}".format(creature_list[i][-1])+":"+str(items[0][i]) for i in set_of_play_cards[0]]
-        name_list[1]=["{:<15}".format(creature_list[i][-1])+":"+str(items[1][i]) for i in set_of_play_cards[1]]
-        print("Player1 play_cards")
-        list(map(print,name_list[0]))
-        print("\n")
-        print("Player2 play_cards")
-        list(map(print,name_list[1]))
+        #name_list[0]=["{:<15}".format(creature_list[i][-1])+":"+str(items[0][i]) for i in set_of_play_cards[0]]
+        #name_list[1]=["{:<15}".format(creature_list[i][-1])+":"+str(items[1][i]) for i in set_of_play_cards[1]]
+        for i in range(2):
+            for ele in set_of_play_cards[i]:
+                card_list=None
+                if ele[0]=="Creature":
+                    card_list=creature_list
+                elif ele[0]=="Spell":
+                    card_list=spell_list
+                elif ele[0]=="Amulet":
+                    card_list=amulet_list
+                else:
+                    assert False
+                if card_list[ele[1]][0] not in name_list[i]:
+                    name_list[i][card_list[ele[1]][0]]={}
+                if ele[0] not in name_list[i][card_list[ele[1]][0]]:
+                    name_list[i][card_list[ele[1]][0]][ele[0]]={}
+                name_list[i][card_list[ele[1]][0]][ele[0]][card_list[ele[1]][-1]]=items[i][ele]
+        self.name_list=name_list
+
+
+    def show_play_list(self):
+        self.play_cards_set()
+        for i in range(2):        
+            print("Player{} play_cards".format(i+1))
+            for cost_key in sorted(list(self.name_list[i].keys())):
+                print("cost {}:".format(cost_key))
+                for category_key in sorted(list(self.name_list[i][cost_key].keys())):
+                    print("category:{}".format(category_key))
+                    for name_key in sorted(list(self.name_list[i][cost_key][category_key].keys())):
+                        print("{}×{}".format(name_key,self.name_list[i][cost_key][category_key][name_key]))
+            print("\n")
+
+
 
 
 

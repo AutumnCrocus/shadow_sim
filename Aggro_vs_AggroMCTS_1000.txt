@@ -1,0 +1,175 @@
+kobayashi@DESKTOP-Q2FNMT4:~/Documents/TCG_AI/TCG_test7$ python3 test.py 1000 2 14
+__main__:same_flg:False
+__main__:complete:1/8
+__main__:complete:2/8
+__main__:complete:3/8
+__main__:complete:4/8
+__main__:complete:5/8
+__main__:complete:6/8
+__main__:complete:7/8
+__main__:complete:8/8
+__main__:((0, 0)):rate:0.365 first:0.509
+__main__:((0, 1)):rate:0.405 first:0.547
+__main__:((0, 2)):rate:0.356 first:0.56
+__main__:((0, 3)):rate:0.419 first:0.893
+__main__:((0, 4)):rate:0.439 first:0.865
+__main__:((0, 5)):rate:0.324 first:0.576
+__main__:((0, 6)):rate:0.375 first:0.591
+__main__:((0, 7)):rate:0.315 first:0.783
+__main__:((1, 0)):rate:0.482 first:0.322
+__main__:((1, 1)):rate:0.611 first:0.399
+__main__:((1, 2)):rate:0.378 first:0.234
+__main__:((1, 3)):rate:0.395 first:0.533
+__main__:((1, 4)):rate:0.452 first:0.736
+__main__:((1, 5)):rate:0.442 first:0.26
+__main__:((1, 6)):rate:0.499 first:0.559
+__main__:((1, 7)):rate:0.444 first:0.758
+__main__:((2, 0)):rate:0.363 first:0.495
+__main__:((2, 1)):rate:0.381 first:0.747
+__main__:((2, 2)):rate:0.233 first:0.535
+__main__:((2, 3)):rate:0.41 first:0.892
+__main__:((2, 4)):rate:0.403 first:0.793
+__main__:((2, 5)):rate:0.381 first:0.529
+__main__:((2, 6)):rate:0.324 first:0.64
+__main__:((2, 7)):rate:0.343 first:0.797
+__main__:((3, 0)):rate:0.412 first:0.104
+__main__:((3, 1)):rate:0.388 first:0.32
+__main__:((3, 2)):rate:0.419 first:0.115
+__main__:((3, 3)):rate:0.231 first:0.471
+__main__:((3, 4)):rate:0.28 first:0.434
+__main__:((3, 5)):rate:0.365 first:0.203
+__main__:((3, 6)):rate:0.333 first:0.231
+__main__:((3, 7)):rate:0.189 first:0.355
+__main__:((4, 0)):rate:0.403 first:0.163
+__main__:((4, 1)):rate:0.426 first:0.178
+__main__:((4, 2)):rate:0.347 first:0.261
+__main__:((4, 3)):rate:0.262 first:0.564
+__main__:((4, 4)):rate:0.364 first:0.486
+__main__:((4, 5)):rate:0.324 first:0.244
+__main__:((4, 6)):rate:0.377 first:0.235
+__main__:((4, 7)):rate:0.289 first:0.291
+__main__:((5, 0)):rate:0.374 first:0.436
+__main__:((5, 1)):rate:0.407 first:0.657
+__main__:((5, 2)):rate:0.371 first:0.539
+__main__:((5, 3)):rate:0.384 first:0.81
+__main__:((5, 4)):rate:0.398 first:0.818
+__main__:((5, 5)):rate:0.403 first:0.535
+__main__:((5, 6)):rate:0.359 first:0.461
+__main__:((5, 7)):rate:0.348 first:0.76
+__main__:((6, 0)):rate:0.4 first:0.45
+__main__:((6, 1)):rate:0.445 first:0.321
+__main__:((6, 2)):rate:0.32 first:0.488
+__main__:((6, 3)):rate:0.322 first:0.754
+__main__:((6, 4)):rate:0.413 first:0.781
+__main__:((6, 5)):rate:0.346 first:0.62
+__main__:((6, 6)):rate:0.37 first:0.564
+__main__:((6, 7)):rate:0.283 first:0.653
+__main__:((7, 0)):rate:0.344 first:0.194
+__main__:((7, 1)):rate:0.438 first:0.156
+__main__:((7, 2)):rate:0.292 first:0.262
+__main__:((7, 3)):rate:0.239 first:0.647
+__main__:((7, 4)):rate:0.297 first:0.695
+__main__:((7, 5)):rate:0.311 first:0.269
+__main__:((7, 6)):rate:0.266 first:0.33
+__main__:((7, 7)):rate:0.075 first:0.479
+__main__:2019-10-19 15:30:33.546713
+__main__:2019-10-22 10:06:13.615502
+__main__:2 days, 18:35:40.068789
+
+
+
+kobayashi@DESKTOP-Q2FNMT4:~/Documents/TCG_AI/TCG_test7$ python3 test.py 1000 2 9
+__main__:same_flg:False
+__main__:complete:1/8
+__main__:complete:2/8
+__main__:complete:3/8
+__main__:complete:4/8
+__main__:complete:5/8
+;ploimi@/[m.,__main__:complete:6/8
+__main__:complete:7/8
+__main__:complete:8/8
+__main__:((0, 0)):rate:0.438 first:0.542
+__main__:((0, 1)):rate:0.462 first:0.592
+__main__:((0, 2)):rate:0.443 first:0.495
+__main__:((0, 3)):rate:0.442 first:0.93
+__main__:((0, 4)):rate:0.462 first:0.888
+__main__:((0, 5)):rate:0.327 first:0.513
+__main__:((0, 6)):rate:0.459 first:0.663
+__main__:((0, 7)):rate:0.331 first:0.795
+__main__:((1, 0)):rate:0.467 first:0.293
+__main__:((1, 1)):rate:0.646 first:0.384
+__main__:((1, 2)):rate:0.423 first:0.177
+__main__:((1, 3)):rate:0.403 first:0.539
+__main__:((1, 4)):rate:0.46 first:0.75
+__main__:((1, 5)):rate:0.435 first:0.217
+__main__:((1, 6)):rate:0.531 first:0.579
+__main__:((1, 7)):rate:0.481 first:0.749
+__main__:((2, 0)):rate:0.49 first:0.546
+__main__:((2, 1)):rate:0.436 first:0.756
+__main__:((2, 2)):rate:0.317 first:0.519
+__main__:((2, 3)):rate:0.418 first:0.874
+__main__:((2, 4)):rate:0.447 first:0.823
+__main__:((2, 5)):rate:0.375 first:0.447
+__main__:((2, 6)):rate:0.438 first:0.702
+__main__:((2, 7)):rate:0.426 first:0.868
+__main__:((3, 0)):rate:0.441 first:0.069
+__main__:((3, 1)):rate:0.408 first:0.366
+__main__:((3, 2)):rate:0.442 first:0.084
+__main__:((3, 3)):rate:0.244 first:0.476
+__main__:((3, 4)):rate:0.323 first:0.465
+__main__:((3, 5)):rate:0.377 first:0.149
+__main__:((3, 6)):rate:0.358 first:0.22
+__main__:((3, 7)):rate:0.221 first:0.337
+__main__:((4, 0)):rate:0.416 first:0.13
+__main__:((4, 1)):rate:0.459 first:0.147
+__main__:((4, 2)):rate:0.405 first:0.221
+__main__:((4, 3)):rate:0.327 first:0.587
+__main__:((4, 4)):rate:0.394 first:0.502
+__main__:((4, 5)):rate:0.352 first:0.206
+__main__:((4, 6)):rate:0.416 first:0.218
+__main__:((4, 7)):rate:0.295 first:0.271
+__main__:((5, 0)):rate:0.406 first:0.534
+__main__:((5, 1)):rate:0.424 first:0.714
+__main__:((5, 2)):rate:0.394 first:0.632
+__main__:((5, 3)):rate:0.391 first:0.861
+__main__:((5, 4)):rate:0.398 first:0.832
+__main__:((5, 5)):rate:0.407 first:0.511
+__main__:((5, 6)):rate:0.361 first:0.583
+__main__:((5, 7)):rate:0.35 first:0.78
+__main__:((6, 0)):rate:0.42 first:0.422
+__main__:((6, 1)):rate:0.501 first:0.299
+__main__:((6, 2)):rate:0.403 first:0.429
+__main__:((6, 3)):rate:0.376 first:0.776
+__main__:((6, 4)):rate:0.469 first:0.793
+__main__:((6, 5)):rate:0.286 first:0.504
+__main__:((6, 6)):rate:0.455 first:0.597
+__main__:((6, 7)):rate:0.314 first:0.654
+__main__:((7, 0)):rate:0.356 first:0.176
+__main__:((7, 1)):rate:0.444 first:0.156
+__main__:((7, 2)):rate:0.356 first:0.218
+__main__:((7, 3)):rate:0.228 first:0.61
+__main__:((7, 4)):rate:0.338 first:0.706
+__main__:((7, 5)):rate:0.293 first:0.273
+__main__:((7, 6)):rate:0.309 first:0.333
+__main__:((7, 7)):rate:0.114 first:0.486
+__main__:2019-10-21 19:52:04.584752
+__main__:2019-10-23 16:46:06.830402
+__main__:1 day, 20:54:02.245650
+
+D[0]=tsv_to_deck("Sword.tsv")
+
+D[1]=tsv_to_deck("Haven.tsv")
+
+D[2]=tsv_to_deck("Dragon.tsv")
+
+D[3]=tsv_to_deck("Rune.tsv")
+
+D[4]=tsv_to_deck("Blood.tsv")
+
+D[5]=tsv_to_deck("Shadow.tsv")
+
+D[6]=tsv_to_deck("Rune_Earth.tsv")
+
+D[7]=tsv_to_deck("Forest.tsv")
+
+#D[8]=tsv_to_deck("Sword_Aggro.tsv")

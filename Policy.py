@@ -187,7 +187,7 @@ class AggroPolicy(Policy):
                     creature_attack_flg=False
                     
             if creature_attack_flg==False:
-                if attack_creature.player_attack_regulation==None or attack_creature.player_attack_regulation(field,player)==True:
+                if attack_creature.player_attack_regulation==None or attack_creature.player_attack_regulation(player)==True:
                     return 3,card_id,0#プレイヤーへの攻撃   
                 
 
@@ -219,19 +219,16 @@ class GreedyPolicy(Policy):
         first=player.player_num
         dicision=[0,0,0]
         max_state_value=-10000
-        can_play,can_attack=True,True
-        if len(able_to_play)==0:
-            can_play=False
-        if len(able_to_creature_attack)==0:
-            can_attack=False
         length=len(able_to_play+able_to_creature_attack)+1
-
+        end_field_id_list=[]
 
         #tmp_field_list=[copy.deepcopy(field) for i in range(length)]
+        #mylogger.info("len:{}".format(length))
         tmp_field_list=[]
         for i in range(length):
-            new_field=Field(5)
+            new_field=Field_setting.Field(5)
             new_field.set_data(field)
+            #new_field.get_flag_and_choices(new_field.players[player.player_num],new_field.players[opponent.player_num],regal_targets)
             tmp_field_list.append(new_field)
         state_value_list=[0 for i in range(length)]#各行動後の状態価値のリスト
         state_value_list[0]=self.state_value(tmp_field_list[0],first)
@@ -248,7 +245,7 @@ class GreedyPolicy(Policy):
             evo_id=can_evolve_power.index(max(can_evolve_power))
             direct_index=able_to_evo[0]
             for i,ele in enumerate(able_to_evo):
-                if field.card_location[player.player_num][ele].is_tapped==False:
+                if field.card_location[player.player_num][ele].can_attack_to_player():
                     leader_flg=True
                     direct_index=i
 
@@ -262,12 +259,12 @@ class GreedyPolicy(Policy):
                 choices=field.get_regal_targets(creature,player_num=player.player_num)
                 if choices!=[]:
                     target_id=random.choice(choices)
-            #evo_field=copy.deepcopy(field)
             evo_field = Field_setting.Field(5)
             evo_field.set_data(field)
             evo_field.players[first].creature_evolve(evo_field.card_location[first][able_to_evo[evo_id]],evo_field,virtual=True,target=target_id)
             evo_field.solve_field_trigger_ability(virtual=True,player_num=player.player_num)
-            if evo_field.stack!=[]:
+            #if evo_field.stack!=[]:
+            if len(evo_field.stack)>0:
                 evo_field.solve_lastword_ability(virtual=True,player_num=player.player_num)
             tmp_state_value=self.state_value(evo_field,first)
             if max_state_value<tmp_state_value:
@@ -277,7 +274,10 @@ class GreedyPolicy(Policy):
 
  
         if can_play==True:
+            #mylogger.info(range(1,len(able_to_play)+1))
             for i in range(1,len(able_to_play)+1):
+                assert i not in  end_field_id_list,"{} {}".format(i,end_field_id_list)
+                #mylogger.info("i(play):{}".format(i))
                 target_id=None
                 card=player.hand[able_to_play[i-1]]
                 if card.card_category!="Spell" and len(field.card_location[player.player_num])==field.max_field_num:
@@ -291,9 +291,11 @@ class GreedyPolicy(Policy):
                 tmp_field_list[i].players[first].play_card(tmp_field_list[i],able_to_play[i-1],tmp_field_list[i].players[first],\
                     tmp_field_list[i].players[1-first],virtual=True,target=target_id)
                 tmp_field_list[i].solve_field_trigger_ability(virtual=True,player_num=player.player_num)
-                if tmp_field_list[i].stack!=[]:
+                #if tmp_field_list[i].stack!=[]:
+                if len(tmp_field_list[i].stack)>0:
                     tmp_field_list[i].solve_lastword_ability(virtual=True,player_num=player.player_num)
                 state_value_list[i]=self.state_value(tmp_field_list[i],first)
+                end_field_id_list.append(i)
                 if max_state_value < state_value_list[i] and tmp_field_list[i].players[first].life>0:
                     max_state_value=state_value_list[i]
                     dicision=[1,able_to_play[i-1],target_id]
@@ -309,15 +311,20 @@ class GreedyPolicy(Policy):
                 ward_creatures_toughness = [field.card_location[opponent.player_num][i].get_current_toughness()\
                     for i in ward_list]
                 able_to_creature_attack_power=[field.card_location[player.player_num][i].power for i in able_to_creature_attack]
+                #mylogger.info(range(len(able_to_play)+1,length))
                 for i in range(len(able_to_play)+1,length):
+                    assert i not in  end_field_id_list,"{} {}".format(i,end_field_id_list)
+                    #mylogger.info("i(attack):{}".format(i))
                     target_id=None
                     attacker_id=able_to_creature_attack[i-len(able_to_play)+1-2]
-                    attacker_power=field.card_location[first][attacker_id].power
+                    attacker_power=tmp_field_list[i].card_location[first][attacker_id].power
                     if min(ward_creatures_toughness)<=sum(able_to_creature_attack_power):
                         target_id=ward_list[ward_creatures_toughness.index(min(ward_creatures_toughness))]
-                        tmp_field_list[i].players[first].attack_to_creature(tmp_field_list[i],attacker_id,target_id,virtual=True)
+                        tmp_field_list[i].players[first].attack_to_follower(tmp_field_list[i],attacker_id,target_id,virtual=True)
                         tmp_field_list[i].solve_field_trigger_ability(virtual=True,player_num=player.player_num)
-                        if tmp_field_list[i].stack!=[]:
+                        end_field_id_list.append(i)
+                        #if tmp_field_list[i].stack!=[]:
+                        if len(tmp_field_list[i].stack)>0:
                             tmp_field_list[i].solve_lastword_ability(virtual=True,player_num=player.player_num)
                         state_value_list[i]+=self.state_value(tmp_field_list[i],first)
                         if max_state_value < state_value_list[i] and target_id!=None:
@@ -326,29 +333,39 @@ class GreedyPolicy(Policy):
                             dicision=[2,attacker_id,target_id]
             else:
                 for i in range(len(able_to_play)+1,length):
+                    assert i not in  end_field_id_list,"{} {}".format(i,end_field_id_list)
                     direct_flg=False
                     target_id=None
-                    attacker_id=able_to_creature_attack[i-len(able_to_play)+1-2]
-                    attacker_power=field.card_location[first][attacker_id].power
+                    attacker_id=able_to_creature_attack[i-(len(able_to_play)+1)]
+                    attacking_creature=tmp_field_list[i].card_location[player.player_num][attacker_id]
+                    assert attacking_creature.can_attack_to_follower()
+                    
+                    attacker_power=attacking_creature.power
 
                     if (len(opponent_creatures_toughness)==0 or min(opponent_creatures_toughness)>attacker_power\
-                        ) and field.card_location[player.player_num][attacker_id].is_tapped==False:
-                        return 3,attacker_id,None
+                        ) and attacking_creature.can_attack_to_player():
+                        if attacker_id in able_to_attack:
+                            return 3,attacker_id,None
 
 
                     elif (opponent_creatures_toughness)!=[] and min(opponent_creatures_toughness)<=attacker_power:
                         target_id=can_be_attacked[opponent_creatures_toughness.index(min(opponent_creatures_toughness))]
-                        if field.card_location[opponent.player_num][target_id]==None:
-                            raise Exception("No exist target!")
-                        tmp_field_list[i].players[first].attack_to_creature(tmp_field_list[i],attacker_id,target_id,virtual=True)
+                        defencing_creature=tmp_field_list[i].card_location[opponent.player_num][target_id]
+                        assert defencing_creature.can_be_attacked()
+                        tmp_field_list[i].players[first].attack_to_follower(tmp_field_list[i],attacker_id,target_id,virtual=True)
                         tmp_field_list[i].solve_field_trigger_ability(virtual=True,player_num=player.player_num)
-                        if tmp_field_list[i].stack!=[]:
+                        #if tmp_field_list[i].stack!=[]:
+                        if len(tmp_field_list[i].stack)>0:
                             tmp_field_list[i].solve_lastword_ability(virtual=True,player_num=player.player_num)
+                            tmp_field_list[i].solve_field_trigger_ability(virtual=True,player_num=player.player_num)
                         state_value_list[i]+=self.state_value(tmp_field_list[i],first)
+                        end_field_id_list.append(i)
 
-                    elif field.card_location[player.player_num][attacker_id].is_tapped==False:
-                        direct_flg=True
-                        return 3,attacker_id,None
+                    elif attacking_creature.can_attack_to_player():
+                        if attacker_id in able_to_attack:
+                             
+                            direct_flg=True
+                            return 3,attacker_id,None
                  
 
                     
@@ -356,15 +373,16 @@ class GreedyPolicy(Policy):
                         state_value_list[i]=10000
                     
                     if max_state_value < state_value_list[i]:
-                        if direct_flg==True and field.card_location[first][attacker_id].is_tapped==False:
-                            max_state_value=state_value_list[i]
-                            dicision=[3,attacker_id,0]                    
+                        if direct_flg==True and attacking_creature.can_attack_to_player():
+                            if attacker_id in able_to_attack:
+                                max_state_value=state_value_list[i]
+                                dicision=[3,attacker_id,0]                    
                         if direct_flg==False and opponent_creatures_toughness!=[] and target_id!=None:
                             max_state_value=state_value_list[i]
                             #mylogger.info("target_id:{},name:{}".format(target_id,field.card_location[opponent.player_num][target_id].name))
                             dicision=[2,attacker_id,target_id]
 
-        
+        #mylogger.info("Interval")
         return dicision[0],dicision[1],dicision[2]
 
 class FastGreedyPolicy(GreedyPolicy):
@@ -390,6 +408,7 @@ class Node:
         self.max_child_visit_num=[None,None]
         self.parent_node=None
         self.regal_targets={}
+        self.action_value_dict={}
         #self.node_id=node_id
         #if self.field!=None:
         #    self.parent_node=None
@@ -447,6 +466,8 @@ class Node:
             #        children_moves.append((3,attacker_id,None))
 
         self.children_moves=children_moves
+        #for action in self.children_moves:
+        #    self.action_value_dict[action]=0
  
 
  
@@ -479,6 +500,18 @@ class Node:
     
     def get_able_action_list(self):
         return sorted(list(set(self.children_moves)-set(self.get_exist_action())))
+    
+    def print_estimated_action_value(self):
+        if self.visit_num==0:
+            print("this node is never simulated!")
+            return
+        print("visit_num:{} depth:{}".format(self.visit_num,self.depth))
+        for key in list(self.action_value_dict.keys()):
+            print("{}:{}".format(key,self.action_value_dict[key]/self.visit_num))
+        
+        #for cell in self.child_nodes:
+        #    print("{}:{} times".format(cell[0],cell[1].visit_num))
+        #print("")
 
 
 
@@ -921,5 +954,473 @@ class Aggro_MCTSPolicy(MCTSPolicy):
         #RandomPolicyとAggroPolicyのPlayOutでの比較
         self.play_out_policy=AggroPolicy()
 
+
+class EXP3_MCTSPolicy(Policy):
+    def __init__(self):
+        self.tree=None
+        self.first_action_flg=False
+        self.action_seq=[]
+        self.initial_seq=[]
+        self.num_simulations=0
+        self.uct_c = 1. / np.sqrt(2)
+        self.play_out_policy=RandomPolicy()
+        self.end_count=0
+        self.decide_node_seq=[]
+        self.starting_node=None
+        self.current_node=None
+        self.node_index=0
+        self.policy_type=3
+        self.next_node=None
+        self.prev_node=None
+
+    def state_value(self,field,player_num):
+        if field.players[1-player_num].life<=0:
+            return 1.0
+        power_sum=0
+        for card_id in field.get_creature_location()[1-player_num]:
+            power_sum+=field.card_location[1-player_num][card_id].power
+        if power_sum>=field.players[player_num].life:
+            return 0.01
+
+        value = (field.players[1-player_num].max_life-field.players[1-player_num].life)*10 + \
+            (len(field.get_creature_location()[player_num])-len(field.get_creature_location()[1-player_num])) + len(field.players[player_num].hand)/10
+        max_value = 20 * 10 + (5-0) + 9/10
+        min_value = 0*10 + (0-5) + 0/10
+        probability=np.log(value-min_value)/np.log(max_value-min_value)
+
+        assert probability>0.0 and probability <=1.0
+        return probability
+    def decide(self,player,opponent,field):
+        if self.current_node==None:
+            
+            self.exp3_search(player,opponent,field)
+            
+            if self.current_node.child_nodes==[]:
+                #mylogger.info("End")
+                self.current_node=None
+                return 0,0,0 
+            else:
+                #mylogger.info("roulette(0)")
+                #mylogger.info("action_value:{}".format(self.current_node.action_value_dict))
+                #self.current_node.print_estimated_action_value()
+                #mylogger.info("distribution:{}".format(self.exp3(self.current_node)))
+                next_node,action,_=self.roulette(self.current_node)
+                self.next_node=next_node
+                self.prev_node=self.current_node
+                #self.current_node=next_node
+                if action==(0,0,0):self.current_node=None
+                return action
+
+                #mylogger.info("Blanch")
+        else:
+            self.current_node=self.next_node
+            if len(self.current_node.child_nodes)==0:
+                self.current_node=None
+                return 0,0,0 
+            else:
+                #mylogger.info("roulette(1)")
+                #self.current_node.print_estimated_action_value()
+                #mylogger.info("distribution:{}".format(self.exp3(self.current_node)))
+
+                #mylogger.info("action_value:{}".format(self.current_node.action_value_dict))
+                next_node,action,_=self.roulette(self.current_node)
+                self.next_node=next_node
+                self.prev_node=self.current_node
+                if action==(0,0,0):
+                    self.current_node=None
+                return action
+
+                #mylogger.info("Blanch")
+            
+            
+            
+
+    def exp3_search(self,player,opponent,field):
+        field.get_regal_target_dict(player,opponent)
+        player_num=player.player_num
+        starting_field = Field_setting.Field(5)
+        starting_field.set_data(field)
+        starting_field.get_regal_target_dict(starting_field.players[player.player_num],starting_field.players[opponent.player_num])
+        starting_node = Node(field=starting_field,player_num=player.player_num)
+        mark_node=None
+        starting_node.is_root=True
+        self.starting_node=starting_node
+        self.current_node=starting_node
+        end_flg=False
+        self.decide_node_seq=[]
+        self.decide_node_seq.append(starting_node)
+        if starting_node.get_able_action_list()==[(0,0,0)]:
+            #mylogger.info("check:{}".format(self.current_node==self.starting_node))
+            return 0,0,0
+        for i in range(ITERATION):
+
+            node,probability = self.tree_policy(starting_node,player_num=player_num)
+            value = self.default_policy(node,probability,player_num=player_num)
+            self.back_up(node,value,player_num=player_num)
+            if starting_node.max_child_visit_num[0]!=None and starting_node.max_child_visit_num[1]!=None:
+                if starting_node.max_child_visit_num[1].visit_num-starting_node.max_child_visit_num[0].visit_num>ITERATION-i:
+                    break
+
+            elif starting_node.max_child_visit_num[1]!=None:
+                if starting_node.max_child_visit_num[1].visit_num>50:
+                    break
+
+        #if end_flg==True:
+        #    while True:
+        #        if mark_node.parent_node==None:
+        #            break
+        #        for child in mark_node.parent_node.child_nodes:
+        #            if child[1]==mark_node:
+        #                self.action_seq.append(child[0])
+        #                break
+        #        mark_node=mark_node.parent_node
+        #    self.action_seq=self.action_seq[::-1]
+        #    self.initial_seq=self.action_seq[:]
+        assert self.starting_node!=None and self.current_node !=None,"{},{}".format(self.starting_node,self.current_node)
+        #mylogger.info("check:{}".format(self.current_node==self.starting_node))
+        assert len(self.current_node.field.card_location[0])==len(field.card_location[0])
+        assert len(self.current_node.field.card_location[1])==len(field.card_location[1])
+        assert len(self.current_node.field.players[player.player_num].hand)==len(field.players[player.player_num].hand)
+        #mylogger.info("action_value:{}".format(self.current_node.action_value_dict))
+        return #move
+
+    def tree_policy(self,node,player_num=0):
+
+        length_of_children=len(node.child_nodes)
+        check=self.fully_expand(node,player_num=player_num)
+        if length_of_children== 0 and check==False:
+            return self.expand(node,player_num=player_num)
+        count=0
+        probability=0.01
+        while node.finite_state_flg==False:
+            if length_of_children>0:
+                if random.uniform(0,1)<.5:
+                    node,action,probability=self.roulette(node,player_num=player_num)
+                    #node, _ = self.best(node,player_num=player_num)
+                    #if node==None:
+                    #    return select_expand(self,node,action,player_num=0)
+                else:
+                    check=self.fully_expand(node,player_num=player_num)
+                    if check == False:
+                        return self.expand(node,player_num=player_num)
+                    else:
+                        node,action,probability=self.roulette(node,player_num=player_num)
+                        #node, _ = self.best(node,player_num=player_num)
+                length_of_children=len(node.child_nodes)
+            else:
+                return self.expand(node,player_num=player_num)
+
+
+            count+=1
+            if count>100:
+                field=node.field
+                node.field.show_field()
+                mylogger.info("finite:{}".format(node.finite_state_flg))
+                raise Exception("infinite loop!")
+
+        return node,probability
+    
+    def default_policy(self,node,probability,player_num=0):
+        if node.finite_state_flg==True:
+            action=None
+            for cell in node.parent_node.child_nodes:
+                if cell[-1]==node:
+                    action=cell[0]
+            node.parent_node.action_value_dict[action]=self.state_value(node.field,player_num)
+            return self.state_value(node.field,player_num)
+        sum_of_value=0
+        end_flg=False
+        for i in range(10):
+            if node.finite_state_flg==False:
+                current_field = Field_setting.Field(5)
+                current_field.set_data(node.field)
+
+                current_field.players[0].deck.shuffle()#デッキの並びは不明だから
+                current_field.players[1].deck.shuffle()
+                current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+
+
+                while True:
+                    (action_num,card_id,target_id)=self.play_out_policy.decide(current_field.players[player_num],current_field.players[1-player_num],\
+                        current_field)
+ 
+                    end_flg=current_field.players[player_num].execute_action(current_field,current_field.players[1-player_num],\
+                        action_code=(action_num,card_id,target_id),virtual=True)
+
+                    if current_field.check_game_end()==True or end_flg==True:
+                        break
+
+                    current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+
+                if current_field.check_game_end()==True:
+                    sum_of_value += 1.0
+                    action=None
+                    for cell in node.parent_node.child_nodes:
+                        if cell[-1]==node:
+                            action=cell[0]
+                    node.parent_node.action_value_dict[action]=self.state_value(current_field,player_num)
+                    return sum_of_value/(i+1)
+                current_field.end_of_turn(player_num,virtual=True)
+                if current_field.check_game_end()==True:
+                    action=None
+                    for cell in node.parent_node.child_nodes:
+                        if cell[-1]==node:
+                            action=cell[0]
+                    node.parent_node.action_value_dict[action]=self.state_value(current_field,player_num)
+                    sum_of_value += 1.0
+                    return sum_of_value/(i+1)
+                else:
+                    assert self.state_value(current_field,player_num)>0,"{},{}".format(self.state_value(current_field,player_num),current_field.check_game_end())
+                    sum_of_value += self.state_value(current_field,player_num)
+            else:
+                assert False,"finite:True"
+        result=sum_of_value/10
+        if node.parent_node!=[]:
+            action=None
+            for cell in node.parent_node.child_nodes:
+                if cell[-1]==node:
+                    action=cell[0]
+            assert action!=None,"child_nodes:{}".format(node.parent_node.child_nodes)
+            if action not in node.parent_node.action_value_dict:
+                node.parent_node.action_value_dict[action]=0.0
+                #mylogger.info("append {} to action_value_dict:{}".format(action,node.parent_node.action_value_dict))
+            assert result/probability!=0.0,"result:{} probability:{} sum_of_value:{}".format(result,probability,sum_of_value)
+            node.parent_node.action_value_dict[action]+=result/probability
+        return result
+
+    def fully_expand(self,node,player_num=0):
+        return len(node.child_nodes)==len(node.children_moves) or node.finite_state_flg==True#turn_endの場合を追加
+    
+    def expand(self,node,player_num=0):
+
+        field=node.field
+
+        new_choices = node.get_able_action_list()
+        if new_choices==[]:
+            field.show_field()
+
+            mylogger.info("children_moves:{} exist_action:{}".format(node.children_moves,node.get_exist_action()))
+            raise Exception()
+        move = random.choice(new_choices)
+        next_field = Field_setting.Field(5)
+        next_field.set_data(field)
+        next_field.players[0].deck.shuffle()
+        next_field.players[1].deck.shuffle()
+        next_field.get_situation(next_field.players[player_num],next_field.players[1-player_num])#regal_targetsの更新のため
+        next_node=None
+
+        if move[0]==0:
+            next_field.end_of_turn(player_num,virtual=True)
+            #if (0,0,0) not in node.action_value_dict:
+            node.action_value_dict[move]=self.state_value(next_field,player_num)
+            next_node=Node(field=next_field,player_num=player_num,finite_state_flg=True,depth=node.depth+1)
+        else:
+            if move[0]==1 and move[2]==None and node.regal_targets[move[1]]!=[]:
+                mylogger.info("in_node:{}".format(node.regal_targets[move[1]]))
+                raise Exception("Null target!")
+
+            next_field.players[player_num].execute_action(next_field,next_field.players[1-player_num],action_code=move,virtual=True)
+            flg =(next_field.check_game_end()==True)
+            if flg==True:
+                if move not in node.action_value_dict:
+                    node.action_value_dict[move]=self.state_value(next_field,player_num)
+            next_node=Node(field=next_field,player_num=player_num,\
+                finite_state_flg= flg==True,depth=node.depth+1)
+        next_node.parent_node=node
+        node.child_nodes.append((move,next_node))
+        if move==(0,0,0):   
+            node.action_value_dict[move]=self.state_value(next_field,player_num)
+
+        #node.action_value_dict[move]=0.0
+        #mylogger.info("append {} to action_value_dict:{}".format(move,node.action_value_dict))
+        return next_node,1/len(new_choices)
+
+    def best(self,node,player_num=0):
+        children = node.child_nodes
+        uct_values = {}
+        for i in range(len(children)):
+            uct_values[i]=self.uct(children[i][1],node,player_num=player_num)
+        uct_values_list=list(uct_values.values())
+        max_uct_value=max(uct_values_list)
+        max_list_index=uct_values_list.index(max_uct_value)
+
+        max_value_node = children[max_list_index][1]
+
+        action=children[max_list_index][0]
+
+        return max_value_node,action
+
+
+
+    def uct(self,child_node,node,player_num=0):
+        over_all_n = node.visit_num
+        n = child_node.visit_num
+        w = child_node.value
+        t = self.num_simulations
+        c = self.uct_c
+        epsilon = EPSILON
+        exploitation_value = w / (n+epsilon)
+        exploration_value = 2.0 * c * np.sqrt(np.log(over_all_n) / ( n + epsilon))
+
+        value = exploitation_value+exploration_value
+
+        child_node.uct = value
+
+        return value
+    
+    def exp3(self,node,player_num=0):
+        over_all_n = node.visit_num
+        #A = len(node.child_nodes)
+        dict_key_list=list(node.action_value_dict.keys())
+        A = len(dict_key_list)
+        #if A==0 and any(cell[0]!=(0,0,0) for cell in node.child_nodes):
+        #    for cell in node.child_nodes:
+        #        if cell[0] not in node.action_value_dict:
+        #            node.action_value_dict[cell[0]]=0
+        #    dict_key_list=list(node.action_value_dict.keys())
+        #    return [1/len(dict_key_list)]*len(dict_key_list)
+        assert A>0,"child_nodes:{}".format(node.child_nodes)
+
+        #index=0
+        #for i,child in enumerate(node.child_nodes):
+        #     if child[-1] == child_node:
+        #        index=i
+        #        break
+
+        e = np.e
+        value = (A*np.log(A))/((e-1)*over_all_n)
+        value = np.sqrt(value)
+        gamma = min(1,value)
+        #gamma = 0.5
+        #eta = gamma / over_all_n
+        eta = 1000000*gamma/np.sqrt(over_all_n)
+        #distribution = [0 for i in range(A)]
+        #value_list=[0 for i in range(A)]
+        distribution=[0.0]*len(dict_key_list)
+        #value_list=[node.action_value_dict[child[0]] for child in node.child_nodes]
+        value_list=[node.action_value_dict[key]/over_all_n for key in dict_key_list]
+        """
+        for i,child in enumerate(node.child_nodes):
+            children_node=child[-1]
+            target_value = self.state_value(children_node.field,player_num)
+            value_list[i]=target_value
+
+        for i in range(A):
+            first_member = gamma / A
+            weight=sum([np.exp((value_list[j]-value_list[i])*mu) for j in range(A)])
+            second_member = (1-gamma)/weight
+            distribution[i]= first_member + second_member
+        """
+        first_term = gamma / A
+        max_value=max(value_list)
+        value_list=[(value_list[i]-max_value)*eta for i in range(len(value_list))]
+        value_list=np.exp(value_list)/(np.sum(np.exp(value_list))+EPSILON)
+        for i in range(len(distribution)):
+            second_term = (1-gamma)*(value_list[i])
+            distribution[i]=first_term + second_term
+        #for i,key in enumerate(list(node.action_value_dict.keys())):
+        #    if node.action_value_dict[key]==0:
+        #        distribution[i]=0
+        return distribution#,index
+        
+    def roulette(self,node,player_num=0):
+        distribution=self.exp3(node,player_num=player_num)
+        assert len(distribution)>0
+        #mylogger.info(distribution)
+        #population=[i for i in range(len(distribution))]
+        population=[key for key in list(node.action_value_dict.keys())]
+        assert len(distribution)==len(population),"{},{}".format(len(distribution),len(population))
+        assert np.nan not in distribution,"{}".format(distribution)
+        decision=random.choices(population,weights=distribution,k=1)
+        #child=node.child_nodes[decision[0]]
+        for cell in node.child_nodes:
+            if cell[0]==decision[0]:
+                decision_node=cell[-1]
+                action=cell[0]
+                index=population.index(cell[0])
+                return decision_node,action,distribution[index]
+        assert decision[0]!=None,"population:{},distribution:{}".format(population,distribution)
+        assert False,"{},{} {}".format(decision[0],node.action_value_dict,node.child_nodes)
+        #return node,decition[0],distribution[population.index(cell[0])]
+        """
+        child=node.child_nodes[decision[0]]
+        decision_node=child[-1]
+        action=child[0]
+        return decision_node,action,distribution[decision[0]]
+        """
+        
+    def select_expand(self,node,action,player_num=0):
+
+        field=node.field
+
+        new_choices = node.get_able_action_list()
+        assert action in new_choices
+        move = action
+        next_field = Field_setting.Field(5)
+        next_field.set_data(field)
+        next_field.players[0].deck.shuffle()
+        next_field.players[1].deck.shuffle()
+        next_field.get_situation(next_field.players[player_num],next_field.players[1-player_num])#regal_targetsの更新のため
+        next_node=None
+
+        if move[0]==0:
+            next_node=Node(field=next_field,player_num=player_num,finite_state_flg=True,depth=node.depth+1)
+        else:
+            if move[0]==1 and move[2]==None and node.regal_targets[move[1]]!=[]:
+                mylogger.info("in_node:{}".format(node.regal_targets[move[1]]))
+                raise Exception("Null target!")
+
+            next_field.players[player_num].execute_action(next_field,next_field.players[1-player_num],action_code=move,virtual=True)
+            flg =(next_field.check_game_end()==True)
+            
+            next_node=Node(field=next_field,player_num=player_num,\
+                finite_state_flg= flg==True,depth=node.depth+1)
+        next_node.parent_node=node
+        node.child_nodes.append((move,next_node))
+        return next_node,1/len(new_choices)
+
+
+    def back_up(self,last_visited,reward,player_num=0):
+        current=last_visited
+        while True:
+            current.visit_num += 1
+            current.value += reward
+
+            if current.is_root==True:
+                break
+
+            elif current.parent_node.is_root==True:
+                best_childen=current.parent_node.max_child_visit_num
+                best_node=best_childen[1]
+                second_node=best_childen[0]
+                if best_node==None:#ベストが空
+                    best_node=current
+                elif second_node==None:#ベストが1つのみ
+                    if current!=best_node:
+                        if best_node.visit_num<current.visit_num:
+                            best_childen=[best_node,current]
+                        else:
+                            best_childen=[current,best_node]
+                else:
+                    if second_node.visit_num>best_node.visit_num:
+                        best_children=[best_node,second_node]
+
+                    different_flg= current not in best_children[0]
+                    if different_flg==True:
+                        if current.visit_num>best_children[1].visit_num:
+                            best_children=[best_children[1],current]
+
+                        elif current.visit_num>best_children[0].visit_num:
+                           best_children=[current,best_children[1]]
+                
+            current = current.parent_node
+            if current==None:
+                break
+    
+
+
+    
+    def __str__(self):
+        return 'EXP3_MCTSPolicy'
 
 

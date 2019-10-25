@@ -63,6 +63,32 @@ class trigger_ability_006:
             elif state_log[1][1]=="Amulet":
                 if card_setting.amulet_list[state_log[1][2]][2][-1]==1:
                     buff_creature_until_end_of_turn(itself,params=[1,0])
+
+class trigger_ability_007:
+    def __init__(self):
+        self.count=0
+    def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
+        #実装途中
+        """
+        Whenever an enemy follower is destroyed, gain +1/+0.
+        """
+        if state_log!=None and state_log[0]==State_Code.DESTROYED.value and state_log[1][0]==opponent.player_num:
+            buff_creature(itself,params=[1,0])
+
+class trigger_ability_008:
+    def __init__(self):
+        self.count=0
+    def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
+        #実装途中
+        if state_log!=None and (state_log[0]==State_Code.ATTACK_TO_FOLLOWER.value or state_log[0]==State_Code.ATTACK_TO_PLAYER.value):
+            if state_log[1]==player.player_num and state_log[2]!=itself:
+                attacking_creature=state_log[2]
+                buff_creature_until_end_of_turn(attacking_creature,params=[1,0])
+                if virtual==False:
+                    mylogger.info("{} get +1/0 until end of turn".format(attacking_creature.name))
+
+
+
             
 
 
@@ -70,4 +96,4 @@ class trigger_ability_006:
         
 
 trigger_ability_dict={1:trigger_ability_001,2:trigger_ability_002,3:trigger_ability_003,4:trigger_ability_004,5:trigger_ability_005,\
-                    6:trigger_ability_006}
+                    6:trigger_ability_006,7:trigger_ability_007,8:trigger_ability_008}

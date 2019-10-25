@@ -219,6 +219,8 @@ def add_ability_to_creature(field,player,creature,virtual,add_ability=[]):
     for ability in add_ability:
         if ability not in creature.ability:
             creature.ability.append(ability)
+    if virtual==False:
+        mylogger.info("{} get {}".format(creature.name,[KeywordAbility(i).name for i in add_ability]))
 
 def add_temporary_ability_to_creature(field,player,creature,virtual,add_ability=[]):
     def ability_until_end_of_turn(field,player,opponent,virtual,target,self_creature):
@@ -231,6 +233,8 @@ def add_temporary_ability_to_creature(field,player,creature,virtual,add_ability=
                 self_creature.turn_end_ability.remove(ability_until_end_of_turn)
             else:
                 break
+        if virtual==False:
+            mylogger.info("{} get {} until end of turn".format(creature.name,[KeywordAbility(i).name for i in add_ability]))
             
     for ability in add_ability:
         if ability not in creature.ability:
@@ -243,3 +247,20 @@ def gain_max_pp(field,player,virtual,num=0):
 
 def restore_pp(field,player,virtual,num=0):
     field.restore_pp(player_num=player.player_num,num=num,virtual=virtual)
+
+def put_card_from_deck_in_play(field,player,virtual,condition=None):
+    assert condition!=None
+    pop_id_list=[]
+    for i,card in enumerate(player.deck.deck):
+        if condition(card)==True:
+            pop_id_list.append(i)
+    if len(pop_id_list)==0:return
+    pop_id=random.choice(pop_id_list)
+    card_in_play=player.deck.deck.pop(pop_id)
+    if virtual==False:
+        mylogger.info("recruit {} from deck".format(card_in_play.name))
+    field.set_card(card_in_play,player.player_num,virtual=virtual)
+    return card_in_play
+
+
+

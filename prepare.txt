@@ -1,0 +1,10 @@
+import os.path
+from neuralnetwork import build_model
+input=np.array([state])
+state_value=sum(input[0][:10])-sum(input[0][10:])
+model=build_model()
+model.load_weights(os.path.join('./model','battle_state_model.hdf5'))
+output=model.predict(input)
+f=lambda x:int(x)+(1,0)[x-int(x)<0.5]
+next_state=list(map(f,output[0]))
+next_state_value=sum(next_state[:10])-sum(next_state[10:])

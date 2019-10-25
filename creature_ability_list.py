@@ -164,13 +164,19 @@ def creature_ability_025(field,player,opponent,virtual,target,itself):
 
 def creature_ability_026(field,player,opponent,virtual,target,itself):
     if target!=None:
-        if itself.target_regulation(field.card_location[opponent.player_num][target])==True:
+        if itself.target_regulation(field.card_location[opponent.player_num][target]):
             destroy_opponent_creature(field,opponent,virtual,target)
 
 def creature_ability_027(field,player,opponent,virtual,target,itself):
+    """
+    Fanfare: Give +1/+0 to a 1-play point allied follower.
+    """
     if target!=None:
-        if itself.target_regulation(field.card_location[player.player_num][target])==True:
-            buff_creature(field.card_location[player.player_num][target],params=[1,0])
+        target_creature=field.card_location[player.player_num][target]
+        assert itself.target_regulation(target_creature)==True
+        if virtual==False:
+            mylogger.info("{} get +1/0".format(target_creature.name))
+        buff_creature(target_creature,params=[1,0])
 
 def creature_ability_028(field,player,opponent,virtual,target,itself):
     destroy_random_creature(field,opponent,virtual)
@@ -436,6 +442,56 @@ def creature_ability_069(field,player,opponent,virtual,target,itself):
     new_cards[0].cost=7
     if virtual == False:raise Exception()
 
+def creature_ability_070(field,player,opponent,virtual,target,itself):
+    """
+    Evolve: Gain +1/+0 and Ward if there are at least 4 allied Swordcraft followers in play.
+    """
+    count=0
+    for card in field.card_location[player.player_num]:
+        if card.card_class.value==LeaderClass.SWORD.value:
+            count+=1
+    if count>=4:
+        buff_creature(itself,params=[1,0])
+        add_ability_to_creature(field,player,itself,virtual,add_ability=[KeywordAbility.WARD.value])
+
+def creature_ability_071(field,player,opponent,virtual,target,itself):
+    """
+    Fanfare: Gain Storm if an allied Commander card is in play.
+    """
+    for card in field.card_location[player.player_num]:
+        if card.trait.value==Trait.COMMANDER.value:
+            add_ability_to_creature(field,player,itself,virtual,add_ability=[KeywordAbility.STORM.value])
+            return
+            
+
+def creature_ability_072(field,player,opponent,virtual,target,itself):
+    """
+    Evolve: Destroy an enemy follower if an allied Neutral follower is in play.
+    """
+    for card in field.card_location[player.player_num]:
+        if card.card_class.value==LeaderClass.NEUTRAL.value:
+            destroy_opponent_creature(field,opponent,virtual,target)
+            return
+
+
+def creature_ability_073(field,player,opponent,virtual,target,itself):
+    """
+    Fanfare: Enhance (9) - Can attack 2 times per turn. Reduce damage to 0 until the end of the turn.
+    """
+    if itself.active_enhance_code[0]==True:
+        itself.can_attack_num=2
+        if virtual==False:
+            mylogger.info("{} get 'can attack 2 times per turn' ".format(itself.name))
+        add_temporary_ability_to_creature(field,player,itself,virtual,add_ability=[KeywordAbility.REDUCE_DAMAGE_TO_ZERO.value])
+
+
+def creature_ability_074(field,player,opponent,virtual,target,itself):
+    """
+    Fanfare: Summon a Kunoichi Trainee.
+    """
+    summon_creature(field,player,virtual,name="Kunoichi Trainee",num=1)
+
+
 
 creature_ability_dict={0:None,1:creature_ability_001,2:creature_ability_002,3:creature_ability_003,\
     4:creature_ability_004,5:creature_ability_005,6:creature_ability_006,7:creature_ability_007,8:creature_ability_008,
@@ -451,5 +507,6 @@ creature_ability_dict={0:None,1:creature_ability_001,2:creature_ability_002,3:cr
     54:creature_ability_054,55:creature_ability_055,56:creature_ability_056,57:creature_ability_057,58:creature_ability_058,
     59:creature_ability_059,60:creature_ability_060,61:creature_ability_061,62:creature_ability_062,63:creature_ability_063,
     64:creature_ability_064,65:creature_ability_065,66:creature_ability_066,67:creature_ability_067,68:creature_ability_068,\
-    69:creature_ability_069}
+    69:creature_ability_069,70:creature_ability_070,71:creature_ability_071,72:creature_ability_072,73:creature_ability_073,\
+    74:creature_ability_074}
 

@@ -20,6 +20,7 @@ def tsv_to_deck(tsv_name):
         reader = csv.reader(f,delimiter='\t')
         for row in reader:
             card_category=row[0]
+            #mylogger.info(row)
             if card_category=="Creature":
                 deck.append(Creature(creature_name_to_id[row[1]]),num=int(row[2]))
             elif card_category=="Spell":
@@ -67,6 +68,9 @@ def game_play(Player1,Player2,D1,D2,win,lose,lib_num,virtual_flg=False):
     f.players[1].hand=[]
     f.players[1].deck=None
     f.players[1].lib_out_flg=False
+    if virtual_flg==False:
+        f.graveyard.show_graveyard()
+        f.play_cards.show_play_list()
     return win,lose,lib_num,turn,first
 
 #import numba
@@ -129,8 +133,12 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
                 class_pool[i]=1
                 D[i]=tsv_to_deck("Forest.tsv")
                 D[i].set_deck_type(4)
-                
+            
             elif deck_type[i]==8:
+                class_pool[i]=2
+                D[i]=tsv_to_deck("Sword_Aggro.tsv")
+                D[1].set_deck_type(1)
+            elif deck_type[i]==9:
                 class_pool[i]=2
                 d.set_deck_type(2)
                 #テスト用デッキ
@@ -178,6 +186,7 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
         mylogger.info("Result:win={}, lose={}, libout_num={}, win_rate:{:<3}".format(win_lose[0],win_lose[1],lib_num,win_lose[0]/iteration))
         mylogger.info("deck size:{} mean_end_turn {:<3}".format(len(D[0].deck),sum_of_turn/iteration))
         mylogger.info("first_win_rate:{:<3}".format(first_num/iteration))
+
         import itertools
         if Player1.mulligan_policy.data_use_flg==True:
             mylogger.info("mulligan_data:{}".format(set(list(itertools.compress(Player1.mulligan_policy.mulligan_data,\
@@ -186,7 +195,7 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
             mylogger.info("mulligan_data:{}".format(set(list(itertools.compress(Player2.mulligan_policy.mulligan_data,\
                 Player2.mulligan_policy.win_data)))))
 
-def test_2(Player_1,Player_2,iteration,same_flg=False):
+def test_2(Player_1,Player_2,iteration,same_flg=False,result_name="Result.tsv"):
         Player1=copy.deepcopy(Player_1)
         Player2=copy.deepcopy(Player_2)
         Player1=Player_1
@@ -197,33 +206,38 @@ def test_2(Player_1,Player_2,iteration,same_flg=False):
         win=0
         lose=0
         lib_num=0
-        D=[Deck() for i in range(8)]
+        D=[Deck() for i in range(9)]
 
         for i,d in enumerate(D):
             if i==0:
-                D[i]=tsv_to_deck("Sword.tsv")
-
+                D[i]=tsv_to_deck("Sword_Aggro.tsv")
+                #Aggro
             elif i==1:
-                D[i]=tsv_to_deck("Haven.tsv")
-
-            elif i==2:
-                D[i]=tsv_to_deck("Dragon.tsv")
-
-            elif i==3:
-                D[i]=tsv_to_deck("Rune.tsv")
-
-            elif i==4:
-                D[i]=tsv_to_deck("Blood.tsv")
-
-            elif i==5:
-                D[i]=tsv_to_deck("Shadow.tsv")
-
-            elif i==6:
                 D[i]=tsv_to_deck("Rune_Earth.tsv")
-
+                #Aggro
+            elif i==2:
+                D[i]=tsv_to_deck("Sword.tsv")
+                #Mid
+            elif i==3:
+                D[i]=tsv_to_deck("Shadow.tsv")
+                #Mid
+            elif i==4:
+                D[i]=tsv_to_deck("Haven.tsv")
+                #Control
+            elif i==5:
+                D[i]=tsv_to_deck("Blood.tsv")
+                #Control
+            elif i==6:
+                D[i]=tsv_to_deck("Dragon.tsv")
+                #Control
             elif i==7:
                 D[i]=tsv_to_deck("Forest.tsv")
-                
+                #Combo
+            elif i==8:
+                D[i]=tsv_to_deck("Rune.tsv")
+                #Combo
+
+
 
         #D[0].mean_cost=D[0].get_mean_cost()
         #D[1].mean_cost=D[1].get_mean_cost()
@@ -231,11 +245,11 @@ def test_2(Player_1,Player_2,iteration,same_flg=False):
         #Turn_Players=[Player1,Player2]
         Results={}
         mylogger.info("same_flg:{}".format(same_flg))
-        for j in range(8):
+        for j in range(len(D)):
             l=0
             if same_flg:
                 l=j
-            for k in range(l,8):
+            for k in range(l,len(D)):
                 Turn_Players=[Player1,Player2]
                 assert Player1!=Player2
                 win_lose=[win,lose]
@@ -251,9 +265,33 @@ def test_2(Player_1,Player_2,iteration,same_flg=False):
                         win_lose[i%2],win_lose[(i+1)%2],lib_num,virtual_flg=True)
                     first_num+=first
                 Results[(j,k)]=[win_lose[0]/iteration,first_num/iteration]
-            mylogger.info("complete:{}/8".format(j+1))
-        for key in list(Results.keys()):
-            mylogger.info("({}):rate:{} first:{}".format(key,Results[key][0],Results[key][1]))
+            mylogger.info("complete:{}/{}".format(j+1,len(D)))
+        #for key in list(Results.keys()):
+        #    mylogger.info("({}):rate:{} first:{}".format(key,Results[key][0],Results[key][1]))
+        deck_id_2_name={0:"Sword_Aggro",1:"Rune_Earth",2:"Sword",3:"Shadow",4:"Haven",5:"Blood",6:"Dragon",7:"Forest",8:"Rune"}
+        with open("Battle_Result/"+result_name,"w") as f:
+            writer = csv.writer(f,delimiter='\t',lineterminator='\n')
+            row=["RULE\\MCTS"]
+            mylogger.info("row:{}".format(row))
+            mylogger.info("row:{}".format([deck_id_2_name[i] for i in range(9)]))
+            row=row+[deck_id_2_name[i] for i in range(9)]
+            mylogger.info("row:{}".format(row))
+            writer.writerow(row)
+            if same_flg:
+                for i in range(9):
+                    row=[deck_id_2_name[i]]
+                    for j in range(0,i+1):
+                        row.append(Results[(j,i)][0])
+                    mylogger.info(row)
+                    writer.writerow(row)
+            else:
+                for i in range(9):
+                    row=[deck_id_2_name[i]]
+                    for j in range(9):
+                        row.append(Results[(i,j)][0])
+                    writer.writerow(row)
+
+                
 
 
 Players=[]
@@ -271,10 +309,11 @@ Players.append(Player(9,True,policy=Test_MCTSPolicy(),mulligan=Min_cost_mulligan
 Players.append(Player(9,True,policy=Test_2_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#12
 Players.append(Player(9,True,policy=Test_3_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#13
 Players.append(Player(9,True,policy=Aggro_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#14
-Players.append(Player(9,True,policy=MCTSPolicy()))#15
-Players.append(Player(9,True,policy=MCTSPolicy(),mulligan=Test_mulligan_policy()))#16
-Players.append(Player(9,True,policy=AggroPolicy(),mulligan=Min_cost_mulligan_policy()))#17
-Players.append(Player(9,True,policy=AggroPolicy(),mulligan=Test_mulligan_policy()))#18
+Players.append(Player(9,True,policy=EXP3_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#15
+Players.append(Player(9,True,policy=MCTSPolicy()))#16
+Players.append(Player(9,True,policy=MCTSPolicy(),mulligan=Test_mulligan_policy()))#17
+Players.append(Player(9,True,policy=AggroPolicy(),mulligan=Min_cost_mulligan_policy()))#18
+Players.append(Player(9,True,policy=AggroPolicy(),mulligan=Test_mulligan_policy()))#19
 #Player(5,True,policy=AggroPolicy(),mulligan=Min_cost_mulligan_policy)
 #Player(5,False,policy=GreedyPolicy(),mulligan=Min_cost_mulligan_policy)
 
@@ -285,12 +324,14 @@ v=False
 deck_flg=False
 p1,p2=0,0
 human_player=HumanPlayer(9,first=True)
+file_name="Result.tsv"
 if len(sys.argv)>=2:
     n=int(sys.argv[1])
 if len(sys.argv)>=4:
     a=int(sys.argv[2])-1
     b=int(sys.argv[3])-1
 if len(sys.argv)>=5:
+    file_name=sys.argv[4]
     v=sys.argv[-1]=="-v"
 if len(sys.argv)>=6:
     mylogger.info("Deck")
@@ -313,14 +354,16 @@ if b==-1:
     d2=human_player
 else:
     d2=copy.deepcopy(Players[b])
+
 t1=datetime.datetime.now()
-if sys.argv[-1]=="-demo":
+if sys.argv[-1]=="-demo":  
+    #cProfile.run('test_1(d1,d2,n,deck_type=[p1,p2])')
     test_1(d1,d2,n,deck_type=[p1,p2])
 else:
     if a==b:
-        test_2(d1,d2,iteration,same_flg=True)
+        test_2(d1,d2,iteration,same_flg=True,result_name=file_name)
     else:
-        test_2(d1,d2,iteration)
+        test_2(d1,d2,iteration,result_name=file_name)
 mylogger.info(t1)
 t2=datetime.datetime.now()
 mylogger.info(t2)
