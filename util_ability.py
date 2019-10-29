@@ -3,6 +3,7 @@ import card_setting
 from my_moduler import get_module_logger
 mylogger = get_module_logger(__name__)
 from my_enum import *
+counter=0
 def summon_creature(field,player,virtual,name=None,num=1):
     for i in range(num):
         if len(field.card_location[player.player_num])>=field.max_field_num:
@@ -71,6 +72,7 @@ def get_damage_to_player(player,virtual,num=0):
     damage=player.get_damage(num)
     if virtual==False:
         mylogger.info("Player {} get {} damage".format(player.player_num+1,damage))
+
 
 def restore_player_life(player,virtual,num=0):
     player.restore_life(num=num,virtual=virtual)

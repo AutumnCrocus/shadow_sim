@@ -7,7 +7,7 @@ from my_moduler import get_module_logger,get_state_logger
 from mulligan_setting import *
 mylogger = get_module_logger(__name__)
 #mylogger = get_module_logger('mylogger')
-
+import itertools
 
 statelogger = get_state_logger('state')
 from my_enum import *
@@ -136,8 +136,9 @@ class Player:
             elif self.hand[card_id].card_category=="Amulet":
                 field.play_amulet(self.hand,card_id,self.player_num,player,opponent,virtual=virtual,target=target)
             field.players_play_num+=1
-            if field.stack!=[]:
-                field.solve_lastword_ability(virtual=virtual,player_num=self.player_num)
+            field.ability_resolution(virtual=virtual,player_num=self.player_num)
+            #if field.stack!=[]:
+            #    field.solve_lastword_ability(virtual=virtual,player_num=self.player_num)
             
         def attack_to_follower(self,field,attacker_id,target_id,virtual=False):
             field.attack_to_follower([self.player_num,attacker_id],[1-self.player_num,target_id],field,virtual=virtual)
@@ -148,6 +149,7 @@ class Player:
 
         def creature_evolve(self,creature,field,target=None,virtual=False):
             assert field.evo_point[self.player_num]>0
+            if virtual==False:mylogger.info("evo_check")
             field.evo_point[self.player_num]-=1
             field.evolve(creature,virtual=virtual,target=target)
 
@@ -188,9 +190,6 @@ class Player:
                     real_hand=player.hand
                     sim_hand=self.policy.current_node.field.players[player.player_num].hand
                     if len(real_hand)!=len(sim_hand):
-                        #mylogger.info("Different hand len")
-                        #player.show_hand()
-                        #self.policy.current_node.field.players[player.player_num].show_hand()
                         msg="diff hand len error"
                         re_check=True
                     else:
@@ -198,10 +197,20 @@ class Player:
                             if real_hand[i].name!=sim_hand[i].name:
                                 re_check=True
                                 msg="diff hand name error"
-                                #player.show_hand()
-                                #self.policy.current_node.field.players[player.player_num].show_hand()
-                                #mylogger.info("Different hand name")
                                 break
+                        if re_check==False:
+                            if any(field.card_num[i]!=self.policy.current_node.field.card_num[i] for i in range(2)):
+                                re_check=True
+                                msg="diff field len error"
+                            if re_check==False:
+                                for side_id in range(2):
+                                    for location_id in range(len(field.card_location[side_id])):
+                                        if field.card_location[side_id][location_id].name!=self.policy.current_node.field.card_location[side_id][location_id].name:
+                                            msg="diff field card error"
+                                            re_check=True
+                                            break
+                                    if re_check==True:break
+                            
                 if action_num==-1:
                     if card_id not in field.get_creature_location()[player.player_num]\
                         or field.card_location[player.player_num][card_id].evolved==True:
@@ -212,21 +221,21 @@ class Player:
                         msg="illigal_hand_card_error"
                         re_check=True
                     elif len(regal_targets[card_id])>0 and target_id not in regal_targets[card_id]:
-                        mylogger.info("target is null!")
+                        #mylogger.info("target is null!")
                         msg="illigal_target_error"
                         re_check=True
                     elif player.hand[card_id].have_target==8 and (self.policy.policy_type==3):
                         real_hand=player.hand
                         sim_hand=self.policy.current_node.field.players[player.player_num].hand
                         if len(real_hand)!=len(sim_hand):
-                            mylogger.info("Different hand len")
+                            #mylogger.info("Different hand len")
                             msg="diff hand len error"
                             re_check=True
                         else:
                             for i in range(len(real_hand)):
                                 if real_hand[i].name!=sim_hand[i].name:
                                     re_check=True
-                                    mylogger.info("Different hand name")
+                                    #mylogger.info("Different hand name")
                                     break
                     
                     if len(player.hand)<=card_id:
@@ -259,6 +268,8 @@ class Player:
                     #player.show_hand()
                     #field.show_field()
                     #raise Exception(msg)
+                    #if virtual==False:
+                    self.current_node=None
                     if virtual==False:
                         mylogger.info(msg)
                 elif re_check==True:
@@ -308,10 +319,11 @@ class Player:
                 self.attack_to_player(field,card_id,opponent,virtual=virtual)
 
             field.check_death(player_num=self.player_num,virtual=virtual)
-            field.solve_field_trigger_ability(virtual=virtual,player_num=self.player_num)
-            if field.stack!=[]:
-                field.solve_lastword_ability(virtual=virtual,player_num=self.player_num)
-                field.solve_field_trigger_ability(virtual=virtual,player_num=self.player_num)
+            field.ability_resolution(virtual=virtual,player_num=self.player_num)
+            #field.solve_field_trigger_ability(virtual=virtual,player_num=self.player_num)
+            #if field.stack!=[]:
+            #    field.solve_lastword_ability(virtual=virtual,player_num=self.player_num)
+            #    field.solve_field_trigger_ability(virtual=virtual,player_num=self.player_num)
             return field.check_game_end()
 
                                                            
@@ -380,8 +392,14 @@ class HumanPlayer(Player):
                 if card_id not in able_to_evo:
                     print("already evolved!")
                     return can_play,can_attack,field.check_game_end()
+                if field.card_location[self.player_num][card_id].card_id==96:
+                    maisy=field.card_location[self.player_num][card_id]
+                    mylogger.info("name:{}".format(maisy.name))
+                    mylogger.info("target:{}".format(maisy.evo_target))
                 if field.card_location[self.player_num][card_id].evo_target!=None:
+                    mylogger.info("target-evolve")
                     regal = field.get_regal_targets(field.card_location[self.player_num][card_id],target_type=0,player_num=self.player_num)
+                    mylogger.info("targets:{}".format(regal))
                     if regal!=[]:
                         print("you can target:{}".format(regal))
                         target_id=int(input("input target_id :"))
@@ -392,6 +410,7 @@ class HumanPlayer(Player):
                         
 
                 else:    
+                    mylogger.info("evolve")
                     self.creature_evolve(field.card_location[self.player_num][card_id],field)
 
             if action_num==0:
@@ -456,8 +475,9 @@ class HumanPlayer(Player):
 
             field.check_death(player_num=self.player_num,virtual=virtual)
             field.solve_field_trigger_ability(virtual=virtual,player_num=self.player_num)
-            if field.stack!=[]:
-                field.solve_lastword_ability(virtual=virtual,player_num=self.player_num)
+            #if field.stack!=[]:
+            #    field.solve_lastword_ability(virtual=virtual,player_num=self.player_num)
+            field.ability_resolution(virtual=virtual,player_num=self.player_num)
             return field.check_game_end()
                                     
 

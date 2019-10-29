@@ -173,7 +173,10 @@ def creature_ability_027(field,player,opponent,virtual,target,itself):
     """
     if target!=None:
         target_creature=field.card_location[player.player_num][target]
-        assert itself.target_regulation(target_creature)==True
+        if  itself.target_regulation(target_creature)==False:
+            mylogger.info("target_id:{}".format(target))
+            field.show_field()
+            assert False
         if virtual==False:
             mylogger.info("{} get +1/0".format(target_creature.name))
         buff_creature(target_creature,params=[1,0])
@@ -470,6 +473,7 @@ def creature_ability_072(field,player,opponent,virtual,target,itself):
     """
     for card in field.card_location[player.player_num]:
         if card.card_class.value==LeaderClass.NEUTRAL.value:
+            #mylogger.info("hit")
             destroy_opponent_creature(field,opponent,virtual,target)
             return
 

@@ -37,7 +37,8 @@ class Field:
         #self.stack=[]
         self.stack=deque()
         self.players_play_num=0
-        self.state_log=[]
+        #self.state_log=[]
+        self.state_log=deque()
 
     def set_data(self,field):
         #self.card_location=copy.deepcopy(field.card_location)
@@ -64,15 +65,6 @@ class Field:
         self.players_play_num=int(field.players_play_num)
 
     def solve_lastword_ability(self,virtual=False,player_num=0):
-        """
-        while self.stack!=[] :
-            (ability,player_num,itself)=self.stack.pop(0)
-            if virtual==False:
-                mylogger.info("{}'s ability actived".format(itself.name))
-            ability(self,self.players[player_num],self.players[1-player_num],virtual,None,itself)
-            if self.check_game_end()==True:
-                break
-        """
         while len(self.stack)>0 :
             (ability,player_num,itself)=self.stack.pop()
             if virtual==False:
@@ -84,15 +76,11 @@ class Field:
             #if virtual==False:
             #    mylogger.info("rest_num={}".format(len(self.stack)))
     def solve_field_trigger_ability(self,virtual=False,player_num=0):
-        #if virtual==False:
-        #    mylogger.info("state_log:{}".format(self.state_log))
-        #    mylogger.info("state_log:{}".format([State_Code(self.state_log[i][0]).name for i in range(len(self.state_log))]))
-            
         index=0
         while True:
             if len(self.state_log)==0:
                 break
-            state_log=self.state_log.pop(0)
+            state_log=self.state_log.pop()
             for i in range(2):
                 index=0
                 while index < len(self.card_location[(i+player_num)%2]):
@@ -102,13 +90,22 @@ class Field:
                         for ability in thing.trigger_ability:
                             ability(self,self.players[(i+player_num)%2],self.players[(i+player_num+1)%2],virtual,None,thing,state_log=state_log)
                         after=len(self.card_location[(i+player_num)%2])
-                        if before==after:
-                            index+=1
+                        #if before==after:
+                        #    index+=1
+                        index+=int(before==after)
                     else:
                         index+=1
 
                     if self.check_game_end()==True:
                         return
+
+    def ability_resolution(self,virtual=False,player_num=0):
+        chain_len=0
+        while len(self.stack)>0 or len(self.state_log)>0:
+            self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+            self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+            chain_len+=1
+            assert chain_len<100,"infinite_chain_error"
 
     def gain_max_pp(self,player_num=0,num=0,virtual=False):
         if self.cost[player_num]<self.max_cost: 
@@ -139,11 +136,12 @@ class Field:
             self.state_log.append([State_Code.PLAY.value,(player_num,tmp.card_category,tmp.card_id)])#1はプレイ
             tmp.is_in_field=True
             tmp.is_tapped=True
-            self.set_card(tmp,player_num,virtual=False)
+            self.set_card(tmp,player_num,virtual=virtual)
             if tmp.fanfare_ability != None:
                 tmp.fanfare_ability(self,player,opponent,virtual,target,tmp)
-            self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+            #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
             self.play_cards.append(tmp.card_category,tmp.card_id,player_num)
+            self.ability_resolution(virtual=virtual,player_num=player_num)
         else:
             raise Exception('field is full!\n')
     
@@ -156,7 +154,8 @@ class Field:
         tmp.is_in_graveyard=True
         self.graveyard.append(tmp.card_category,tmp.card_id,player_num)
         self.play_cards.append(tmp.card_category,tmp.card_id,player_num)
-        self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+        self.ability_resolution(virtual=virtual,player_num=player_num)
+        #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
 
     def play_amulet(self,hand,card_id,player_num,player,opponent,virtual=False,target=None):
         if self.card_num[player_num]<self.max_field_num:
@@ -168,8 +167,9 @@ class Field:
             self.card_num[player_num]+=1
             if tmp.fanfare_ability != None:
                 tmp.fanfare_ability(self,player,opponent,virtual,target,tmp)
-            self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+            #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
             self.play_cards.append(tmp.card_category,tmp.card_id,player_num)
+            self.ability_resolution(virtual=virtual,player_num=player_num)
         else:
             raise Exception('field is full!\n')
 
@@ -197,7 +197,8 @@ class Field:
                 ability(self,player,opponent,virtual,target,new_card)
             new_card.is_in_graveyard=True
             self.graveyard.append(new_card.card_category,new_card_id,player_num)
-            self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+            #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+            self.ability_resolution(virtual=virtual,player_num=player_num)
 
 
     def set_card(self,card,player_num,virtual=False):
@@ -207,7 +208,8 @@ class Field:
             card.is_tapped=True
             self.card_location[player_num].append(card)
             self.card_num[player_num]+=1
-            self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+            #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+            self.ability_resolution(virtual=virtual,player_num=player_num)
         else:
             None
 
@@ -230,6 +232,7 @@ class Field:
         self.graveyard.append(tmp.card_category,tmp.card_id,location[0])
         del self.card_location[location[0]][location[1]]
         self.card_num[location[0]]-=1
+        self.ability_resolution(virtual=virtual,player_num=location[0])
 
     def return_card_to_hand(self,target_location,virtual=False):
         assert len(self.card_location[target_location[0]]) > target_location[1]
@@ -250,6 +253,7 @@ class Field:
             
         if card!=None:
             self.players[target_location[0]].hand.append(card)
+        self.ability_resolution(virtual=virtual,player_num=target_location[0])    
 
     def banish_card(self,location,virtual=False):
         assert self.card_location[location[0]][location[1]]!=None
@@ -257,6 +261,7 @@ class Field:
             mylogger.info("{}(location_id={}) is banished".format(self.card_location[location[0]][location[1]].name,location[1]))
         del self.card_location[location[0]][location[1]]
         self.card_num[location[0]]-=1
+        self.ability_resolution(virtual=virtual,player_num=location[0])
 
     def transform_card(self,location,card=None,virtual=False):
         assert self.card_location[location[0]][location[1]]!=None and card==None
@@ -264,6 +269,7 @@ class Field:
             mylogger.info("{}(location_id={}) is transformed into {}".format(self.card_location[location[0]][location[1]].name,\
                 location[1],card.name))
         self.card_location[location[0]][location[1]]=card
+        self.ability_resolution(virtual=virtual,player_num=location[0])
 
     def show_field(self):
         for i in range(2):
@@ -283,9 +289,7 @@ class Field:
         assert attacking_creature.can_attack_to_follower() and defencing_creature.can_be_attacked(),\
             "attack:{} defence:{}".format(attacking_creature.can_attack_to_follower(),defencing_creature.can_be_attacked())
         attacking_creature.current_attack_num+=1
-        if virtual==False:   
-            if attacking_creature.is_tapped==True and attacking_creature.evolved==True:
-                mylogger.info("{}'s Evo_Attack!".format(self.players[attack[0]].name))     
+        if virtual==False:      
             mylogger.info("Player {}'s {} attacks Player {}'s {}".format(attack[0]+1,attacking_creature.name\
                 ,defence[0]+1,defencing_creature.name))
 
@@ -294,15 +298,12 @@ class Field:
         for ability in defencing_creature.in_battle_ability:
             ability(self,self.players[defence[0]],self.players[attack[0]],defencing_creature,attacking_creature,situation_num=[3],virtual=virtual)
         self.state_log.append([State_Code.ATTACK_TO_FOLLOWER.value,attack[0],attacking_creature,defencing_creature])#5はフォロワーに攻撃したとき
-        #while self.stack!=[]:
+        #while len(self.stack)>0:
         #    self.solve_field_trigger_ability(virtual=virtual)
         #    self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
-        while len(self.stack)>0:
-            self.solve_field_trigger_ability(virtual=virtual)
-            self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
+        self.ability_resolution(virtual=virtual,player_num=attack[0])
         if attacking_creature.is_in_field!=True or defencing_creature.is_in_field!=True:
             return
-        #attacking_creature.attacked_flg=True
         amount=attacking_creature.get_damage(defencing_creature.power)
         if KeywordAbility.DRAIN.value in attacking_creature.ability:
             restore_player_life(self.players[attack[0]],virtual,num=amount)
@@ -315,7 +316,8 @@ class Field:
         if KeywordAbility.BANE.value in defencing_creature.ability and\
              KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value not in attacking_creature.ability:
             self.remove_card(attack,virtual)
-        self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
+        #self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
+        self.ability_resolution(virtual=virtual,player_num=attack[0])
             
     def attack_to_player(self,attacker,defence_player,visible=False,virtual=False):
         attacking_creature=self.card_location[attacker[0]][attacker[1]]
@@ -325,14 +327,15 @@ class Field:
         attacking_creature.current_attack_num+=1
         for ability in attacking_creature.in_battle_ability:
             ability(self,self.players[attacker[0]],defence_player,attacking_creature,defence_player,situation_num=[0,2],virtual=virtual)
-        self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
+        #self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
         self.state_log.append([State_Code.ATTACK_TO_PLAYER.value,attacker[0],attacking_creature])#5はプレイヤーに攻撃したとき
+        self.ability_resolution(virtual=virtual,player_num=attacker[0])
         #while self.stack!=[]:
         #    self.solve_field_trigger_ability(virtual=virtual,player_num=attacker[0])
         #    self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
-        while len(self.stack)>0:
-            self.solve_field_trigger_ability(virtual=virtual,player_num=attacker[0])
-            self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
+        #while len(self.stack)>0:
+        #    self.solve_field_trigger_ability(virtual=virtual,player_num=attacker[0])
+        #    self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
         if attacking_creature.is_in_field!=True:
             return
         #attacking_creature.attacked_flg=True
@@ -346,7 +349,8 @@ class Field:
         if KeywordAbility.DRAIN.value in attacking_creature.ability:
             restore_player_life(self.players[attacker[0]],virtual,num=amount)
         
-        self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
+        #self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
+        self.ability_resolution(virtual=virtual,player_num=attacker[0])
         if visible==True:
             print("Player",defence_player.player_num+1,"life: ",defence_player.life)
 
@@ -385,10 +389,11 @@ class Field:
         self.check_death(player_num,virtual=virtual)
 
         #while self.stack!=[]:
-        while len(self.stack)>0:
-            
-            self.solve_lastword_ability(virtual=virtual,player_num=player_num)
-            self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+        #while len(self.stack)>0:
+        #    
+        #    self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+        #    self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+        self.ability_resolution(virtual=virtual,player_num=player_num)
     
 
        
@@ -431,9 +436,10 @@ class Field:
                 return
         self.check_death(player_num=player_num,virtual=virtual)
         #while self.stack!=[]:
-        while len(self.stack)>0:
-            self.solve_lastword_ability(virtual=virtual,player_num=player_num)
-            self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+        #while len(self.stack)>0:
+        #    self.solve_lastword_ability(virtual=virtual,player_num=player_num)
+        #    self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+        self.ability_resolution(virtual=virtual,player_num=player_num)
         self.players_play_num=0
     
 
@@ -463,6 +469,7 @@ class Field:
         self.reset_remain_cost(player_num)
     
     def evolve(self,creature,virtual=False,target=None):
+        if virtual==False:mylogger.info("evo_check")
         assert creature.evolved==False and self.evo_flg==False
         card_index=int(creature not in self.card_location[0])
         self.state_log.append(([State_Code.EVOLVE.value,(card_index,id(creature))]))#5は進化したとき
@@ -813,21 +820,21 @@ class Field:
                 return []
             if target_category==1:
                 for card_id in can_be_targeted:
-                    target_thing=self.card_location[1-player_num][card_id]
-                    if regulation_func(target_thing)==True:
+                    target_follower=self.card_location[1-player_num][card_id]
+                    if regulation_func(target_follower)==True:
                         regal_targets.append(card_id)
 
             elif target_category==2:
                 for card_id in self.get_creature_location()[player_num]:
-                    target_thing=self.card_location[player_num][card_id]
-                    if regulation_func(target_thing)==True:
+                    target_follower=self.card_location[player_num][card_id]
+                    if regulation_func(target_follower)==True:
                         regal_targets.append(card_id)
 
             elif target_category==3:
                 regal_targets=[-1]
                 for card_id in can_be_targeted:
-                    target_thing=self.card_location[1-player_num][card_id]
-                    if regulation_func(target_thing)==True:
+                    target_follower=self.card_location[1-player_num][card_id]
+                    if regulation_func(target_follower)==True:
                         regal_targets.append(card_id)
 
             elif target_category==4:

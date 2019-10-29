@@ -3,7 +3,7 @@ from my_moduler import get_module_logger
 import card_setting
 mylogger = get_module_logger(__name__)
 from util_ability import * 
-
+counter=0
 def spell_ability_001(field,player,opponent,virtual,target,itself):
     get_damage_to_creature(field,opponent,virtual,target,num=3)
     put_card_in_hand(field,player,virtual,name="Earth Essence",card_category="Amulet")

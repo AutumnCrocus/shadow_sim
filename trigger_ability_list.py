@@ -73,6 +73,8 @@ class trigger_ability_007:
         Whenever an enemy follower is destroyed, gain +1/+0.
         """
         if state_log!=None and state_log[0]==State_Code.DESTROYED.value and state_log[1][0]==opponent.player_num:
+            if virtual==False:
+                mylogger.info("{} get +1/0".format(itself.name))
             buff_creature(itself,params=[1,0])
 
 class trigger_ability_008:

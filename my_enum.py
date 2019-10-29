@@ -1,5 +1,5 @@
 from enum import Enum
-class LeaderClass(Enum):
+class __LeaderClass(Enum):
     NEUTRAL = 0
     FOREST = 1
     SWORD = 2
@@ -10,19 +10,25 @@ class LeaderClass(Enum):
     HAVEN = 7
     PORTAL = 8
     
-class Trait(Enum):
+LeaderClass=__LeaderClass
+
+class __Trait(Enum):
     EARTH_SIGIL = -2
     NONE = -1
     OFFICER = 0
     COMMANDER = 1
 
-class DeckType(Enum):
+Trait=__Trait
+
+class __DeckType(Enum):
     AGGRO = 1
     MID = 2
     CONTROL = 3
     COMBO = 4
 
-class KeywordAbility(Enum):
+DeckType=__DeckType
+
+class __KeywordAbility(Enum):
     STORM = 1
     BANE = 2
     WARD = 3
@@ -45,7 +51,9 @@ class KeywordAbility(Enum):
 #10はダメージを受けない
 #11は能力によるダメージを受けない
 
-class State_Code(Enum):
+KeywordAbility=__KeywordAbility
+
+class __State_Code(Enum):
     PLAY = 1
     SET = 2
     DESTROYED = 3
@@ -53,3 +61,14 @@ class State_Code(Enum):
     ATTACK_TO_FOLLOWER = 5
     ATTACK_TO_PLAYER = 6
     RESTORE_PLAYER_LIFE = 7
+
+State_Code=__State_Code
+
+class __Action_Code(Enum):
+    EVOLVE = -1
+    TURN_END = 0
+    PLAY_CARD = 1
+    ATTACK_TO_FOLLOWER = 2
+    ATTACK_TO_PLAYER = 3
+
+Action_Code=__Action_Code

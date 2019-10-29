@@ -310,10 +310,9 @@ Players.append(Player(9,True,policy=Test_2_MCTSPolicy(),mulligan=Min_cost_mullig
 Players.append(Player(9,True,policy=Test_3_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#13
 Players.append(Player(9,True,policy=Aggro_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#14
 Players.append(Player(9,True,policy=EXP3_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#15
-Players.append(Player(9,True,policy=MCTSPolicy()))#16
-Players.append(Player(9,True,policy=MCTSPolicy(),mulligan=Test_mulligan_policy()))#17
-Players.append(Player(9,True,policy=AggroPolicy(),mulligan=Min_cost_mulligan_policy()))#18
-Players.append(Player(9,True,policy=AggroPolicy(),mulligan=Test_mulligan_policy()))#19
+Players.append(Player(9,True,policy=New_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#16
+Players.append(Player(9,True,policy=New_Aggro_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#17
+
 #Player(5,True,policy=AggroPolicy(),mulligan=Min_cost_mulligan_policy)
 #Player(5,False,policy=GreedyPolicy(),mulligan=Min_cost_mulligan_policy)
 

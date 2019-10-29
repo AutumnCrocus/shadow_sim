@@ -193,7 +193,7 @@ creature_end_of_turn_ability=tsv_2_ability_dict("All_end_of_turn_list.tsv",name_
 creature_start_of_turn_ability=tsv_2_ability_dict("All_start_of_turn_list.tsv",name_to_id=creature_name_to_id)
 creature_has_target=tsv_2_ability_dict("All_fanfare_target_list.tsv",name_to_id=creature_name_to_id)
 creature_evo_effect=tsv_2_ability_dict("All_evo_effect_list.tsv",name_to_id=creature_name_to_id)
-creature_has_evo_effect_target={29:1,41:1,83:2,96:72}
+creature_has_evo_effect_target={29:1,41:1,83:2,96:1}
 creature_target_regulation={46:lambda x:x.power>=5,48:lambda x:x.origin_cost==1,88:lambda card:card.card_category=="Creature" \
     and card.card_class.name=="NEUTRAL"}
 another_target_func=lambda creature,itself:creature!=itself
@@ -514,6 +514,7 @@ class Creature(Card):
         self.current_attack_num=0
 
     def evolve(self,field,target,player_num=0,virtual=False,auto=False):
+        if virtual==False:mylogger.info("evo_check")
         self.evolved=True
         self.power+=self.evo_stat[0]
         self.toughness+=self.evo_stat[1]
