@@ -3,7 +3,6 @@ from my_moduler import get_module_logger
 import card_setting
 mylogger = get_module_logger(__name__)
 from util_ability import * 
-counter=0
 def spell_ability_001(field,player,opponent,virtual,target,itself):
     get_damage_to_creature(field,opponent,virtual,target,num=3)
     put_card_in_hand(field,player,virtual,name="Earth Essence",card_category="Amulet")
@@ -28,7 +27,18 @@ def spell_ability_005(field,player,opponent,virtual,target,itself):
 
     if virtual==False:
         mylogger.info("All creatures are destroyed!")
+    for j in range(2):
+        side_num=(player.player_num+j)%2
+        #side=field.get_creature_location()[side_num]
+        side=field.card_location[side_num]
+        for thing in side:
+            #thing=field.card_location[side_num][i]
+            if thing.card_category=="Creature" and KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value not in thing.ability:
+                thing.is_in_field=False
+                thing.is_in_graveyard=True
+    field.check_death(player_num=player.player_num,virtual=virtual)
 
+    """
     while True:
         break_flg=True
         continue_flg=False
@@ -44,6 +54,7 @@ def spell_ability_005(field,player,opponent,virtual,target,itself):
 
         if break_flg==True:
             break
+    """
 
 def spell_ability_006(field,player,opponent,virtual,target,itself):
     destroy_opponent_creature(field,opponent,virtual,target)

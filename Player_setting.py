@@ -161,10 +161,10 @@ class Player:
         def decide(self,player,opponent,field,virtual=False):
             field.stack=[]
             #field.get_previous_field()
-            (_,_,can_be_attacked,regal_targets)=field.get_situation(player,opponent)
+            (_,_,can_be_attacked,regal_targets)=field.get_situation(self,opponent)
             #mylogger.info("regal_targets1:{}".format(regal_targets))
             (can_play,can_attack,can_evo),(able_to_play,able_to_attack,able_to_creature_attack,able_to_evo)\
-                =field.get_flag_and_choices(player,opponent,regal_targets)
+                =field.get_flag_and_choices(self,opponent,regal_targets)
             #mylogger.info("regal_targets2:{}".format(regal_targets))
             if virtual==False:
                 self.show_hand()
@@ -183,12 +183,20 @@ class Player:
             card_id=0
             target_id=None
             msg=""
+            policy_count=0
             while True:
+                policy_count+=1
+                if policy_count>20:
+                    mylogger.info("action_cdoe:{}".format((action_num,card_id,target_id)))
+                    self.show_hand()
+                    field.show_field()
+                    assert False,"infinite loop!"
                 re_check=False
-                (action_num,card_id,target_id)=self.policy.decide(player,opponent,field)
+                (action_num,card_id,target_id)=self.policy.decide(self,opponent,field)
+                assert action_num in [-1,0,1,2,3]
                 if self.policy.policy_type==3 and action_num!=0:
-                    real_hand=player.hand
-                    sim_hand=self.policy.current_node.field.players[player.player_num].hand
+                    real_hand=self.hand
+                    sim_hand=self.policy.current_node.field.players[self.player_num].hand
                     if len(real_hand)!=len(sim_hand):
                         msg="diff hand len error"
                         re_check=True
@@ -212,8 +220,9 @@ class Player:
                                     if re_check==True:break
                             
                 if action_num==-1:
-                    if card_id not in field.get_creature_location()[player.player_num]\
-                        or field.card_location[player.player_num][card_id].evolved==True:
+                    if virtual==False:
+                        mylogger.info("able_to_evo:{} card_id:{}".format(field.get_able_to_evo(self),card_id))
+                    if card_id not in field.get_able_to_evo(self):
                         msg="evo_error"
                         re_check=True
                 elif action_num==1:
@@ -224,9 +233,9 @@ class Player:
                         #mylogger.info("target is null!")
                         msg="illigal_target_error"
                         re_check=True
-                    elif player.hand[card_id].have_target==8 and (self.policy.policy_type==3):
-                        real_hand=player.hand
-                        sim_hand=self.policy.current_node.field.players[player.player_num].hand
+                    elif self.hand[card_id].have_target==8 and (self.policy.policy_type==3):
+                        real_hand=self.hand
+                        sim_hand=self.policy.current_node.field.players[self.player_num].hand
                         if len(real_hand)!=len(sim_hand):
                             #mylogger.info("Different hand len")
                             msg="diff hand len error"
@@ -238,13 +247,13 @@ class Player:
                                     #mylogger.info("Different hand name")
                                     break
                     
-                    if len(player.hand)<=card_id:
+                    if len(self.hand)<=card_id:
                         re_check=True
                     else:
                         if player.hand[card_id].card_category!="Spell":
                             if len(field.card_location[self.player_num])==field.max_field_num and self.hand[card_id].active_accelerate_code[0]==False:
                                 re_check=True
-                        elif player.hand[card_id].have_target!=0:
+                        elif self.hand[card_id].have_target!=0:
                             if regal_targets[card_id]==[] or target_id not in regal_targets[card_id]:
                                 msg="illigal spell target error"
                                 re_check=True
@@ -257,24 +266,12 @@ class Player:
                         re_check=True
                 
                 if re_check==True and self.policy.policy_type==3:
-                    """
-                    mylogger.info("Illigal Action")
-                    self.policy.current_node.field.players[player.player_num].show_hand()
-                    self.policy.current_node.field.show_field()
-                    """
-                    #self.policy.action_seq=[]
-                    #self.current_node=None
-                    #mylogger.info("{}".format((action_num,card_id,target_id)))
-                    #player.show_hand()
-                    #field.show_field()
-                    #raise Exception(msg)
-                    #if virtual==False:
                     self.current_node=None
                     if virtual==False:
                         mylogger.info(msg)
                 elif re_check==True:
                     mylogger.info("{}".format((action_num,card_id,target_id)))
-                    player.show_hand()
+                    self.show_hand()
                     field.show_field()
                     raise Exception()
                 else:

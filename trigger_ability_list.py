@@ -82,6 +82,9 @@ class trigger_ability_008:
         self.count=0
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
         #実装途中
+        """
+        Whenever another allied follower attacks, give that follower +1/+0 until the end of the turn.
+        """
         if state_log!=None and (state_log[0]==State_Code.ATTACK_TO_FOLLOWER.value or state_log[0]==State_Code.ATTACK_TO_PLAYER.value):
             if state_log[1]==player.player_num and state_log[2]!=itself:
                 attacking_creature=state_log[2]

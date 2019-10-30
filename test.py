@@ -291,7 +291,141 @@ def test_2(Player_1,Player_2,iteration,same_flg=False,result_name="Result.tsv"):
                         row.append(Results[(i,j)][0])
                     writer.writerow(row)
 
+def test_3(Player_1,Player_2,iteration,same_flg=False,result_name="shadow_result.tsv"):
+        Player1=copy.deepcopy(Player_1)
+        Player2=copy.deepcopy(Player_2)
+        Player1=Player_1
+        Player2=Player_2
+        Player1.name="Alice"
+        Player2.name="Bob"
+        assert Player1!=Player2
+        win=0
+        lose=0
+        lib_num=0
+        D=[Deck() for i in range(9)]
+
+        D[0]=tsv_to_deck("Sword_Aggro.tsv")
+        D[1]=tsv_to_deck("Rune_Earth.tsv")
+        D[2]=tsv_to_deck("Sword.tsv")
+        D[3]=tsv_to_deck("Shadow.tsv")
+        D[4]=tsv_to_deck("Haven.tsv")
+        D[5]=tsv_to_deck("Blood.tsv")
+        D[6]=tsv_to_deck("Dragon.tsv")
+        D[7]=tsv_to_deck("Forest.tsv")
+        D[8]=tsv_to_deck("Rune.tsv")
+
+
+
+
+
+        #D[0].mean_cost=D[0].get_mean_cost()
+        #D[1].mean_cost=D[1].get_mean_cost()
+        assert all(len(D[i].deck)==40 for i in range(8)) 
+        #Turn_Players=[Player1,Player2]
+        Results={}
+        mylogger.info("same_flg:{}".format(same_flg))
+        l=0
+        j=3
+        if same_flg:
+            l=j
+        for k in range(l,len(D)):
+            Turn_Players=[Player1,Player2]
+            assert Player1!=Player2
+            win_lose=[win,lose]
+            first_num=0
+            for i in range(iteration):
+                Turn_Players[i%2].is_first=True
+                Turn_Players[i%2].player_num=0
+                Turn_Players[(i+1)%2].is_first=False
+                Turn_Players[(i+1)%2].player_num=1
+                assert Turn_Players[0].player_num!=Turn_Players[1].player_num,"same error {} name:{} {}"\
+                    .format(Turn_Players[0].player_num,Turn_Players[0].name,Turn_Players[1].name)
+                (win_lose[i%2],win_lose[(i+1)%2],lib_num,end_turn,first)=game_play(Turn_Players[i%2],Turn_Players[(i+1)%2],D[j],D[k],\
+                    win_lose[i%2],win_lose[(i+1)%2],lib_num,virtual_flg=False)
+                first_num+=first
                 
+def make_policy_table(n,initial_players=None,deck_type=None,same_flg=False,result_name="Policy_table_result.tsv"):
+    iteration = n
+    win=0
+    lose=0
+    lib_num=0
+    assert initial_players!=None,"Non-players!"
+    assert deck_type!=None,"Non-Deck_type!"
+    players = copy.deepcopy(initial_players)
+    D = [Deck() for i in range(2)]
+    for i in range(2):
+        if deck_type[i]==0:
+            D[i]=tsv_to_deck("Sword_Aggro.tsv")
+            #Aggro
+        elif deck_type[i]==1:
+            D[i]=tsv_to_deck("Rune_Earth.tsv")
+            #Aggro
+        elif deck_type[i]==2:
+            D[i]=tsv_to_deck("Sword.tsv")
+            #Mid
+        elif deck_type[i]==3:
+            D[i]=tsv_to_deck("Shadow.tsv")
+            #Mid
+        elif deck_type[i]==4:
+            D[i]=tsv_to_deck("Haven.tsv")
+            #Control
+        elif deck_type[i]==5:
+            D[i]=tsv_to_deck("Blood.tsv")
+            #Control
+        elif deck_type[i]==6:
+            D[i]=tsv_to_deck("Dragon.tsv")
+            #Control
+        elif deck_type[i]==7:
+            D[i]=tsv_to_deck("Forest.tsv")
+            #Combo
+        elif deck_type[i]==8:
+            D[i]=tsv_to_deck("Rune.tsv")
+            #Combo
+    Results={}
+    for policy1_id,player1 in enumerate(players):
+        P1 = copy.deepcopy(player1)
+        for policy2_id,player2 in enumerate(players):
+            P2 = copy.deepcopy(player2)
+            Turn_Players=[P1,P2]
+            win_lose=[win,lose]
+            first_num=0
+            for i in range(iteration):
+                Turn_Players[i%2].is_first=True
+                Turn_Players[i%2].player_num=0
+                Turn_Players[(i+1)%2].is_first=False
+                Turn_Players[(i+1)%2].player_num=1
+                assert Turn_Players[0].player_num!=Turn_Players[1].player_num,"same error {} name:{} {}"\
+                    .format(Turn_Players[0].player_num,Turn_Players[0].name,Turn_Players[1].name)
+                (win_lose[i%2],win_lose[(i+1)%2],lib_num,end_turn,first)=game_play(Turn_Players[i%2],Turn_Players[(i+1)%2],D[i%2],D[(i+1)%2],\
+                    win_lose[i%2],win_lose[(i+1)%2],lib_num,virtual_flg=True)
+                first_num+=first
+            Results[(policy1_id,policy2_id)]=[win_lose[0]/iteration,first_num/iteration]
+        mylogger.info("complete:{}/{}".format(policy1_id+1,len(players)))
+    deck_id_2_name={0:"Sword_Aggro",1:"Rune_Earth",2:"Sword",3:"Shadow",4:"Haven",5:"Blood",6:"Dragon",7:"Forest",8:"Rune"}
+    policy_id_2_name={0:"Random",1:"Aggro",2:"Greedy",3:"MCTS",4:"A-MCTS",5:"EXP3_MCTS"}
+    with open("Battle_Result/"+result_name,"w") as f:
+        writer = csv.writer(f,delimiter='\t',lineterminator='\n')
+        row=["{} vs {}".format(deck_id_2_name[deck_type[0]],deck_id_2_name[deck_type[1]])]
+        mylogger.info("row:{}".format(row))
+        mylogger.info("row:{}".format([policy_id_2_name[i] for i in range(6)]))
+        row=row+[policy_id_2_name[i] for i in range(6)]
+        mylogger.info("row:{}".format(row))
+        writer.writerow(row)
+        if same_flg:
+            for i in range(6):
+                row=[policy_id_2_name[i]]
+                for j in range(0,i+1):
+                    row.append(Results[(j,i)][0])
+                mylogger.info(row)
+                writer.writerow(row)
+        else:
+            for i in range(6):
+                row=[policy_id_2_name[i]]
+                for j in range(6):
+                    row.append(Results[(i,j)][0])
+                writer.writerow(row)
+
+
 
 
 Players=[]
@@ -332,7 +466,7 @@ if len(sys.argv)>=4:
 if len(sys.argv)>=5:
     file_name=sys.argv[4]
     v=sys.argv[-1]=="-v"
-if len(sys.argv)>=6:
+if len(sys.argv)>=6 and sys.argv[-1]!="-policy":
     mylogger.info("Deck")
     p1=int(sys.argv[4])
     p2=int(sys.argv[5])
@@ -353,11 +487,16 @@ if b==-1:
     d2=human_player
 else:
     d2=copy.deepcopy(Players[b])
-
+input_players=[Players[0],Players[1],Players[4],Players[8],Players[13],Players[14]]
 t1=datetime.datetime.now()
 if sys.argv[-1]=="-demo":  
     #cProfile.run('test_1(d1,d2,n,deck_type=[p1,p2])')
     test_1(d1,d2,n,deck_type=[p1,p2])
+elif sys.argv[-1]=="-shadow":
+    test_3(d1,d2,n)
+elif sys.argv[-1]=="-policy":
+    file_name=sys.argv[-2]
+    make_policy_table(n,initial_players=input_players,deck_type=[a+1,b+1],same_flg=a==b,result_name=file_name)
 else:
     if a==b:
         test_2(d1,d2,iteration,same_flg=True,result_name=file_name)

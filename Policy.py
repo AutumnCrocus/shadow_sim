@@ -36,6 +36,7 @@ class RandomPolicy(Policy):
         return 'RandomPolicy'
     def __init__(self):
         self.policy_type=0
+        self.name="RandomPolicy"
     def decide(self,player,opponent,field):
         (ward_list,_,can_be_attacked,regal_targets)=field.get_situation(player,opponent)
         (can_play,can_attack,can_evo),(able_to_play,able_to_attack,able_to_creature_attack,able_to_evo)\
@@ -105,6 +106,7 @@ class AggroPolicy(Policy):
     
     def __init__(self):
         self.policy_type=1
+        self.name="AggroPolicy"
     def decide(self,player,opponent,field):
         (ward_list,_,can_be_attacked,regal_targets)=field.get_situation(player,opponent)
         (can_play,can_attack,can_evo),(able_to_play,able_to_attack,able_to_creature_attack,able_to_evo)\
@@ -205,6 +207,7 @@ class GreedyPolicy(Policy):
         return 'GreedyPolicy'
     def __init__(self):
         self.policy_type=2
+        self.name="GreedyPolicy"
     def state_value(self,field,player_num):
         if field.players[1-player_num].life<=0:
             return 100000
@@ -238,29 +241,31 @@ class GreedyPolicy(Policy):
             target_creatures_toughness = [field.card_location[opponent.player_num][i].get_current_toughness()\
                  for i in can_be_targeted]
 
-        if can_evo==True and able_to_play==[]:
+        if can_evo==True and len(able_to_evo) > 0 and able_to_play==[]:
 
             leader_flg=False
             can_evolve_power=[field.card_location[player.player_num][i].power for i in able_to_evo]
-            evo_id=can_evolve_power.index(max(can_evolve_power))
+            evo_id=able_to_evo[can_evolve_power.index(max(can_evolve_power))]
+            
             direct_index=able_to_evo[0]
             for i,ele in enumerate(able_to_evo):
                 if field.card_location[player.player_num][ele].can_attack_to_player():
                     leader_flg=True
-                    direct_index=i
+                    direct_index=ele
 
                     break
             if len(field.get_creature_location()[opponent.player_num])==0 and leader_flg:
                 evo_id=direct_index
-
+            assert evo_id in able_to_evo
             target_id=None
-            creature=field.card_location[first][able_to_evo[evo_id]]
+            creature=field.card_location[first][evo_id]
             if creature.evo_target!=None:
                 choices=field.get_regal_targets(creature,player_num=player.player_num)
                 if choices!=[]:
                     target_id=random.choice(choices)
             evo_field = Field_setting.Field(5)
             evo_field.set_data(field)
+            assert evo_field.get_able_to_evo(evo_field.players[first]) == field.get_able_to_evo(player)
             evo_field.players[first].execute_action(evo_field,evo_field.players[1-first],action_code=(Action_Code.EVOLVE.value,evo_id,target_id),virtual=True)
             #evo_field.players[first].creature_evolve(evo_field.card_location[first][able_to_evo[evo_id]],evo_field,virtual=True,target=target_id)
             #evo_field.solve_field_trigger_ability(virtual=True,player_num=player.player_num)
@@ -271,7 +276,7 @@ class GreedyPolicy(Policy):
             tmp_state_value=self.state_value(evo_field,first)
             if max_state_value<tmp_state_value:
                 max_state_value=tmp_state_value
-                dicision=[Action_Code.EVOLVE.value,able_to_evo[evo_id],target_id]
+                dicision=[Action_Code.EVOLVE.value,evo_id,target_id]
 
 
  
@@ -338,7 +343,7 @@ class GreedyPolicy(Policy):
                         if max_state_value < state_value_list[i] and target_id!=None:
                             max_state_value=state_value_list[i]
                             #mylogger.info("target_id:{},name:{}".format(target_id,field.card_location[opponent.player_num][target_id].name))
-                            dicision=[Action_Code.ATTACK_TO_FOLLOWER,attacker_id,target_id]
+                            dicision=[Action_Code.ATTACK_TO_FOLLOWER.value,attacker_id,target_id]
             else:
                 for i in range(len(able_to_play)+1,length):
                     assert i not in  end_field_id_list,"{} {}".format(i,end_field_id_list)
@@ -398,6 +403,7 @@ class GreedyPolicy(Policy):
 class FastGreedyPolicy(GreedyPolicy):
     def __init__(self):
         self.f=lambda x:int(x)+(1,0)[x-int(x)<0.5]
+        self.name="FastGreedyPolicy"
 
     def __str__(self):
         return 'FastGreedyPolicy(now freezed)'
@@ -591,6 +597,7 @@ class MCTSPolicy(Policy):
         self.current_node=None
         self.node_index=0
         self.policy_type=3
+        self.name="MCTSPolicy"
 
     #import numba
     #@numba.jit
@@ -997,12 +1004,14 @@ class Test_3_MCTSPolicy(Test_MCTSPolicy):
 class Aggro_MCTSPolicy(MCTSPolicy):
     def __init__(self):
         super().__init__()
+        self.name="Aggro_MCTSPolicy"
         #RandomPolicyとAggroPolicyのPlayOutでの比較
         self.play_out_policy=AggroPolicy()
 
 class New_MCTSPolicy(MCTSPolicy):
     def __init__(self):
         super().__init__()
+        self.name="New_MCTSPolicy"
         self.hyper_parameter=[1,1,1,1,1,1]#[1/6]*6
         self.probability_check_func=lambda x:x>=0 and x<=1
         self.eta=100
@@ -1054,6 +1063,7 @@ class New_MCTSPolicy(MCTSPolicy):
 class New_Aggro_MCTSPolicy(Aggro_MCTSPolicy):
     def __init__(self):
         super().__init__()
+        self.name="New_Aggro_MCTSPolicy"
         self.hyper_parameter=[1,1,1,1,1,1]#[1/6]*6
         self.probability_check_func=lambda x:x>=0 and x<=1
         self.eta=100
@@ -1123,6 +1133,7 @@ class EXP3_MCTSPolicy(Policy):
         self.hyper_parameter=[1,1,1,1,1,1]#[1/6]*6
         self.eta=1
         self.probability_check_func=lambda x:x>=0 and x<=1
+        self.name="EXP3_MCTSPolicy"
     def state_value(self,field,player_num):
         if field.check_game_end():
             if field.players[1-player_num].life<=0 or len(field.players[1-player_num].deck.deck)==0:
@@ -1203,7 +1214,9 @@ class EXP3_MCTSPolicy(Policy):
                 #mylogger.info("action_value:{}".format(self.current_node.action_value_dict))
                 #self.current_node.print_estimated_action_value()
                 #mylogger.info("distribution:{}".format(self.exp3(self.current_node)))
-
+                if self.current_node.get_able_action_list()==[(0,0,0)]:
+                    self.current_node = None
+                    return 0,0,0
                 next_node,action,_=self.roulette(self.current_node)
                 self.next_node=next_node
                 self.prev_node=self.current_node
@@ -1243,7 +1256,7 @@ class EXP3_MCTSPolicy(Policy):
         self.decide_node_seq.append(starting_node)
         if starting_node.get_able_action_list()==[(0,0,0)]:
             #mylogger.info("check:{}".format(self.current_node==self.starting_node))
-            return 0,0,0
+            return
         for i in range(ITERATION):
 
             node,probability = self.tree_policy(starting_node,player_num=player_num)
@@ -1481,7 +1494,7 @@ class EXP3_MCTSPolicy(Policy):
         dict_key_list=list(node.action_value_dict.keys())
         A = len(dict_key_list)
 
-        assert A>0,"child_nodes:{} child_moves:{}".format(node.child_nodes,node.childlen_moves)
+        assert A>0,"child_nodes:{} child_moves:{} able_to_actions:{}".format(node.child_nodes,node.children_moves,node.get_exist_action())
 
 
         e = np.e

@@ -470,7 +470,14 @@ class Field:
     
     def evolve(self,creature,virtual=False,target=None):
         if virtual==False:mylogger.info("evo_check")
-        assert creature.evolved==False and self.evo_flg==False
+        if  creature.evolved==True or self.evo_flg==True:
+            first = creature in self.card_location[0] 
+            
+            mylogger.info("first:{} policy:{}".format(first,self.players[1-int(first)].policy.name))
+            self.show_field()
+            mylogger.info(" name:{} evolved:{} evo_flg:{} able_to_evo:{}"\
+                .format(creature.name,creature.evolved,self.evo_flg,self.get_able_to_evo(self.players[self.turn_player_num])))
+            assert False
         card_index=int(creature not in self.card_location[0])
         self.state_log.append(([State_Code.EVOLVE.value,(card_index,id(creature))]))#5は進化したとき
         if virtual==False:
@@ -647,7 +654,8 @@ class Field:
         able_to_evo=[]
         for i in self.get_creature_location()[player.player_num]:
             creature=self.card_location[player.player_num][i]
-            if creature.evolved==False:able_to_evo.append(i)
+            if creature.evolved==False:
+                able_to_evo.append(i)
 
         return able_to_evo 
 
@@ -666,7 +674,7 @@ class Field:
         able_to_evo=self.get_able_to_evo(player)
         if len(able_to_creature_attack)==0 and len(able_to_attack)==0:
             can_attack=False
-        if len(able_to_evo)==0:
+        if len(able_to_evo)==0 or self.evo_flg==True:
             can_evo=False
 
         

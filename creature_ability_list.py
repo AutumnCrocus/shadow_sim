@@ -196,7 +196,7 @@ def creature_ability_030(field,player,opponent,virtual,target,itself):
         buff_creature(itself,params=[1,1])
 
 def creature_ability_031(field,player,opponent,virtual,target,itself):
-    #Ghost's end-of-turn ability
+    #Ghost's end-of-turn  and removed-from-field-ability
     flg = itself in field.card_location[player.player_num]
     if flg==False:
         mylogger.info("Player_num:{}".format(player.player_num))
@@ -443,7 +443,8 @@ def creature_ability_069(field,player,opponent,virtual,target,itself):
     set_amulet(field,player,virtual,name="Earth Essence",num=2)
     new_cards=put_card_in_hand(field,player,virtual,name="Orichalcum Golem",card_category="Creature",num=1)
     new_cards[0].cost=7
-    if virtual == False:raise Exception()
+    if virtual == False:
+        mylogger.info("{}'s cost is changed to 7".format(itself.name))
 
 def creature_ability_070(field,player,opponent,virtual,target,itself):
     """
