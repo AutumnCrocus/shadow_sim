@@ -9,8 +9,9 @@ class trigger_ability_001:
         self.count=0
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
         #実装途中
+        if itself.is_in_field==False:return
         if state_log!=None and state_log[0]==State_Code.SET.value and state_log[1][0]==opponent.player_num:
-            get_damage_to_player(player,virtual,num=1)
+            get_damage_to_player(opponent,virtual,num=1)
 
 class trigger_ability_002:
     def __init__(self):
@@ -37,7 +38,7 @@ class trigger_ability_004:
         self.count=0
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
         if state_log!=None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
-            get_damage_to_player(player,virtual,num=2)
+            get_damage_to_player(opponent,virtual,num=2)
 
 class trigger_ability_005:
     def __init__(self):
@@ -92,6 +93,43 @@ class trigger_ability_008:
                 if virtual==False:
                     mylogger.info("{} get +1/0 until end of turn".format(attacking_creature.name))
 
+class trigger_ability_009:
+    def __init__(self):
+        self.count=0
+    def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
+        #実装途中
+        """
+        Whenever an allied follower is destroyed, subtract 1 from this amulet's Countdown.
+
+        self.state_log.append([State_Code.DESTROYED.value,(location[0],tmp.card_category,tmp.card_id)])#3は破壊されたとき
+        """
+        if state_log!=None and state_log[0]==State_Code.DESTROYED.value and state_log[1][0]==player.player_num and state_log[1][1]=="Creature":
+            itself.down_count(num=1,virtual=virtual)
+        
+
+class trigger_ability_010:
+    def __init__(self):
+        self.count=0
+    def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
+        #実装途中
+        """
+        Whenever an allied Dragoncraft follower that originally costs 3 play points or less comes into play,
+        deal 2 damage to a random enemy follower and 1 damage to the enemy leader if Overflow is active for you.
+
+        self.state_log.append([State_Code.SET.value,(player_num,card.card_category,card.card_id)])
+        """
+        if player.check_overflow()==False or itself.is_in_field==False:return
+        if state_log!=None and state_log[0]==State_Code.SET.value and state_log[1][0]==player.player_num:
+            if virtual==False:
+                mylogger.info("state_log:{}".format(state_log))
+            if state_log[1][1]=="Creature":
+                if card_setting.creature_list[state_log[1][2]][-2][0]==LeaderClass.DRAGON.value and card_setting.creature_list[state_log[1][2]][0]<=3:
+                    get_damage_to_random_creature(field,opponent,virtual,num=2)
+                    get_damage_to_player(player,virtual,num=1)
+                elif virtual==False:
+                     mylogger.info("Class:{} Cost:{}".format(LeaderClass(card_setting.creature_list[state_log[1][2]][-2][0]),\
+                         card_setting.creature_list[state_log[1][2]][0]))
+
 
 
             
@@ -101,4 +139,4 @@ class trigger_ability_008:
         
 
 trigger_ability_dict={1:trigger_ability_001,2:trigger_ability_002,3:trigger_ability_003,4:trigger_ability_004,5:trigger_ability_005,\
-                    6:trigger_ability_006,7:trigger_ability_007,8:trigger_ability_008}
+                    6:trigger_ability_006,7:trigger_ability_007,8:trigger_ability_008,9:trigger_ability_009,10:trigger_ability_010}

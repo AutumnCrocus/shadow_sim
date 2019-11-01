@@ -61,7 +61,7 @@ class Player:
             self.field.state_log.append([State_Code.RESTORE_PLAYER_LIFE.value,self.player_num])
             
         
-        def check_vengence(self):
+        def check_vengeance(self):
             return self.life<=10
         
         def check_overflow(self):

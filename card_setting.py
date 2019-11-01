@@ -166,29 +166,14 @@ def tsv_2_ability_dict(file_name,name_to_id=None):
         
     return ability_dict
 
-#creature_list=tsv_to_card_list("ALL_Creature_Card_List.tsv")
 creature_list=tsv_to_card_list("New-All_Creature_Card_List.tsv")
-#creature_df=tsv_to_dataframe("New-All_Creature_Card_List.tsv")
-#creature_df.to_csv('DF_TSV/Creature_df.tsv',sep='\t',index=False)
-#spell_df=tsv_to_dataframe("New-All_Spell_Card_List.tsv")
-#spell_df.to_csv('DF_TSV/Spell_df.tsv',sep='\t',index=False)
-#amulet_df=tsv_to_dataframe("New-All_Amulet_Card_List.tsv")
-#amulet_df.to_csv('DF_TSV/Amulet_df.tsv',sep='\t',index=False)
 
 
 creature_name_to_id={}
 for key in list(creature_list.keys()):
     creature_name_to_id[creature_list[key][-1]]=key
-#creature_fanfare_ability={9:1,10:2,11:3,12:4,13:5,16:6,21:7,22:8,23:9,24:10,25:11,34:16,35:5,37:17,38:18,\
-#    39:19,40:20,42:22,43:23,44:24,45:25,46:26,48:27,50:29,51:30,58:38,61:1,62:40,66:43,68:46,69:47,70:48,71:49,\
-#    73:33,74:51,75:52,76:53,80:55,81:56,82:57,84:59,85:61,87:64,88:65,89:67,3:68,94:71,98:73,99:74}
 creature_fanfare_ability=tsv_2_ability_dict("All_fanfare_list.tsv",name_to_id=creature_name_to_id)
-#creature_lastword_ability={11:3,19:3,32:15,49:28,52:3,53:33,55:35,56:36,57:37,59:39,67:45,72:50,85:62,90:69}
 creature_lastword_ability=tsv_2_ability_dict("All_lastword_list.tsv",name_to_id=creature_name_to_id)
-#creature_end_of_turn_ability={27:13,-12:31,84:60,86:63}
-#creature_start_of_turn_ability={28:1}
-#creature_has_target={12:1,13:1,35:1,43:3,46:1,48:2,50:2,69:3,70:3,80:1,85:3,88:8}
-#creature_evo_effect={26:12,29:14,41:21,52:32,54:34,64:41,65:42,66:44,77:54,83:58,92:70,96:72}
 creature_end_of_turn_ability=tsv_2_ability_dict("All_end_of_turn_list.tsv",name_to_id=creature_name_to_id)
 creature_start_of_turn_ability=tsv_2_ability_dict("All_start_of_turn_list.tsv",name_to_id=creature_name_to_id)
 creature_has_target=tsv_2_ability_dict("All_fanfare_target_list.tsv",name_to_id=creature_name_to_id)
@@ -204,8 +189,8 @@ creature_in_battle_ability_list={47:1,89:2}
 creature_cost_change_ability_list={97:2}
 can_only_attack_check=lambda field,player:field.check_word()[1-player.player_num]==True
 creature_can_only_attack_list={49:can_only_attack_check}
-creature_trigger_ability_dict={60:1,63:4,64:5,79:6,95:7,100:8}
-special_evo_stats_id={26:1,27:3,28:1,29:1,41:1,52:1,66:1,77:1}
+creature_trigger_ability_dict={60:1,63:4,64:5,79:6,95:7,100:8,creature_name_to_id["Prime Dragon Keeper"]:10}
+special_evo_stats_id={26:1,27:3,29:1,41:1,52:1,66:1,77:1}
 evo_stats={1:[1,1],2:[0,0],3:[3,1]}
 creature_earth_rite_list=[67,68,71,90]
 #1:相手のフォロワー,2:自分のフォロワー,3:相手のフォロワーと相手リーダー,
@@ -220,6 +205,23 @@ creature_accelerate_card_id_list={90:{1:-2}}
 creature_accelerate_target_list={}
 creature_accelerate_target_regulation_list={}
 #spell_list=tsv_to_card_list("ALL_Spell_Card_List.tsv")
+creature_active_ability_card_id_list={\
+    creature_name_to_id["Dark Dragoon Forte"]:Active_Ability_Check_Code.OVERFLOW.value,\
+    creature_name_to_id["Prime Dragon Keeper"]:Active_Ability_Check_Code.OVERFLOW.value,\
+    creature_name_to_id["Bahamut"]:Active_Ability_Check_Code.BAHAMUT.value\
+    }
+
+creature_active_ability_list={\
+    creature_name_to_id["Dark Dragoon Forte"]:[KeywordAbility.CANT_BE_ATTACKED.value],\
+    creature_name_to_id["Prime Dragon Keeper"]:[KeywordAbility.CANT_BE_ATTACKED.value],\
+    creature_name_to_id["Bahamut"]:[KeywordAbility.CANT_ATTACK_TO_PLAYER.value]
+    }
+active_ability_check_func_list={\
+    Active_Ability_Check_Code.OVERFLOW.value:lambda player:player.check_overflow(),\
+    Active_Ability_Check_Code.VENGEANCE.value:lambda player:player.check_vengeance(),\
+    Active_Ability_Check_Code.RESONANCE.value:lambda player:player.check_resonance(),\
+    Active_Ability_Check_Code.BAHAMUT.value:lambda player:len(player.field.get_creature_location()[1-player.player_num])>=2}
+
 spell_list=tsv_to_card_list("New-All_Spell_Card_List.tsv")
 """
 spell_list={1:[2,[3,[False],-1],"Witch Snap"],2:[1,[3,[False],-1],"Insight"],3:[4,[3,[False],-1],"Nova Flare"],4:[3,[2,-1],"Forge Weaponry"],\
@@ -288,17 +290,22 @@ amulet_name_to_id={}
 for key in list(amulet_list.keys()):
     amulet_name_to_id[amulet_list[key][-1]]=key
 Earth_sigil_list=[-1,15,16]
-amulet_start_of_turn_ability={1:1,2:2}
+amulet_start_of_turn_ability={\
+    amulet_name_to_id["Well of Destiny"]:1,\
+    amulet_name_to_id["Polyphonic Roar"]:2}
 amulet_end_of_turn_ability={3:3,10:10,12:11}
-amulet_fanfare_ability={9:9, 13:13, 14:15, 15:16, 16:17}
-amulet_lastword_ability={4:4,5:5,6:6,7:7,8:8,9:9,12:12,13:14,14:14,17:13}
+amulet_fanfare_ability={9:9, 13:13, 14:15, 15:16, 16:17,\
+    amulet_name_to_id["Staircase to Paradise"]:18}
+amulet_lastword_ability={4:4,5:5,6:6,7:7,8:8,9:9,12:12,13:14,14:14,17:13,\
+    amulet_name_to_id["Staircase to Paradise"]:19}
 amulet_has_target={14:1}
-amulet_trigger_ability_dict={11:2,12:3}
+amulet_trigger_ability_dict={11:2,12:3,\
+    amulet_name_to_id["Staircase to Paradise"]:9}
 #amulet_countdown_list={4:3,5:1,6:2,7:2,8:2,9:3}
 amulet_target_regulation={}
 amulet_cost_change_ability_list={}
 amulet_earth_rite_list=[]
-amulet_enhance_list={}
+amulet_enhance_list={amulet_name_to_id["Staircase to Paradise"]:[5]}
 amulet_enhance_target_list={}
 amulet_enhance_target_regulation_list={}
 
@@ -306,6 +313,10 @@ amulet_accelerate_list={}
 amulet_accelerate_card_id_list={}
 amulet_accelerate_target_list={}
 amulet_accelerate_target_regulation_list={}
+
+amulet_active_ability_card_id_list={}
+
+amulet_active_ability_list={}
 class_card_list={}
 for i in range(8):
     class_card_list[i]={"Creature":{},"Spell":{},"Amulet":{}}
@@ -376,6 +387,11 @@ class Creature(Card):
 
         #self.ability=copy.copy(creature_list[self.card_id][3])#カードのキーワード能力idリスト
         self.ability=creature_list[self.card_id][3][:]
+        self.have_active_ability=card_id in creature_active_ability_card_id_list
+        if self.have_active_ability==True:
+            func_id = creature_active_ability_card_id_list[card_id]
+            self.active_ability_check_func=active_ability_check_func_list[func_id]
+            self.active_ability=creature_active_ability_list[card_id]
         #print(itself_df)
         """
         self.ability=[KeywordAbility(int(ability)).value for ability in itself_df["Ability"][0]]
@@ -415,6 +431,7 @@ class Creature(Card):
         self.trigger_ability=[]
         if card_id in creature_trigger_ability_dict:
             self.trigger_ability.append(trigger_ability_dict[creature_trigger_ability_dict[card_id]]())
+            self.trigger_ability_stack=[]
 
         self.name=creature_list[self.card_id][-1]
         #self.name=str(itself_df["Card_name"][0])
@@ -549,16 +566,32 @@ class Creature(Card):
         if self.current_attack_num>=self.can_attack_num:
             #raise Exception("{} {}".format(self.current_attack_num,self.can_attack_num))
             return False
+        if KeywordAbility.CANT_ATTACK_TO_PLAYER.value in self.ability:return False
         #mylogger.info("{}:type={}".format(KeywordAbility.STORM,type(KeywordAbility.STORM)))
         #if self.attacked_flg==True: return False 
         if KeywordAbility.STORM.value in self.ability: return True
         if self.is_tapped==False: return True
         return False
     def can_be_targeted(self):
-        return not any(i in self.ability for i in [KeywordAbility.CANT_BE_TARGETED.value,KeywordAbility.AMBUSH.value])
+        #return not any(i in self.ability for i in [KeywordAbility.CANT_BE_TARGETED.value,KeywordAbility.AMBUSH.value])
+        if KeywordAbility.CANT_BE_TARGETED.value in self.ability:return False
+        if KeywordAbility.AMBUSH.value in self.ability:return False
+        return True
 
     def can_be_attacked(self):
         return not any(i in self.ability for i in [KeywordAbility.CANT_BE_ATTACKED.value,KeywordAbility.AMBUSH.value])
+
+    def get_active_ability(self):
+        assert self.have_active_ability==True,"invalid acitve ability error"
+        for ability_id in self.active_ability:
+            self.ability.append(ability_id)
+        self.ability=list(set(self.ability))
+    
+    def lose_active_ability(self):
+        assert self.have_active_ability==True,"invalid acitve ability error"
+        for ability_id in self.active_ability:
+            if ability_id in self.ability:
+                self.ability.remove(ability_id)
 
     def __str__(self):
         text=""
@@ -582,6 +615,9 @@ class Creature(Card):
             text+=" spell_boost:{:<2}".format(self.spell_boost)
         if self.ability!=[] and self.is_in_field==True:
             text+=" ability={}".format([KeywordAbility(i).name for i in self.ability])
+        if len(self.trigger_ability)>0 and self.is_in_field:
+            GREEN = '\033[32m'
+            text+=GREEN+" ◆"
         text+="\033[0m"
         return text
 
@@ -664,9 +700,15 @@ class Amulet(Card):
         self.origin_cost=amulet_list[self.card_id][0]#カードの元々のコスト
         self.can_not_be_targeted=6 in amulet_list[card_id][1]#能力の対象にならないを持つか
         self.ability=amulet_list[card_id][1][:]
+        self.have_active_ability=card_id in amulet_active_ability_card_id_list
+        if self.have_active_ability==True:
+            func_id = amulet_active_ability_card_id_list[card_id]
+            self.active_ability_check_func=active_ability_check_func_list[func_id]
+            self.active_ability=amulet_active_ability_list[card_id]
         self.trigger_ability=[]
         if card_id in amulet_trigger_ability_dict:
             self.trigger_ability.append(trigger_ability_dict[amulet_trigger_ability_dict[card_id]]())
+            self.trigger_ability_stack=[]
         self.target_regulation=None
         if card_id in amulet_target_regulation:
             self.target_regulation=amulet_target_regulation[card_id]
@@ -755,7 +797,10 @@ class Amulet(Card):
         return amulet
 
     def can_be_targeted(self):
-        return not any(i in self.ability for i in [KeywordAbility.CANT_BE_TARGETED.value,KeywordAbility.AMBUSH.value])
+        if KeywordAbility.CANT_BE_TARGETED.value in self.ability:return False
+        if KeywordAbility.AMBUSH.value in self.ability:return False
+        return True
+        #return not any(i in self.ability for i in [KeywordAbility.CANT_BE_TARGETED.value,KeywordAbility.AMBUSH.value])
 
     def down_count(self,num=1,virtual=False):
         if self.countdown==False: return
@@ -766,6 +811,7 @@ class Amulet(Card):
             self.is_in_field=False
             self.current_count=self.ini_count
     def __str__(self):
+        tmp=""
         if self.is_in_field==False:
             tmp = "name:"+'{:<25}'.format(self.name)+" cost: "+'{:<2}'.format(str(self.cost))
         else:
@@ -774,7 +820,11 @@ class Amulet(Card):
         if self.countdown==True:
             tmp=tmp+" count:{:<2}".format(self.current_count)
         if self.have_enhance==True and self.active_enhance_code[0]==True:
-            text+=" enhance:{}".format(self.active_enhance_code[1])
+            tmp+=" enhance:{}".format(self.active_enhance_code[1])
+        if len(self.trigger_ability)>0 and self.is_in_field:
+            GREEN = '\033[32m'
+            tmp+=GREEN+" ◆"
+        tmp+="\033[0m"
         return tmp
             
 class Deck:

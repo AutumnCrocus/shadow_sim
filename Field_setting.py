@@ -36,8 +36,10 @@ class Field:
         self.turn_player_num=0
         #self.stack=[]
         self.stack=deque()
+        self.chain_num=0
         self.players_play_num=0
         #self.state_log=[]
+        self.player_ability=[[],[]]
         self.state_log=deque()
 
     def set_data(self,field):
@@ -63,6 +65,10 @@ class Field:
         self.ex_turn_count=field.ex_turn_count[:]
         self.turn_player_num=int(field.turn_player_num)
         self.players_play_num=int(field.players_play_num)
+        if self.player_ability[0]!=[]:
+            field.player_ability[0]=deepcopy(self.player_ability[0])
+        if self.player_ability[1]!=[]:
+            field.player_ability[1]=deepcopy(self.player_ability[1])
 
     def solve_lastword_ability(self,virtual=False,player_num=0):
         while len(self.stack)>0 :
@@ -77,15 +83,30 @@ class Field:
             #    mylogger.info("rest_num={}".format(len(self.stack)))
     def solve_field_trigger_ability(self,virtual=False,player_num=0):
         index=0
+        #search_three_followers(field,player,virtual,state_log=None)
+        """
         while True:
             if len(self.state_log)==0:
                 break
             state_log=self.state_log.pop()
             for i in range(2):
                 index=0
+                if self.player_ability[(i+player_num)%2]!=[]:
+                    player_ability_index=0
+                    limit=0
+                    while player_ability_index < len(self.player_ability[(i+player_num)%2]):
+                        before=len(self.player_ability[(i+player_num)%2])
+                        self.player_ability[(i+player_num)%2][player_ability_index](self,self.players[(i+player_num)%2],virtual,state_log=state_log)
+                        after=len(self.player_ability[(i+player_num)%2])
+                        player_ability_index+=int(before==after)
+                        limit+=1
+                        assert limit<100
+
                 while index < len(self.card_location[(i+player_num)%2]):
                     thing=self.card_location[(i+player_num)%2][index]
                     if thing.trigger_ability!=[]:
+                        #if virtual==False:
+                        #    mylogger.info("name:{}".format(thing.name))
                         before=len(self.card_location[(i+player_num)%2])
                         for ability in thing.trigger_ability:
                             ability(self,self.players[(i+player_num)%2],self.players[(i+player_num+1)%2],virtual,None,thing,state_log=state_log)
@@ -98,14 +119,64 @@ class Field:
 
                     if self.check_game_end()==True:
                         return
+        """
+        ability_list=deque()
+        #ability_list.apendleft()
+        if len(self.state_log) == 0:return
+        index=len(self.state_log)-1
+        while index>=0:
+            target_state_log=self.state_log[index]
+            for i in range(2):
+                side_id=(i+player_num)%2
+                side = self.card_location[side_id]
+                location_id=len(side)-1
+                while location_id>=0:
+                    for ability in side[location_id].trigger_ability:
+                        argument=[self,self.players[side_id],self.players[1-side_id],virtual,None,side[location_id],target_state_log]
+                        ability_list.appendleft((ability,argument))
+                        #ability(self,self.players[side_id],self.players[1-side_id],virtual,None,thing,state_log=target_state_log)
+                    location_id-=1
+            index-=1
+        while len(ability_list)>0:
+            tmp_ability_pair = ability_list.popleft()
+            ability=tmp_ability_pair[0]
+            argument=tmp_ability_pair[1]
+            ability(argument[0],argument[1],argument[2],argument[3],argument[4],argument[5],state_log=argument[6])
+        
+        self.state_log.clear()
+
+
+                
+
 
     def ability_resolution(self,virtual=False,player_num=0):
         chain_len=0
+
+        self.check_active_ability()
         while len(self.stack)>0 or len(self.state_log)>0:
             self.solve_lastword_ability(virtual=virtual,player_num=player_num)
             self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
             chain_len+=1
             assert chain_len<100,"infinite_chain_error"
+    
+    def check_active_ability(self):
+        for i in range(2):
+            for card in self.card_location[i]:
+                if card.have_active_ability==True:
+                    if card.active_ability_check_func(self.players[i])==True:
+                        card.get_active_ability()
+                    else:
+                        card.lose_active_ability()
+    """
+    def inform_state_code_to_field(self,state_code=None):
+        if state_code==None: return
+        for i in range(2):
+            for card in self.card_location[(i+self.turn_player_num)%2]:
+                if len(card.trigger_ability)>0:
+                    card.trigger_ability_stack.append(state_code,self.chain_num)
+                    self.chain_num
+    """         
+
 
     def gain_max_pp(self,player_num=0,num=0,virtual=False):
         if self.cost[player_num]<self.max_cost: 
@@ -141,7 +212,7 @@ class Field:
                 tmp.fanfare_ability(self,player,opponent,virtual,target,tmp)
             #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
             self.play_cards.append(tmp.card_category,tmp.card_id,player_num)
-            self.ability_resolution(virtual=virtual,player_num=player_num)
+            #self.ability_resolution(virtual=virtual,player_num=player_num)
         else:
             raise Exception('field is full!\n')
     
@@ -154,7 +225,7 @@ class Field:
         tmp.is_in_graveyard=True
         self.graveyard.append(tmp.card_category,tmp.card_id,player_num)
         self.play_cards.append(tmp.card_category,tmp.card_id,player_num)
-        self.ability_resolution(virtual=virtual,player_num=player_num)
+        #self.ability_resolution(virtual=virtual,player_num=player_num)
         #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
 
     def play_amulet(self,hand,card_id,player_num,player,opponent,virtual=False,target=None):
@@ -169,7 +240,7 @@ class Field:
                 tmp.fanfare_ability(self,player,opponent,virtual,target,tmp)
             #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
             self.play_cards.append(tmp.card_category,tmp.card_id,player_num)
-            self.ability_resolution(virtual=virtual,player_num=player_num)
+            #self.ability_resolution(virtual=virtual,player_num=player_num)
         else:
             raise Exception('field is full!\n')
 
@@ -198,18 +269,18 @@ class Field:
             new_card.is_in_graveyard=True
             self.graveyard.append(new_card.card_category,new_card_id,player_num)
             #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
-            self.ability_resolution(virtual=virtual,player_num=player_num)
+            #self.ability_resolution(virtual=virtual,player_num=player_num)
 
 
     def set_card(self,card,player_num,virtual=False):
         if len(self.card_location[player_num])<self.max_field_num:
-            self.state_log.append([State_Code.SET.value,(player_num,card.card_category,card.card_id)])#2は場に出たとき
-            card.is_in_field=True
-            card.is_tapped=True
+            self.state_log.append([State_Code.SET.value,(player_num,card.card_category,card.card_id,id(card))])#2は場に出たとき
+            #self.ability_resolution(virtual=virtual,player_num=player_num)
             self.card_location[player_num].append(card)
             self.card_num[player_num]+=1
-            #self.solve_lastword_ability(virtual=virtual,player_num=player_num)
-            self.ability_resolution(virtual=virtual,player_num=player_num)
+            #self.ability_resolution(virtual=virtual,player_num=player_num)
+            card.is_tapped=True
+            card.is_in_field=True
         else:
             None
 
@@ -232,7 +303,7 @@ class Field:
         self.graveyard.append(tmp.card_category,tmp.card_id,location[0])
         del self.card_location[location[0]][location[1]]
         self.card_num[location[0]]-=1
-        self.ability_resolution(virtual=virtual,player_num=location[0])
+        #self.ability_resolution(virtual=virtual,player_num=location[0])
 
     def return_card_to_hand(self,target_location,virtual=False):
         assert len(self.card_location[target_location[0]]) > target_location[1]
@@ -253,7 +324,7 @@ class Field:
             
         if card!=None:
             self.players[target_location[0]].hand.append(card)
-        self.ability_resolution(virtual=virtual,player_num=target_location[0])    
+        #self.ability_resolution(virtual=virtual,player_num=target_location[0])    
 
     def banish_card(self,location,virtual=False):
         assert self.card_location[location[0]][location[1]]!=None
@@ -261,7 +332,7 @@ class Field:
             mylogger.info("{}(location_id={}) is banished".format(self.card_location[location[0]][location[1]].name,location[1]))
         del self.card_location[location[0]][location[1]]
         self.card_num[location[0]]-=1
-        self.ability_resolution(virtual=virtual,player_num=location[0])
+        #self.ability_resolution(virtual=virtual,player_num=location[0])
 
     def transform_card(self,location,card=None,virtual=False):
         assert self.card_location[location[0]][location[1]]!=None and card==None
@@ -269,7 +340,7 @@ class Field:
             mylogger.info("{}(location_id={}) is transformed into {}".format(self.card_location[location[0]][location[1]].name,\
                 location[1],card.name))
         self.card_location[location[0]][location[1]]=card
-        self.ability_resolution(virtual=virtual,player_num=location[0])
+        #self.ability_resolution(virtual=virtual,player_num=location[0])
 
     def show_field(self):
         for i in range(2):
@@ -317,7 +388,7 @@ class Field:
              KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value not in attacking_creature.ability:
             self.remove_card(attack,virtual)
         #self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
-        self.ability_resolution(virtual=virtual,player_num=attack[0])
+        #self.ability_resolution(virtual=virtual,player_num=attack[0])
             
     def attack_to_player(self,attacker,defence_player,visible=False,virtual=False):
         attacking_creature=self.card_location[attacker[0]][attacker[1]]
@@ -350,7 +421,7 @@ class Field:
             restore_player_life(self.players[attacker[0]],virtual,num=amount)
         
         #self.solve_lastword_ability(virtual=virtual,player_num=attacker[0])
-        self.ability_resolution(virtual=virtual,player_num=attacker[0])
+        #self.ability_resolution(virtual=virtual,player_num=attacker[0])
         if visible==True:
             print("Player",defence_player.player_num+1,"life: ",defence_player.life)
 
@@ -358,6 +429,9 @@ class Field:
 
 
     def start_of_turn(self,player_num,virtual=False):
+        self.state_log.clear()
+        self.state_log.append([State_Code.START_OF_TURN.value,player_num])
+        self.ability_resolution(virtual=virtual,player_num=player_num)
         i=0 
         while i < len(self.card_location[player_num]):
             thing=self.card_location[player_num][i]
@@ -401,6 +475,9 @@ class Field:
 
 
     def end_of_turn(self,player_num,virtual=False):
+        self.state_log.clear()
+        self.state_log.append([State_Code.END_OF_TURN.value,player_num])
+        self.ability_resolution(virtual=virtual,player_num=player_num)
         for creature_id in self.get_creature_location()[player_num]:
             creature=self.card_location[player_num][creature_id]
 
@@ -546,7 +623,8 @@ class Field:
         opponent_side_creature=self.get_creature_location()[1-player_num]
         for ele in opponent_side_creature:
             creature=self.card_location[1-player_num][ele]
-            if creature.can_be_targeted()==True:can_be_targeted.append(ele)
+            if creature.can_be_targeted()==True:
+                can_be_targeted.append(ele)
         return can_be_targeted
 
     def get_can_be_attacked(self,player_num=0):

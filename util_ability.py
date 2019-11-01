@@ -41,9 +41,7 @@ def buff_creature_until_end_of_turn(creature,params=[0,0]):
 
 
 def get_damage_to_creature(field,opponent,virtual,target,num=0):
-    if field.get_can_be_targeted(player_num=1-opponent.player_num) != []:
-        if len(field.card_location[opponent.player_num])<=target:
-            mylogger.info("field_len:{} target:{}".format(len(field.card_location[opponent.player_num],target)))
+    if target in field.get_creature_location()[opponent.player_num]:
         damage=field.card_location[opponent.player_num][target].get_damage(num)
         if virtual==False:
             mylogger.info("Player {}'s {} get {} damage".format(opponent.player_num+1,\
@@ -51,8 +49,10 @@ def get_damage_to_creature(field,opponent,virtual,target,num=0):
         
         #if field.card_location[opponent.player_num][target].is_in_graveyard==True:
         #    field.remove_card([opponent.player_num,target],virtual)
-    else:
-        None
+    elif target!=None:
+        mylogger.info("player_num:{} can_be_targeted:{} field_len:{} target:{}".format(1-opponent.player_num,field.get_can_be_targeted(player_num=opponent.player_num),len(field.get_creature_location()[opponent.player_num]),target))
+        field.show_field()
+        assert False
 def get_damage_to_random_creature(field,opponent,virtual,num=0):
     tmp=field.get_creature_location()[opponent.player_num]
     if tmp!=[]:

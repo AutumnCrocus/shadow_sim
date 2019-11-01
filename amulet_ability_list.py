@@ -96,6 +96,40 @@ def amulet_ability_017(field,player,opponent,virtual,target,itself):
     else:
         summon_creature(field,player,virtual,name="Zombie")
 
+        
+def amulet_ability_018(field,player,opponent,virtual,target,itself):
+    """
+    Countdown (7)
+    Fanfare: Enhance (5) - Subtract 7 from this amulet's Countdown.
+    """
+    if itself.active_enhance_code[0]==True:
+        itself.down_count(num=7,virtual=virtual)
+    
+def amulet_ability_019(field,player,opponent,virtual,target,itself):
+    """
+    Last Words: At the start of your next turn, put 3 random followers from your deck into your hand.
+    """
+    def search_three_followers(field,player,virtual,state_log=None):
+        if state_log==None : return
+        if state_log[0]!=State_Code.START_OF_TURN.value: return
+        if state_log[1]!=player.player_num: return
+        if virtual==False:
+            mylogger.info("Staircase to Paradise's ability is actived")
+        condition=lambda card :card.card_category=="Creature"
+        search_cards(player,condition,virtual,num=3)
+        while True:
+            if search_three_followers in field.player_ability[player.player_num]:
+                field.player_ability[player.player_num].remove(search_three_followers)
+            else:
+                break
+    if virtual==False:
+        mylogger.info("Player{} get ability:'At the start of your next turn, put 3 random followers from your deck into your hand'".format(player.player_num))
+    field.player_ability[player.player_num].append(search_three_followers)
+
+
+
+
 amulet_ability_dict={1:amulet_ability_001,2:amulet_ability_002,3:amulet_ability_003,4:amulet_ability_004,5:amulet_ability_005,\
     6:amulet_ability_006,7:amulet_ability_007,8:amulet_ability_008,9:amulet_ability_009,10:amulet_ability_010,11:amulet_ability_011,\
-    12:amulet_ability_012,13:amulet_ability_013,14:amulet_ability_014,15:amulet_ability_015,16:amulet_ability_016,17:amulet_ability_017}
+    12:amulet_ability_012,13:amulet_ability_013,14:amulet_ability_014,15:amulet_ability_015,16:amulet_ability_016,17:amulet_ability_017,\
+    18:amulet_ability_018,19:amulet_ability_019}

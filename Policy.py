@@ -1349,10 +1349,11 @@ class EXP3_MCTSPolicy(Policy):
 
                 current_field.players[0].deck.shuffle()#デッキの並びは不明だから
                 current_field.players[1].deck.shuffle()
-                current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+                #current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
 
                 action_count=0
                 while True:
+                    current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
                     (action_num,card_id,target_id)=self.play_out_policy.decide(current_field.players[player_num],current_field.players[1-player_num],\
                         current_field)
  
@@ -1362,7 +1363,7 @@ class EXP3_MCTSPolicy(Policy):
                     if current_field.check_game_end()==True or end_flg==True:
                         break
 
-                    current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+                    #current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
                     action_count+=1
                     if action_count>100:
                         current_field.players[player_num].show_hand()

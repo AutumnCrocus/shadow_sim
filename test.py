@@ -95,50 +95,36 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
         class_pool=[0,0]
         for i,d in enumerate(D):
             if deck_type[i]==0:
-                class_pool[i]=2
-                D[i]=tsv_to_deck("Sword.tsv")
-                D[i].set_deck_type(2)
-
-            elif deck_type[i]==1:
-                class_pool[i]=7
-                D[i]=tsv_to_deck("Haven.tsv")
-                D[i].set_deck_type(3)
-
-            elif deck_type[i]==2:
-                class_pool[i]=4
-                D[i]=tsv_to_deck("Dragon.tsv")
-                D[i].set_deck_type(3)
-
-            elif deck_type[i]==3:
-                class_pool[i]=3
-                D[i]=tsv_to_deck("Rune.tsv")
-                D[i].set_deck_type(3)
-
-            elif deck_type[i]==4:
-                class_pool[i]=6
-                D[i]=tsv_to_deck("Blood.tsv")
-                D[i].set_deck_type(3)
-
-            elif deck_type[i]==5:
-                class_pool[i]=6
-                D[i]=tsv_to_deck("Shadow.tsv")
-                D[i].set_deck_type(3)
-
-            elif deck_type[i]==6:
-                class_pool[i]=3
-                D[i]=tsv_to_deck("Rune_Earth.tsv")
-                D[i].set_deck_type(1)
-
-            elif deck_type[i]==7:
-                class_pool[i]=1
-                D[i]=tsv_to_deck("Forest.tsv")
-                D[i].set_deck_type(4)
-            
-            elif deck_type[i]==8:
-                class_pool[i]=2
                 D[i]=tsv_to_deck("Sword_Aggro.tsv")
-                D[1].set_deck_type(1)
+                #Aggro
+            elif deck_type[i]==1:
+                D[i]=tsv_to_deck("Rune_Earth.tsv")
+                #Aggro
+            elif deck_type[i]==2:
+                D[i]=tsv_to_deck("Sword.tsv")
+                #Mid
+            elif deck_type[i]==3:
+                D[i]=tsv_to_deck("Shadow.tsv")
+                #Mid
+            elif deck_type[i]==4:
+                D[i]=tsv_to_deck("Dragon_PDK.tsv")
+                #Mid
+            elif deck_type[i]==5:
+                D[i]=tsv_to_deck("Haven.tsv")
+                #Control
+            elif deck_type[i]==6:
+                D[i]=tsv_to_deck("Blood.tsv")
+                #Control
+            elif deck_type[i]==7:
+                D[i]=tsv_to_deck("Dragon.tsv")
+                #Control
+            elif deck_type[i]==8:
+                D[i]=tsv_to_deck("Forest.tsv")
+                #Combo
             elif deck_type[i]==9:
+                D[i]=tsv_to_deck("Rune.tsv")
+                #Combo
+            elif deck_type[i]==10:
                 class_pool[i]=2
                 d.set_deck_type(2)
                 #テスト用デッキ
@@ -177,7 +163,7 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
             Turn_Players[(i+1)%2].is_first=False
             Turn_Players[(i+1)%2].player_num=1
             assert Turn_Players[0].player_num!=Turn_Players[1].player_num,"same error {}".format(Turn_Players[0].player_num)
-            (win_lose[i%2],win_lose[(i+1)%2],lib_num,end_turn,first)=game_play(Turn_Players[i%2],Turn_Players[(i+1)%2],D[0],D[1],\
+            (win_lose[i%2],win_lose[(i+1)%2],lib_num,end_turn,first)=game_play(Turn_Players[i%2],Turn_Players[(i+1)%2],D[i%2],D[(i+1)%2],\
                 win_lose[i%2],win_lose[(i+1)%2],lib_num,virtual_flg=virtual_flg)
             first_num+=first
             sum_of_turn+=end_turn
@@ -222,18 +208,21 @@ def test_2(Player_1,Player_2,iteration,same_flg=False,result_name="Result.tsv"):
                 D[i]=tsv_to_deck("Shadow.tsv")
                 #Mid
             elif i==4:
+                D[i]=tsv_to_deck("Dragon_PDK.tsv")
+                #Mid
+            elif i==5:
                 D[i]=tsv_to_deck("Haven.tsv")
                 #Control
-            elif i==5:
+            elif i==6:
                 D[i]=tsv_to_deck("Blood.tsv")
                 #Control
-            elif i==6:
+            elif i==7:
                 D[i]=tsv_to_deck("Dragon.tsv")
                 #Control
-            elif i==7:
+            elif i==8:
                 D[i]=tsv_to_deck("Forest.tsv")
                 #Combo
-            elif i==8:
+            elif i==9:
                 D[i]=tsv_to_deck("Rune.tsv")
                 #Combo
 
@@ -281,7 +270,7 @@ def test_2(Player_1,Player_2,iteration,same_flg=False,result_name="Result.tsv"):
                 for i in range(9):
                     row=[deck_id_2_name[i]]
                     for j in range(0,i+1):
-                        row.append(Results[(j,i)][0])
+                        row.append(Results[(i,j)][0])
                     mylogger.info(row)
                     writer.writerow(row)
             else:
@@ -353,32 +342,35 @@ def make_policy_table(n,initial_players=None,deck_type=None,same_flg=False,resul
     assert deck_type!=None,"Non-Deck_type!"
     players = copy.deepcopy(initial_players)
     D = [Deck() for i in range(2)]
-    for i in range(2):
-        if deck_type[i]==0:
+    for i,d in enumerate(D):
+        if i==0:
             D[i]=tsv_to_deck("Sword_Aggro.tsv")
             #Aggro
-        elif deck_type[i]==1:
+        elif i==1:
             D[i]=tsv_to_deck("Rune_Earth.tsv")
             #Aggro
-        elif deck_type[i]==2:
+        elif i==2:
             D[i]=tsv_to_deck("Sword.tsv")
             #Mid
-        elif deck_type[i]==3:
+        elif i==3:
             D[i]=tsv_to_deck("Shadow.tsv")
             #Mid
-        elif deck_type[i]==4:
+        elif i==4:
+            D[i]=tsv_to_deck("Dragon_PDK.tsv")
+            #Mid
+        elif i==5:
             D[i]=tsv_to_deck("Haven.tsv")
             #Control
-        elif deck_type[i]==5:
+        elif i==6:
             D[i]=tsv_to_deck("Blood.tsv")
             #Control
-        elif deck_type[i]==6:
+        elif i==7:
             D[i]=tsv_to_deck("Dragon.tsv")
             #Control
-        elif deck_type[i]==7:
+        elif i==8:
             D[i]=tsv_to_deck("Forest.tsv")
             #Combo
-        elif deck_type[i]==8:
+        elif i==9:
             D[i]=tsv_to_deck("Rune.tsv")
             #Combo
     Results={}
@@ -415,7 +407,7 @@ def make_policy_table(n,initial_players=None,deck_type=None,same_flg=False,resul
             for i in range(6):
                 row=[policy_id_2_name[i]]
                 for j in range(0,i+1):
-                    row.append(Results[(j,i)][0])
+                    row.append(Results[(i,j)][0])
                 mylogger.info(row)
                 writer.writerow(row)
         else:
