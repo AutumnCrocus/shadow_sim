@@ -112,17 +112,17 @@ class AggroPolicy(Policy):
         (can_play,can_attack,can_evo),(able_to_play,able_to_attack,able_to_creature_attack,able_to_evo)\
             =field.get_flag_and_choices(player,opponent,regal_targets)
 
-        can_attack=True
-        can_play=True
-        end_flg=False
+        #can_attack=True
+        #can_play=True
+        #end_flg=False
 
         if len(able_to_play)==0:
             can_play=False
         if len(able_to_creature_attack)==0:
             can_attack=False
 
-        if can_play == False and can_attack == False and can_evo==False:
-            return 0,0,0#ターン終了
+        #if can_play == False and can_attack == False and can_evo==False:
+        #    return 0,0,0#ターン終了
         if can_play==True:
             #card_id=random.choice(able_to_play)
             able_to_play_cost = [player.hand[i].cost for i in able_to_play] 
@@ -933,16 +933,19 @@ class Test_MCTSPolicy(MCTSPolicy):
     def default_policy(self,node,player_num=0):
         if node.field.check_game_end()==True:
             return self.state_value(node.field,player_num)
-        current_field = Field_setting.Field(5)       
+             
         sum_of_value=0
         end_flg=False
+        current_field = Field_setting.Field(5)  
         for i in range(10):
+            
             current_field.set_data(node.field)
             current_field.players[0].deck.shuffle()#デッキの並びは不明だから
             current_field.players[1].deck.shuffle()
             if node.finite_state_flg==False:
-                current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+                
                 while True:
+                    current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
                     (action_num,card_id,target_id)=self.play_out_policy.decide(current_field.players[player_num],current_field.players[1-player_num],\
                         current_field)
                     end_flg=current_field.players[player_num].execute_action(current_field,current_field.players[1-player_num],\
@@ -950,13 +953,12 @@ class Test_MCTSPolicy(MCTSPolicy):
 
                     if current_field.check_game_end()==True or end_flg==True:
                         break
-                    current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
                 if current_field.check_game_end()==True:
-                    sum_of_value += 100000
+                    sum_of_value += WIN_BONUS
                     continue
                 current_field.end_of_turn(player_num,virtual=True)
                 if current_field.check_game_end()==True:
-                    sum_of_value += 100000
+                    sum_of_value += WIN_BONUS
                     continue
             #相手ターンのシミュレーション
             current_field.untap(1-player_num)
@@ -1644,5 +1646,15 @@ class EXP3_MCTSPolicy(Policy):
     
     def __str__(self):
         return 'EXP3_MCTSPolicy'
+
+"""
+class Information_Set_MCTSPolicy(MCTSPolicy):
+    def __init__(self):
+
+"""
+
+class Information_Set():
+    def __init__(self):
+        self.field=None
 
 

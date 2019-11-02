@@ -44,9 +44,14 @@ class Field:
 
     def set_data(self,field):
         #self.card_location=copy.deepcopy(field.card_location)
+        assert len(self.card_location[0])<=self.max_field_num,"card_num:{}".format(len(self.card_location[0]))
+        assert len(self.card_location[1])<=self.max_field_num,"card_num:{}".format(len(self.card_location[1]))
+        self.card_location[0].clear()
+        self.card_location[1].clear()
         for i in range(2):
             for card in field.card_location[i]:
                 self.card_location[i].append(card.get_copy())
+
         self.card_num=field.card_num[:]
         self.cost=field.cost[:]
         self.remain_cost=field.remain_cost[:]
@@ -66,9 +71,9 @@ class Field:
         self.turn_player_num=int(field.turn_player_num)
         self.players_play_num=int(field.players_play_num)
         if self.player_ability[0]!=[]:
-            field.player_ability[0]=deepcopy(self.player_ability[0])
+            field.player_ability[0]=copy.deepcopy(self.player_ability[0])
         if self.player_ability[1]!=[]:
-            field.player_ability[1]=deepcopy(self.player_ability[1])
+            field.player_ability[1]=copy.deepcopy(self.player_ability[1])
 
     def solve_lastword_ability(self,virtual=False,player_num=0):
         while len(self.stack)>0 :
@@ -214,6 +219,9 @@ class Field:
             self.play_cards.append(tmp.card_category,tmp.card_id,player_num)
             #self.ability_resolution(virtual=virtual,player_num=player_num)
         else:
+            self.players[player_num].show_hand()
+            mylogger.info("card_id:{}".format(card_id))
+            self.show_field()
             raise Exception('field is full!\n')
     
     def play_spell(self,hand,card_id,player_num,player,opponent,virtual=False,target=None):
@@ -242,6 +250,9 @@ class Field:
             self.play_cards.append(tmp.card_category,tmp.card_id,player_num)
             #self.ability_resolution(virtual=virtual,player_num=player_num)
         else:
+            self.players[player_num].show_hand()
+            mylogger.info("card_id:{}".format(card_id))
+            self.show_field()
             raise Exception('field is full!\n')
 
     def spell_boost(self,player_num):
@@ -443,7 +454,7 @@ class Field:
                     before=len(self.card_location[player_num])
                     ability(self,self.players[player_num],self.players[1-player_num],virtual,None,\
                     thing)
-                    self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+                    #self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
                     after=len(self.card_location[player_num])
                     i+=int(before==after)
                     
@@ -453,11 +464,31 @@ class Field:
                     break
             else:
                 i+=1
-
+        self.ability_resolution(virtual=virtual,player_num=player_num)
         if self.check_game_end()==True:
             return
+        i=0 
+        while i < len(self.card_location[1-player_num]):
+            thing=self.card_location[1-player_num][i]
+            if thing.turn_start_ability!=[]:
+                for ability in thing.turn_start_ability:
+                    if virtual==False:
+                        mylogger.info("{}'s start-of-turn ability acive".format(thing.name))
 
-        self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+                    before=len(self.card_location[1-player_num])
+                    ability(self,self.players[1-player_num],self.players[player_num],virtual,None,\
+                    thing)
+                    #self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+                    after=len(self.card_location[1-player_num])
+                    i+=int(before==after)
+                    
+                    if self.check_game_end()==True:
+                        break
+                if self.check_game_end()==True:
+                    break
+            else:
+                i+=1
+        #self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
         for thing in self.card_location[player_num]:
             thing.down_count(num=1,virtual=virtual)
         self.check_death(player_num,virtual=virtual)
@@ -498,7 +529,7 @@ class Field:
                     before=len(self.card_location[player_num])
                     ability(self,self.players[player_num],self.players[1-player_num],virtual,None,\
                     thing)
-                    self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+                    #self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
                     after=len(self.card_location[player_num])
                     i+=int(before==after)
                     
@@ -508,7 +539,27 @@ class Field:
                     break
             else:
                 i+=1
-
+        self.ability_resolution(virtual=virtual,player_num=player_num)
+        i=0 
+        while i < len(self.card_location[1-player_num]):
+            thing=self.card_location[1-player_num][i]
+            if thing.turn_end_ability!=[]:
+                for ability in thing.turn_end_ability:
+                    if virtual==False:
+                        mylogger.info("{}'s end-of-turn ability acive".format(thing.name))
+                    before=len(self.card_location[1-player_num])
+                    ability(self,self.players[1-player_num],self.players[player_num],virtual,None,\
+                    thing)
+                    #self.solve_field_trigger_ability(virtual=virtual,player_num=1-player_num)
+                    after=len(self.card_location[1-player_num])
+                    i+=int(before==after)
+                    
+                    if self.check_game_end()==True:
+                        break
+                if self.check_game_end()==True:
+                    break
+            else:
+                i+=1
         if self.check_game_end()==True:
                 return
         self.check_death(player_num=player_num,virtual=virtual)

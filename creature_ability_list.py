@@ -96,12 +96,16 @@ def creature_ability_012(field,player,opponent,virtual,target,itself):
     summon_creature(field,player,virtual,name="Knight")
 
 def creature_ability_013(field,player,opponent,virtual,target,itself):
-    #Lucifer's end-of-turn ability
-    if itself.evolved==False:
-        restore_player_life(player,virtual,num=4)
-    
-    else:
-        get_damage_to_player(opponent,virtual,num=4)
+    """
+    At the end of your turn, restore 4 defense to your leader.
+    At the end of your turn, deal 4 damage to the enemy leader.
+    """
+    if field.turn_player_num==player.player_num:
+        if itself.evolved==False:
+            restore_player_life(player,virtual,num=4)
+        
+        else:
+            get_damage_to_player(opponent,virtual,num=4)
 
 
 def creature_ability_014(field,player,opponent,virtual,target,itself):
@@ -197,13 +201,14 @@ def creature_ability_030(field,player,opponent,virtual,target,itself):
 
 def creature_ability_031(field,player,opponent,virtual,target,itself):
     #Ghost's end-of-turn  and removed-from-field-ability
-    flg = itself in field.card_location[player.player_num]
-    if flg==False:
-        mylogger.info("Player_num:{}".format(player.player_num))
-        field.show_field()
-        raise Exception("Error")
-    location=[player.player_num,field.card_location[player.player_num].index(itself)]
-    field.banish_card(location,virtual=virtual)
+    if field.turn_player_num=player.player_num:
+        flg = itself in field.card_location[player.player_num]
+        if flg==False:
+            mylogger.info("Player_num:{}".format(player.player_num))
+            field.show_field()
+            raise Exception("Error")
+        location=[player.player_num,field.card_location[player.player_num].index(itself)]
+        field.banish_card(location,virtual=virtual)
 
 def creature_ability_032(field,player,opponent,virtual,target,itself):
     #Andrealphus's evolve ability
@@ -250,7 +255,7 @@ def creature_ability_038(field,player,opponent,virtual,target,itself):
         if thing.card_category=="Creature" and thing !=itself:
             buff_creature_until_end_of_turn(thing,params=[2,0])
             if KeywordAbility.RUSH.value not in thing.ability:
-                add_temporary_ability_to_creature(field,player,thing,virtual,add_ability=[KeywordAbility.RUSH.value])
+                add_ability_until_end_of_player_turn(field,player,thing,virtual,add_ability=[KeywordAbility.RUSH.value])
             #    thing.ability.append(4)
             #thing.turn_end_ability.append(ability_until_end_of_turn)
         
@@ -389,8 +394,9 @@ def creature_ability_059(field,player,opponent,virtual,target,itself):
         
 
 def creature_ability_060(field,player,opponent,virtual,target,itself):
-    if player.check_overflow()==True:
-        restore_player_life(player,virtual,num=3)
+    if field.turn_player_num==player.player_num:
+        if player.check_overflow()==True:
+            restore_player_life(player,virtual,num=3)
         
 
 def creature_ability_061(field,player,opponent,virtual,target,itself):
@@ -404,10 +410,11 @@ def creature_ability_062(field,player,opponent,virtual,target,itself):
     put_card_in_hand(field,player,virtual,name="Ouroboros",card_category="Creature",num=1)
 
 def creature_ability_063(field,player,opponent,virtual,target,itself):
-    num=field.remain_cost[player.player_num]
-    if virtual==False:
-        mylogger.info("{} get +{}/0".format(itself.name,num))
-    buff_creature(itself,params=[num,0])
+    if field.turn_player_num==player.player_num:
+        num=field.remain_cost[player.player_num]
+        if virtual==False:
+            mylogger.info("{} get +{}/0".format(itself.name,num))
+        buff_creature(itself,params=[num,0])
 
 def creature_ability_064(field,player,opponent,virtual,target,itself):
     if itself.active_enhance_code[0]==True:
@@ -490,7 +497,7 @@ def creature_ability_073(field,player,opponent,virtual,target,itself):
         itself.can_attack_num=2
         if virtual==False:
             mylogger.info("{} get 'can attack 2 times per turn' ".format(itself.name))
-        add_temporary_ability_to_creature(field,player,itself,virtual,add_ability=[KeywordAbility.REDUCE_DAMAGE_TO_ZERO.value])
+        add_ability_until_end_of_player_turn(field,player,itself,virtual,add_ability=[KeywordAbility.REDUCE_DAMAGE_TO_ZERO.value])
 
 
 def creature_ability_074(field,player,opponent,virtual,target,itself):
@@ -534,6 +541,13 @@ def creature_ability_078(field,player,opponent,virtual,target,itself):
     #ability_resolution(self,virtual=False,player_num=0)
     summon_creature(field,field.players[card_index[0]],virtual,name=card_name)
 
+def creature_ability_079(field,player,opponent,virtual,target,itself):
+    """
+    At the start of your turn, restore 2 defense to your leader.
+    """
+    if field.turn_player_num=player.player_num:
+        restore_player_life(player,virtual,num=2)
+
     
 
 
@@ -551,7 +565,8 @@ creature_ability_dict={0:None,1:creature_ability_001,2:creature_ability_002,3:cr
     49:creature_ability_049,50:creature_ability_050,51:creature_ability_051,52:creature_ability_052,53:creature_ability_053,
     54:creature_ability_054,55:creature_ability_055,56:creature_ability_056,57:creature_ability_057,58:creature_ability_058,
     59:creature_ability_059,60:creature_ability_060,61:creature_ability_061,62:creature_ability_062,63:creature_ability_063,
-    64:creature_ability_064,65:creature_ability_065,66:creature_ability_066,67:creature_ability_067,68:creature_ability_068,\
-    69:creature_ability_069,70:creature_ability_070,71:creature_ability_071,72:creature_ability_072,73:creature_ability_073,\
-    74:creature_ability_074,75:creature_ability_075,76:creature_ability_076,77:creature_ability_077,78:creature_ability_078}
+    64:creature_ability_064,65:creature_ability_065,66:creature_ability_066,67:creature_ability_067,68:creature_ability_068,
+    69:creature_ability_069,70:creature_ability_070,71:creature_ability_071,72:creature_ability_072,73:creature_ability_073,
+    74:creature_ability_074,75:creature_ability_075,76:creature_ability_076,77:creature_ability_077,78:creature_ability_078,
+    79:creature_ability_79}
 
