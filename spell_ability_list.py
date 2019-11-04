@@ -259,6 +259,13 @@ def spell_ability_038(field,player,opponent,virtual,target,itself):
     put_card_from_deck_in_play(field,player,virtual,condition=condition)
     put_card_from_deck_in_play(field,player,virtual,condition=condition)
 
+def spell_ability_039(field,player,opponent,virtual,target,itself):
+    """
+    Destroy an allied follower.
+    Draw 2 cards.
+    """
+    destroy_opponent_creature(field,player,virtual,target)
+    draw_cards(player,virtual,num=2)
 
 
 
@@ -294,6 +301,7 @@ def token_spell_ability_002(field,player,opponent,virtual,target,itself):
 
 
 
+
 spell_ability_dict={1:spell_ability_001,2:spell_ability_002,3:spell_ability_003,4:spell_ability_004,5:spell_ability_005,\
     6:spell_ability_006,7:spell_ability_007,8:spell_ability_008,9:spell_ability_009,10:spell_ability_010,\
     11:spell_ability_011,12:spell_ability_012,13:spell_ability_013,14:spell_ability_014,15:spell_ability_015,\
@@ -301,7 +309,7 @@ spell_ability_dict={1:spell_ability_001,2:spell_ability_002,3:spell_ability_003,
     21:spell_ability_021,22:spell_ability_022,23:spell_ability_023,24:spell_ability_024,25:spell_ability_025,\
     26:spell_ability_026,27:spell_ability_027,28:spell_ability_028,29:spell_ability_029,30:spell_ability_030,\
     31:spell_ability_031,32:spell_ability_032,33:spell_ability_033,34:spell_ability_034,35:spell_ability_035,\
-    36:spell_ability_036,37:spell_ability_037,38:spell_ability_038,\
+    36:spell_ability_036,37:spell_ability_037,38:spell_ability_038,39:spell_ability_039,\
     
     
     -1:token_spell_ability_001,-2:token_spell_ability_002}

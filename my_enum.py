@@ -42,6 +42,7 @@ class __KeywordAbility(Enum):
     REDUCE_DAMAGE_TO_ZERO_BY_EFFECTS = 11
     CANT_ATTACK_TO_FOLLOWER = 12
     CANT_ATTACK_TO_PLAYER = 13
+    BANISH_WHEN_LEAVES = 14
 #1は速攻(出たターンでも攻撃できる),2は必殺(交戦したクリーチャーを必ず破壊する)
 #3は守護(相手の場に守護を持つフォロワーがいる限り、原則このフォロワー以外には攻撃できない)
 #4は突進(出たターンでもフォロワーに攻撃できる)
@@ -65,6 +66,7 @@ class __State_Code(Enum):
     RESTORE_PLAYER_LIFE = 7
     START_OF_TURN = 8
     END_OF_TURN = 9
+    GET_DAMAGE = 10
 
 State_Code=__State_Code
 

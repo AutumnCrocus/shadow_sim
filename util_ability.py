@@ -75,7 +75,7 @@ def get_damage_to_player(player,virtual,num=0):
 
 
 def restore_player_life(player,virtual,num=0):
-    player.restore_life(num=num,virtual=virtual)
+    player.restore_player_life(num=num,virtual=virtual)
 
 def draw_cards(player,virtual,num=1):
     tmp=0

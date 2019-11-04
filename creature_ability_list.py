@@ -201,7 +201,7 @@ def creature_ability_030(field,player,opponent,virtual,target,itself):
 
 def creature_ability_031(field,player,opponent,virtual,target,itself):
     #Ghost's end-of-turn  and removed-from-field-ability
-    if field.turn_player_num=player.player_num:
+    if field.turn_player_num==player.player_num:
         flg = itself in field.card_location[player.player_num]
         if flg==False:
             mylogger.info("Player_num:{}".format(player.player_num))
@@ -481,10 +481,11 @@ def creature_ability_072(field,player,opponent,virtual,target,itself):
     """
     Evolve: Destroy an enemy follower if an allied Neutral follower is in play.
     """
-    if target!=None:return
+    if target==None:return
     for card in field.card_location[player.player_num]:
         if card.card_class.value==LeaderClass.NEUTRAL.value:
-            #mylogger.info("hit")
+            if virtual==False:
+                mylogger.info("hit")
             destroy_opponent_creature(field,opponent,virtual,target)
             return
 
@@ -545,8 +546,43 @@ def creature_ability_079(field,player,opponent,virtual,target,itself):
     """
     At the start of your turn, restore 2 defense to your leader.
     """
-    if field.turn_player_num=player.player_num:
+    if field.turn_player_num==player.player_num:
         restore_player_life(player,virtual,num=2)
+
+def creature_ability_080(field,player,opponent,virtual,target,itself):
+    """
+    Fanfare: Gain Ambush until the end of your opponent's turn.
+    """
+    add_ability_until_end_of_opponent_turn(field,player,itself,virtual,add_ability=[KeywordAbility.AMBUSH])
+
+
+def creature_ability_081(field,player,opponent,virtual,target,itself):
+    """
+    Fanfare: Necromancy (4) - Destroy an evolved enemy follower.
+    """
+    if target==None:return
+    if necromancy(field,player,num=4)==True:
+        target_creature=field.card_location[opponent.player_num][target]
+        assert itself.target_regulation(target_creature)==True,"illigal target error"
+        destroy_opponent_creature(field,opponent,virtual,target)
+
+def creature_ability_082(field,player,opponent,virtual,target,itself):
+    """
+    Fanfare: Give all allied followers Last Words - Summon a Skeleton.
+    """
+    def summon_a_skeleton(field,player,opponent,virtual,target,itself):
+        summon_creature(field,player,virtual,name="Skeleton",num=1)
+    if virtual==False:
+        mylogger.info("All Player{}'s follower get Last Words - Summon a Skeleton".format(player.player_num+1))
+    for card in field.card_location[player.player_num]:
+        if card.card_category=="Creature":
+            card.lastword_ability.append(summon_a_skeleton)
+
+def creature_ability_083(field,player,opponent,virtual,target,itself):
+    """
+    Last Words: Summon 2 Skeletons.
+    """
+    summon_creature(field,player,virtual,name="Skeleton",num=2)
 
     
 
@@ -568,5 +604,5 @@ creature_ability_dict={0:None,1:creature_ability_001,2:creature_ability_002,3:cr
     64:creature_ability_064,65:creature_ability_065,66:creature_ability_066,67:creature_ability_067,68:creature_ability_068,
     69:creature_ability_069,70:creature_ability_070,71:creature_ability_071,72:creature_ability_072,73:creature_ability_073,
     74:creature_ability_074,75:creature_ability_075,76:creature_ability_076,77:creature_ability_077,78:creature_ability_078,
-    79:creature_ability_79}
+    79:creature_ability_079,80:creature_ability_080,81:creature_ability_081,82:creature_ability_082,83:creature_ability_083}
 

@@ -179,8 +179,9 @@ creature_start_of_turn_ability=tsv_2_ability_dict("All_start_of_turn_list.tsv",n
 creature_has_target=tsv_2_ability_dict("All_fanfare_target_list.tsv",name_to_id=creature_name_to_id)
 creature_evo_effect=tsv_2_ability_dict("All_evo_effect_list.tsv",name_to_id=creature_name_to_id)
 creature_has_evo_effect_target={29:1,41:1,83:2,96:1}
-creature_target_regulation={46:lambda x:x.power>=5,48:lambda x:x.origin_cost==1,88:lambda card:card.card_category=="Creature" \
-    and card.card_class.name=="NEUTRAL"}
+creature_target_regulation={46:lambda x:x.power>=5,48:lambda x:x.origin_cost==1,\
+    88:lambda card:card.card_category=="Creature" and card.card_class.name=="NEUTRAL",\
+    creature_name_to_id["Little Soulsquasher"]:lambda card:card.evolved==True}
 another_target_func=lambda creature,itself:creature!=itself
 evo_target_regulation={83:another_target_func}
 player_attack_regulation=\
@@ -189,7 +190,9 @@ creature_in_battle_ability_list={47:1,89:2}
 creature_cost_change_ability_list={97:2}
 can_only_attack_check=lambda field,player:field.check_word()[1-player.player_num]==True
 creature_can_only_attack_list={49:can_only_attack_check}
-creature_trigger_ability_dict={60:1,63:4,64:5,79:6,95:7,100:8,creature_name_to_id["Prime Dragon Keeper"]:10}
+creature_trigger_ability_dict={60:1,63:4,64:5,79:6,95:7,100:8,\
+    creature_name_to_id["Prime Dragon Keeper"]:10,\
+    creature_name_to_id["Shadow Reaper"]:11}
 special_evo_stats_id={26:1,27:3,29:1,41:1,52:1,66:1,77:1}
 evo_stats={1:[1,1],2:[0,0],3:[3,1]}
 creature_earth_rite_list=[67,68,71,90]
@@ -359,6 +362,7 @@ class Card:
         
 class Creature(Card):
     def __init__(self,card_id):
+        self.time_stamp=0
         self.card_id=card_id#カードid
         self.card_category="Creature"
         
@@ -531,7 +535,7 @@ class Creature(Card):
         self.current_attack_num=0
 
     def evolve(self,field,target,player_num=0,virtual=False,auto=False):
-        if virtual==False:mylogger.info("evo_check")
+        #if virtual==False:mylogger.info("evo_check")
         self.evolved=True
         self.power+=self.evo_stat[0]
         self.toughness+=self.evo_stat[1]
@@ -624,6 +628,7 @@ class Creature(Card):
 
 class Spell(Card):
     def __init__(self,card_id):
+        self.time_stamp=0
         self.card_id=card_id#カードid
         self.card_category="Spell"
         self.cost=spell_list[self.card_id][0]#カードのコスト
@@ -694,6 +699,7 @@ class Spell(Card):
 
 class Amulet(Card):
     def __init__(self,card_id):
+        self.time_stamp=0
         self.card_id=card_id#カードid
         self.card_category="Amulet"
         self.cost=amulet_list[self.card_id][0]#カードのコスト

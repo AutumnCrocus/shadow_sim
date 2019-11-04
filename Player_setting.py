@@ -26,6 +26,7 @@ class Player:
             self.field=None
             self.name=None
             self.class_num=None
+            self.effect=[]
         
         def set_field(self,field):
             self.field=field
@@ -45,20 +46,37 @@ class Player:
             player.set_field(field)
             player.name=self.name
             player.class_num=self.class_num
+            if len(self.effect)>0:
+                player.effect=copy.deepcopy(self.effect)
             return player
 
 
         def get_damage(self,damage):
-            self.life-=damage
-            return damage
-        def restore_life(self,num=0,virtual=False):
+            if len(self.effect)>0:
+                tmp=int(damage)
+                priority_list=list(set([effect.proirity for effect in self.effect]))
+                priority_list=sorted(priority_list,reverse=True)
+
+                for i in priority_list:
+                    for effect in self.effect:
+                        if effect.priority==i:
+                            tmp=effect(argument=tmp,state_code=State_Code.GET_DAMAGE.value)
+                return tmp
+            else:
+                self.life-=damage
+                return damage
+        def restore_player_life(self,num=0,virtual=False):
+            self.field.restore_player_life(player=self,num=num,virtual=virtual)
+            """
             tmp=num
             if self.max_life-self.life<tmp:
                 tmp=self.max_life-self.life
             self.life+=tmp
             if virtual==False:
                 mylogger.info("Player {} restore {} life".format(self.player_num+1,tmp))
-            self.field.state_log.append([State_Code.RESTORE_PLAYER_LIFE.value,self.player_num])
+            self.field.stack_num+=1
+            self.field.state_log.append([State_Code.RESTORE_PLAYER_LIFE.value,self.player_num,self.field.stack_num])
+            """
             
         
         def check_vengeance(self):
@@ -285,7 +303,8 @@ class Player:
             return end_flg
 
         def execute_action(self,field,opponent,action_code=None,virtual=False):
-            field.stack=[]
+            
+            field.reset_time_stamp()
             if action_code==None:
                 raise Exception("action_code is None!")
             (action_num,card_id,target_id)=action_code
@@ -365,11 +384,11 @@ class HumanPlayer(Player):
                 choices.append(1)
 
             if can_attack==True:
-                if field.card_num[opponent.player_num]>0:
+                if len(can_be_attacked)>0:
                     print("if you want to attack to creature, input 2")
                     choices.append(2)
 
-                if ward_list==[] and able_to_attack!=[]:
+                if ward_list==[] and len(able_to_attack)>0:
                     print("if you want to attack to player, input 3")
                     choices.append(3)
 
@@ -389,13 +408,9 @@ class HumanPlayer(Player):
                 if card_id not in able_to_evo:
                     print("already evolved!")
                     return can_play,can_attack,field.check_game_end()
-                if field.card_location[self.player_num][card_id].card_id==96:
-                    maisy=field.card_location[self.player_num][card_id]
-                    mylogger.info("name:{}".format(maisy.name))
-                    mylogger.info("target:{}".format(maisy.evo_target))
                 if field.card_location[self.player_num][card_id].evo_target!=None:
                     mylogger.info("target-evolve")
-                    regal = field.get_regal_targets(field.card_location[self.player_num][card_id],target_type=0,player_num=self.player_num)
+                    regal = field.get_regal_targets(field.card_location[self.player_num][card_id],target_type=0,player_num=self.player_num,human=True)
                     mylogger.info("targets:{}".format(regal))
                     if regal!=[]:
                         print("you can target:{}".format(regal))
@@ -404,6 +419,9 @@ class HumanPlayer(Player):
                             print("illigal target!")
                             return can_play,can_attack,field.check_game_end()
                         self.creature_evolve(field.card_location[self.player_num][card_id],field,target=target_id)
+                    else:
+                        mylogger.info("evolve")
+                        self.creature_evolve(field.card_location[self.player_num][card_id],field)  
                         
 
                 else:    
@@ -426,7 +444,17 @@ class HumanPlayer(Player):
                 if self.hand[card_id].have_target!=0:
                     print("valid_targets:{}".format(regal_targets[card_id]))
                     target_id=input("input target code(splited by space):")
-                    target_code=tuple(map(int,target_id.split(" ")))
+                    target_code=None
+                    if target_id=="":
+                        if self.hand[card_id]!="Spell":
+                            target_code=[None]
+                        else:
+                            print("you can't play spell that have target!")
+                            return can_play,can_attack,field.check_game_end()
+
+                    
+                    else:
+                        target_code=tuple(map(int,target_id.split(" ")))
                     if len(target_code)==1:
                         target_code=target_code[0]
                     if target_code not in regal_targets[card_id]:
@@ -440,6 +468,11 @@ class HumanPlayer(Player):
             if action_num==2:
                 field.show_field()
                 print("able_to_attack:{}".format(able_to_creature_attack))
+                if len(ward_list)>0:
+                    print("can_be_attacked:{}".format(ward_list))
+                else:
+                    print("can_be_attacked:{}".format(can_be_attacked))
+
                 card_id=int(input("input creature id you want to let attack:"))
                 if card_id > field.card_num[self.player_num]-1:
                     print("invalid card id!")
@@ -448,7 +481,11 @@ class HumanPlayer(Player):
                         print("can't attack!")
                         return can_play,can_attack,field.check_game_end()
                 tmp=int(input("input target creature id you want to attack:"))
-                if ward_list==[]:
+                if tmp not in can_be_attacked:
+                    mylogger.info("invalid target id!")
+                    return can_play,can_attack,field.check_game_end()
+
+                if len(ward_list)==0:
                     if tmp > field.card_num[1-self.player_num]-1:
                             print("invalid target id!")
                             return can_play,can_attack,field.check_game_end()

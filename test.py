@@ -104,7 +104,8 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
                 D[i]=tsv_to_deck("Sword.tsv")
                 #Mid
             elif deck_type[i]==3:
-                D[i]=tsv_to_deck("Shadow.tsv")
+                #D[i]=tsv_to_deck("Shadow.tsv")
+                D[i]=tsv_to_deck("New-Shadow.tsv")
                 #Mid
             elif deck_type[i]==4:
                 D[i]=tsv_to_deck("Dragon_PDK.tsv")
@@ -125,6 +126,9 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
                 D[i]=tsv_to_deck("Rune.tsv")
                 #Combo
             elif deck_type[i]==10:
+                D[i]=tsv_to_deck("New-Shadow.tsv")
+                #Combo
+            elif deck_type[i]==11:
                 class_pool[i]=2
                 d.set_deck_type(2)
                 #テスト用デッキ
@@ -205,7 +209,8 @@ def test_2(Player_1,Player_2,iteration,same_flg=False,result_name="Result.tsv"):
                 D[i]=tsv_to_deck("Sword.tsv")
                 #Mid
             elif i==3:
-                D[i]=tsv_to_deck("Shadow.tsv")
+                #D[i]=tsv_to_deck("Shadow.tsv")
+                D[i]=tsv_to_deck("New-Shadow.tsv")
                 #Mid
             elif i==4:
                 D[i]=tsv_to_deck("Dragon_PDK.tsv")
@@ -355,7 +360,8 @@ def make_policy_table(n,initial_players=None,deck_type=None,same_flg=False,resul
             D[i]=tsv_to_deck("Sword.tsv")
             #Mid
         elif i==3:
-            D[i]=tsv_to_deck("Shadow.tsv")
+            #D[i]=tsv_to_deck("Shadow.tsv")
+            D[i]=tsv_to_deck("New-Shadow.tsv")
             #Mid
         elif i==4:
             D[i]=tsv_to_deck("Dragon_PDK.tsv")
