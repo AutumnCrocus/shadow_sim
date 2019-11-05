@@ -194,7 +194,7 @@ def creature_ability_029(field,player,opponent,virtual,target,itself):
         draw_cards(player,virtual,num=2)
 
 def creature_ability_030(field,player,opponent,virtual,target,itself):
-    if necromancy(field,player,num=1)==True:
+    if necromancy(field,player,num=1,virtual=virtual)==True:
         if virtual==False:
             mylogger.info("{} get +1/+1".format(itself.name))
         buff_creature(itself,params=[1,1])
@@ -211,7 +211,12 @@ def creature_ability_031(field,player,opponent,virtual,target,itself):
         field.banish_card(location,virtual=virtual)
 
 def creature_ability_032(field,player,opponent,virtual,target,itself):
-    #Andrealphus's evolve ability
+    """
+    Evolve: Give all of the followers in your hand Last Words: Draw a card.
+    Last Words: Draw a card.
+    """
+    if virtual==False:
+        mylogger.info("Player{}'s followers in hand get Last Words: Draw a card.")
     for card in player.hand:
         if card.card_category=="Creature":
             card.lastword_ability.append(creature_ability_003)
@@ -245,7 +250,7 @@ def creature_ability_037(field,player,opponent,virtual,target,itself):
 
 def creature_ability_038(field,player,opponent,virtual,target,itself):
     while len(field.card_location[player.player_num])<field.max_field_num:
-        if necromancy(field,player,num=3)==True:
+        if necromancy(field,player,num=3,virtual=virtual)==True:
             summon_creature(field,player,virtual,name="Zombie")
         else:
             break
@@ -561,7 +566,7 @@ def creature_ability_081(field,player,opponent,virtual,target,itself):
     Fanfare: Necromancy (4) - Destroy an evolved enemy follower.
     """
     if target==None:return
-    if necromancy(field,player,num=4)==True:
+    if necromancy(field,player,num=4,virtual=virtual)==True:
         target_creature=field.card_location[opponent.player_num][target]
         assert itself.target_regulation(target_creature)==True,"illigal target error"
         destroy_opponent_creature(field,opponent,virtual,target)

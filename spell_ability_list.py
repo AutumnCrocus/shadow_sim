@@ -144,21 +144,21 @@ def spell_ability_021(field,player,opponent,virtual,target,itself):
     get_damage_to_all_creature(field,virtual,num=8)
 
 def spell_ability_022(field,player,opponent,virtual,target,itself):
-    if necromancy(field,player,num=2)==True:
+    if necromancy(field,player,num=2,virtual=virtual)==True:
         get_damage_to_creature(field,opponent,virtual,target,num=4)
     else:
         get_damage_to_creature(field,opponent,virtual,target,num=2)
 
 def spell_ability_023(field,player,opponent,virtual,target,itself):
     while len(field.card_location[player.player_num])<field.max_field_num:
-        if necromancy(field,player,num=1)==True:
+        if necromancy(field,player,num=1,virtual=virtual)==True:
             summon_creature(field,player,virtual,name="Ghost")
         else:
             break
 
 def spell_ability_024(field,player,opponent,virtual,target,itself):
     summon_creature(field,player,virtual,name="Zombie",num=3)
-    if necromancy(field,player,num=6)==True:
+    if necromancy(field,player,num=6,virtual=virtual)==True:
         if virtual==False:
             mylogger.info("Give +0/+1 and Ward to allied Zombies.")
         for creature_id in field.get_creature_location()[player.player_num]:

@@ -602,11 +602,13 @@ class Creature(Card):
         default_color="\033[0m"
         if self.is_in_field==True:
             if self.can_attack_to_player():
-                text+="\033[36m"
-                default_color="\033[36m"
+                CYAN="\033[36m"
+                text+=CYAN
+                default_color=CYAN
             elif self.can_attack_to_follower():
-                text+="\033[33m"
-                default_color="\033[33m"
+                YELLOW="\033[33m"
+                text+=YELLOW
+                default_color=YELLOW
         if self.is_in_field==True:
             text+="name:{:<25} {}/{}/{}".format(self.name,str(self.origin_cost),str(self.power),str(self.toughness-self.damage))
         else:
@@ -619,9 +621,13 @@ class Creature(Card):
             text+=" spell_boost:{:<2}".format(self.spell_boost)
         if self.ability!=[] and self.is_in_field==True:
             text+=" ability={}".format([KeywordAbility(i).name for i in self.ability])
-        if len(self.trigger_ability)>0 and self.is_in_field:
-            GREEN = '\033[32m'
-            text+=GREEN+" ◆"
+        if self.is_in_field:
+            if len(self.lastword_ability)>0:
+                RED = '\033[31m'
+                text+=RED+" ◇"
+            if len(self.trigger_ability)>0:
+                GREEN = '\033[32m'
+                text+=GREEN+" ◆"
         text+="\033[0m"
         return text
 
@@ -827,9 +833,13 @@ class Amulet(Card):
             tmp=tmp+" count:{:<2}".format(self.current_count)
         if self.have_enhance==True and self.active_enhance_code[0]==True:
             tmp+=" enhance:{}".format(self.active_enhance_code[1])
-        if len(self.trigger_ability)>0 and self.is_in_field:
-            GREEN = '\033[32m'
-            tmp+=GREEN+" ◆"
+        if self.is_in_field:
+            if len(self.lastword_ability)>0:
+                RED = '\033[31m'
+                tmp+=RED+" ◇"
+            if len(self.trigger_ability)>0:
+                GREEN = '\033[32m'
+                tmp+=GREEN+" ◆"
         tmp+="\033[0m"
         return tmp
             

@@ -427,14 +427,16 @@ class Field:
         if KeywordAbility.DRAIN.value in attacking_creature.ability:
             restore_player_life(self.players[attack[0]],virtual,num=amount)
         defencing_creature.get_damage(attacking_creature.power)
-
-        if KeywordAbility.BANE.value in attacking_creature.ability and\
-             KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value not in defencing_creature.ability:#必殺効果処理
-            self.remove_card(defence,virtual)            
-
-        if KeywordAbility.BANE.value in defencing_creature.ability and\
-             KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value not in attacking_creature.ability:
-            self.remove_card(attack,virtual)
+        if defencing_creature.is_in_field:
+            if KeywordAbility.BANE.value in attacking_creature.ability and\
+                KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value not in defencing_creature.ability:#必殺効果処理
+                new_def_index=[defence[0],self.card_location[defence[0]].index(defencing_creature)]
+                self.remove_card(new_def_index,virtual)            
+        if attacking_creature.is_in_field:
+            if KeywordAbility.BANE.value in defencing_creature.ability and\
+                KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value not in attacking_creature.ability:
+                new_atk_index=[attack[0],self.card_location[attack[0]].index(attacking_creature)]
+                self.remove_card(new_atk_index,virtual)
         #self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
         #self.ability_resolution(virtual=virtual,player_num=attack[0])
             

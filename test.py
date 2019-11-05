@@ -402,7 +402,7 @@ def make_policy_table(n,initial_players=None,deck_type=None,same_flg=False,resul
             Results[(policy1_id,policy2_id)]=[win_lose[0]/iteration,first_num/iteration]
         mylogger.info("complete:{}/{}".format(policy1_id+1,len(players)))
     deck_id_2_name={0:"Sword_Aggro",1:"Rune_Earth",2:"Sword",3:"Shadow",4:"Dragon_PDK",5:"Haven",6:"Blood",7:"Dragon",8:"Forest",9:"Rune"}
-    policy_id_2_name={0:"Random",1:"Aggro",2:"Greedy",3:"MCTS",4:"Test2-MCTS",5:"A-MCTS",6:"EXP3_MCTS"}
+    policy_id_2_name={0:"Random",1:"Aggro",2:"Greedy",3:"MCTS",4:"Test2-MCTS",5:"A-MCTS",6:"EXP3_MCTS",7:"New-MCTS",8:"New-A-MCTS"}
     with open("Battle_Result/"+result_name,"w") as f:
         writer = csv.writer(f,delimiter='\t',lineterminator='\n')
         row=["{} vs {}".format(deck_id_2_name[deck_type[0]],deck_id_2_name[deck_type[1]])]
@@ -446,6 +446,7 @@ Players.append(Player(9,True,policy=Aggro_MCTSPolicy(),mulligan=Min_cost_mulliga
 Players.append(Player(9,True,policy=EXP3_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#15
 Players.append(Player(9,True,policy=New_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#16
 Players.append(Player(9,True,policy=New_Aggro_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#17
+Players.append(Player(9,True,policy=Aggro_EXP3_MCTSPolicy(),mulligan=Min_cost_mulligan_policy()))#18
 
 #Player(5,True,policy=AggroPolicy(),mulligan=Min_cost_mulligan_policy)
 #Player(5,False,policy=GreedyPolicy(),mulligan=Min_cost_mulligan_policy)
@@ -487,7 +488,7 @@ if b==-1:
     d2=human_player
 else:
     d2=copy.deepcopy(Players[b])
-input_players=[Players[0],Players[1],Players[4],Players[8],Players[11],Players[13],Players[14]]
+input_players=[Players[0],Players[1],Players[4],Players[8],Players[11],Players[13],Players[14],Players[15],Players[16]]
 t1=datetime.datetime.now()
 if sys.argv[-1]=="-demo":  
     #cProfile.run('test_1(d1,d2,n,deck_type=[p1,p2])')

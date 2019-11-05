@@ -151,9 +151,11 @@ def search_cards(player,condition,virtual,num=1):
                 mylogger.info("Player{} append {} to hand from deck".format(player.player_num+1,card.name))
         player.append_cards_to_hand(cards)
 
-def necromancy(field,player,num=1):
+def necromancy(field,player,num=1,virtual=False):
     if field.graveyard.shadows[player.player_num]>=num:
         field.graveyard.shadows[player.player_num]-=num
+        if virtual==False:
+            mylogger.info("necromancy({}) is actived".format(num))
         return True
     else:
         return False
@@ -236,12 +238,13 @@ def add_ability_until_end_of_player_turn(field,player,creature,virtual,add_abili
                     self_creature.turn_end_ability.remove(ability_until_end_of_player_turn)
                 else:
                     break
-            if virtual==False:
-                mylogger.info("{} get {} until end of player turn".format(creature.name,[KeywordAbility(i).name for i in add_ability]))
+
             
     for ability in add_ability:
         if ability not in creature.ability:
             creature.ability.append(ability)
+    if virtual==False:
+        mylogger.info("{} get {} until end of player turn".format(creature.name,[KeywordAbility(i).name for i in add_ability]))
     
     creature.turn_end_ability.append(ability_until_end_of_player_turn)
 
@@ -258,13 +261,13 @@ def add_ability_until_end_of_opponent_turn(field,player,creature,virtual,add_abi
                     self_creature.turn_end_ability.remove(ability_until_end_of_opponent_turn)
                 else:
                     break
-            if virtual==False:
-                mylogger.info("{} get {} until end of opponent turn".format(creature.name,[KeywordAbility(i).name for i in add_ability]))
+
             
     for ability in add_ability:
         if ability not in creature.ability:
             creature.ability.append(ability)
-    
+    if virtual==False:
+        mylogger.info("{} get {} until end of opponent turn".format(creature.name,[KeywordAbility(i).name for i in add_ability]))
     creature.turn_end_ability.append(ability_until_end_of_opponent_turn)
         
 def gain_max_pp(field,player,virtual,num=0):

@@ -95,12 +95,14 @@ class Player:
                     return
                 self.hand.append(deck.draw())
                 if len(self.hand)>self.max_hand_num:
+                    self.field.graveyard.shadows[self.player_num]+=1
                     self.hand.pop(-1)
 
         def append_cards_to_hand(self,cards):
             for card in cards:
                 self.hand.append(card)
                 if len(self.hand)>self.max_hand_num:
+                    self.field.graveyard.shadows[self.player_num]+=1
                     self.hand.pop(-1)
 
         def show_hand(self):
@@ -367,6 +369,7 @@ class HumanPlayer(Player):
                 deck.shuffle()
 
         def decide(self,player,opponent,field,virtual=False):
+            field.reset_time_stamp()
 
             (ward_list,can_be_targeted,can_be_attacked,regal_targets)=field.get_situation(player,opponent)
 
@@ -375,6 +378,8 @@ class HumanPlayer(Player):
             self.show_hand()
             field.show_field()
             print("Your life:{},Oppornent life:{}".format(player.life,opponent.life))
+            print("remain_cost:{}".format(field.remain_cost[player.player_num]))
+            print("shadows:{}".format(field.graveyard.shadows[player.player_num]))
             choices=[0]
             if can_evo==True:
                 print("if you want to evolve creature,input -1")
@@ -457,7 +462,9 @@ class HumanPlayer(Player):
                         target_code=tuple(map(int,target_id.split(" ")))
                     if len(target_code)==1:
                         target_code=target_code[0]
-                    if target_code not in regal_targets[card_id]:
+                    if regal_targets[card_id]==[]:
+                        target_code=None
+                    elif target_code not in regal_targets[card_id]:
                         print("Invalid target!")
                         return can_play,can_attack,field.check_game_end()
                     target_id=target_code

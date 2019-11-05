@@ -569,7 +569,8 @@ class Node:
             return
         print("visit_num:{} depth:{}".format(self.visit_num,self.depth))
         for key in list(self.action_value_dict.keys()):
-            print("{}:{}".format(key,self.action_value_dict[key]/(self.visit_num+1)))
+            target_child_node=list(filter(lambda cell:cell[0]==key,self.child_nodes))[0]
+            print("{}(visit_num:{}):{}".format(key,target_child_node[1].visit_num,self.action_value_dict[key]/(self.visit_num+1)))
         
         #for cell in self.child_nodes:
         #    print("{}:{} times".format(cell[0],cell[1].visit_num))
@@ -611,8 +612,10 @@ class MCTSPolicy(Policy):
             return -WIN_BONUS
 
 
-        return (field.players[1-player_num].max_life-field.players[1-player_num].life)*100 + \
-            (len(field.get_creature_location()[player_num])-len(field.get_creature_location()[1-player_num]))*10 + len(field.players[player_num].hand)
+        #return (field.players[1-player_num].max_life-field.players[1-player_num].life)*100 + \
+        #    (len(field.get_creature_location()[player_num])-len(field.get_creature_location()[1-player_num]))*10 + len(field.players[player_num].hand)
+        return (field.players[1-player_num].max_life-field.players[1-player_num].life)*50 + \
+            (len(field.get_creature_location()[player_num])-len(field.get_creature_location()[1-player_num]))*50 + len(field.players[player_num].hand)
 
     def decide(self,player,opponent,field):
         if self.action_seq==[]:
@@ -747,23 +750,25 @@ class MCTSPolicy(Policy):
 
                 current_field.players[0].deck.shuffle()#デッキの並びは不明だから
                 current_field.players[1].deck.shuffle()
-                current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+                player=current_field.players[player_num]
+                opponent=current_field.players[1-player_num]
+                current_field.get_regal_target_dict(player,opponent)
 
                 action_count=0
                 while True:
-                    (action_num,card_id,target_id)=self.play_out_policy.decide(current_field.players[player_num],current_field.players[1-player_num],\
+                    (action_num,card_id,target_id)=self.play_out_policy.decide(player,opponent,\
                         current_field)
  
-                    end_flg=current_field.players[player_num].execute_action(current_field,current_field.players[1-player_num],\
+                    end_flg=player.execute_action(current_field,opponent,\
                         action_code=(action_num,card_id,target_id),virtual=True)
 
                     if current_field.check_game_end()==True or end_flg==True:
                         break
 
-                    current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+                    current_field.get_regal_target_dict(player,opponent)
                     action_count+=1
                     if action_count>100:
-                        current_field.players[player_num].show_hand()
+                        player.show_hand()
                         current_field.show_field()
                         assert False
                 if current_field.check_game_end()==True:
@@ -942,13 +947,15 @@ class Test_MCTSPolicy(MCTSPolicy):
             current_field.set_data(node.field)
             current_field.players[0].deck.shuffle()#デッキの並びは不明だから
             current_field.players[1].deck.shuffle()
+            player=current_field.players[player_num]
+            opponent=current_field.players[1-player_num]
             if node.finite_state_flg==False:
                 
                 while True:
-                    current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
-                    (action_num,card_id,target_id)=self.play_out_policy.decide(current_field.players[player_num],current_field.players[1-player_num],\
+                    current_field.get_regal_target_dict(player,opponent)
+                    (action_num,card_id,target_id)=self.play_out_policy.decide(player,opponent,\
                         current_field)
-                    end_flg=current_field.players[player_num].execute_action(current_field,current_field.players[1-player_num],\
+                    end_flg=player.execute_action(current_field,opponent,\
                         action_code=(action_num,card_id,target_id),virtual=True)
 
                     if current_field.check_game_end()==True or end_flg==True:
@@ -964,17 +971,26 @@ class Test_MCTSPolicy(MCTSPolicy):
             current_field.untap(1-player_num)
             current_field.increment_cost(1-player_num)
             current_field.start_of_turn(1-player_num,virtual=True)
-            current_field.players[1-player_num].mulligan(current_field.players[1-player_num].deck,virtual=True)
-            current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+            #current_field.players[1-player_num].mulligan(current_field.players[1-player_num].deck,virtual=True)
+            
+            opponent_hand=opponent.hand
+            opponent_deck=opponent.deck
+            hand_len=len(opponent.hand)
+            while len(opponent.hand)>0:
+                opponent_deck.append(opponent_hand.pop())
+            opponent_deck.shuffle()
+            opponent.draw(opponent_deck,hand_len+1)
+
+            current_field.get_regal_target_dict(player,opponent)
             while True:
-                (action_num,card_id,target_id)=self.opponent_policy.decide(current_field.players[1-player_num],current_field.players[player_num],\
+                (action_num,card_id,target_id)=self.opponent_policy.decide(opponent,player,\
                     current_field)
-                end_flg=current_field.players[1-player_num].execute_action(current_field,current_field.players[player_num],\
+                end_flg=opponent.execute_action(current_field,player,\
                     action_code=(action_num,card_id,target_id),virtual=True)
                 if current_field.check_game_end()==True or end_flg==True:
                     break
                 
-                current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
+                current_field.get_regal_target_dict(player,opponent)
             if current_field.check_game_end()==True:
                 sum_of_value -= WIN_BONUS
             else:
@@ -1022,7 +1038,7 @@ class New_MCTSPolicy(MCTSPolicy):
             if field.players[1-player_num].life<=0 or len(field.players[1-player_num].deck.deck)==0:
                 return 1.0
             return 0.0
-
+        """
         player = field.players[player_num]
         opponent = field.players[1-player_num]
         
@@ -1061,6 +1077,12 @@ class New_MCTSPolicy(MCTSPolicy):
         assert self.probability_check_func(probability),"probability:{}".format(probability)
         probability=max(0,probability)
         return probability
+        """
+        life_ad=(field.players[1-player_num].max_life-field.players[1-player_num].life)*100
+        board_ad=(len(field.get_creature_location()[player_num])-len(field.get_creature_location()[1-player_num]))*100
+        hand_ad=len(field.players[player_num].hand)
+        return  ((life_ad+board_ad+hand_ad)+500)/((2000+500+9)+500)
+        
 
 class New_Aggro_MCTSPolicy(Aggro_MCTSPolicy):
     def __init__(self):
@@ -1141,6 +1163,7 @@ class EXP3_MCTSPolicy(Policy):
             if field.players[1-player_num].life<=0 or len(field.players[1-player_num].deck.deck)==0:
                 return 1.0
             return 0.0
+        """
         player = field.players[player_num]
         opponent = field.players[1-player_num]
         
@@ -1182,6 +1205,11 @@ class EXP3_MCTSPolicy(Policy):
         probability=max(0,probability)
         #mylogger.info("value:{} max_value:{} probability:{}".format(value,max_value,probability))
         return probability
+        """
+        life_ad=(field.players[1-player_num].max_life-field.players[1-player_num].life)*100
+        board_ad=(len(field.get_creature_location()[player_num])-len(field.get_creature_location()[1-player_num]))*10
+        hand_ad=len(field.players[player_num].hand)
+        return  ((life_ad+board_ad+hand_ad)+50)/((2000+50+9)+50)
     def decide(self,player,opponent,field):
         if self.current_node==None:
             
@@ -1193,10 +1221,32 @@ class EXP3_MCTSPolicy(Policy):
                 self.current_node=None
                 return 0,0,0 
             else:
+                mylogger.info("roulette 0")
                 #mylogger.info("roulette(0)")
                 #mylogger.info("action_value:{}".format(self.current_node.action_value_dict))
                 #self.current_node.print_estimated_action_value()
                 #mylogger.info("distribution:{}".format(self.exp3(self.current_node)))
+                self.current_node.print_estimated_action_value()
+                distribution=self.exp3(self.current_node)
+                #action_probabilities=[(str((Action_Code(key[0]).name,key[1],key[2])),distribution[i]) for i,key in enumerate(list(self.current_node.action_value_dict.keys()))]
+                action_probabilities=[]
+                for i,key in enumerate(list(self.current_node.action_value_dict.keys())):
+                    tmp=[Action_Code(key[0]).name,key[1],key[2]]
+                    if key[0]==1:
+                        tmp[1]=self.current_node.field.players[player.player_num].hand[key[1]].name
+                    elif key[0]==2:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                        tmp[2]=self.current_node.field.card_location[1-player.player_num][key[2]].name
+                    elif key[0]==3:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                    elif key[0]==-1:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                    
+                    action_probabilities.append((str(tuple(tmp)),distribution[i]))
+
+                action_probabilities.sort(key=lambda element:-element[1])
+                for action_probability in action_probabilities:
+                    mylogger.info("{:<75}:{:>10%}".format(action_probability[0],action_probability[1]))
                 next_node,action,_=self.roulette(self.current_node)
                 self.next_node=next_node
                 self.prev_node=self.current_node
@@ -1219,6 +1269,27 @@ class EXP3_MCTSPolicy(Policy):
                 if self.current_node.get_able_action_list()==[(0,0,0)]:
                     self.current_node = None
                     return 0,0,0
+                mylogger.info("roulette 1")
+                self.current_node.print_estimated_action_value()
+                distribution=self.exp3(self.current_node)
+                #action_probabilities=[(str((Action_Code(key[0]).name,key[1],key[2])),distribution[i]) for i,key in enumerate(list(self.current_node.action_value_dict.keys()))]
+                action_probabilities=[]
+                for i,key in enumerate(list(self.current_node.action_value_dict.keys())):
+                    tmp=[Action_Code(key[0]).name,key[1],key[2]]
+                    if key[0]==1:
+                        tmp[1]=self.current_node.field.players[player.player_num].hand[key[1]].name
+                    elif key[0]==2:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                        tmp[2]=self.current_node.field.card_location[1-player.player_num][key[2]].name
+                    elif key[0]==3:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                    elif key[0]==-1:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                    
+                    action_probabilities.append((str(tuple(tmp)),distribution[i]))
+                action_probabilities.sort(key=lambda element:-element[1])
+                for action_probability in action_probabilities:
+                    mylogger.info("{:<75}:{:>10%}".format(action_probability[0],action_probability[1]))
                 next_node,action,_=self.roulette(self.current_node)
                 self.next_node=next_node
                 self.prev_node=self.current_node
@@ -1226,11 +1297,31 @@ class EXP3_MCTSPolicy(Policy):
                 if action==(0,0,0):self.current_node=None
                 return action
             else:
-                #mylogger.info("roulette(1)")
+                mylogger.info("roulette 2")
                 #self.current_node.print_estimated_action_value()
                 #mylogger.info("distribution:{}".format(self.exp3(self.current_node)))
 
                 #mylogger.info("action_value:{}".format(self.current_node.action_value_dict))
+                self.current_node.print_estimated_action_value()
+                distribution=self.exp3(self.current_node)
+                #action_probabilities=[(str((Action_Code(key[0]).name,key[1],key[2])),distribution[i]) for i,key in enumerate(list(self.current_node.action_value_dict.keys()))]
+                action_probabilities=[]
+                for i,key in enumerate(list(self.current_node.action_value_dict.keys())):
+                    tmp=[Action_Code(key[0]).name,key[1],key[2]]
+                    if key[0]==1:
+                        tmp[1]=self.current_node.field.players[player.player_num].hand[key[1]].name
+                    elif key[0]==2:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                        tmp[2]=self.current_node.field.card_location[1-player.player_num][key[2]].name
+                    elif key[0]==3:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                    elif key[0]==-1:
+                        tmp[1]=self.current_node.field.card_location[player.player_num][key[1]].name
+                    
+                    action_probabilities.append((str(tuple(tmp)),distribution[i]))                
+                action_probabilities.sort(key=lambda element:-element[1])
+                for action_probability in action_probabilities:
+                    mylogger.info("{:<75}:{:>10%}".format(action_probability[0],action_probability[1]))
                 next_node,action,_=self.roulette(self.current_node)
                 self.next_node=next_node
                 self.prev_node=self.current_node
@@ -1335,8 +1426,10 @@ class EXP3_MCTSPolicy(Policy):
                 if cell[-1]==node:
                     action=cell[0]
             if node.field.check_game_end():
+                if action not in node.parent_node.action_value_dict:
+                    node.parent_node.action_value_dict[action]=0     
                 #mylogger.info("action:{} depth:{} value:{} probability:{}".format(action,node.depth,self.state_value(node.field,player_num),probability))
-                node.parent_node.action_value_dict[action]=(node.visit_num+1)*self.state_value(node.field,player_num)/probability
+                node.parent_node.action_value_dict[action]+=self.state_value(node.field,player_num)/probability
                 #mylogger.info("action_value:{}".format(node.parent_node.action_value_dict[action]))
             else:
                 node.parent_node.action_value_dict[action]=-1000*(node.parent_node.visit_num+1)*(1/node.depth)#0
@@ -1351,15 +1444,17 @@ class EXP3_MCTSPolicy(Policy):
 
                 current_field.players[0].deck.shuffle()#デッキの並びは不明だから
                 current_field.players[1].deck.shuffle()
+                player=current_field.players[player_num]
+                opponent=current_field.players[1-player_num]
                 #current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
 
                 action_count=0
                 while True:
-                    current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
-                    (action_num,card_id,target_id)=self.play_out_policy.decide(current_field.players[player_num],current_field.players[1-player_num],\
+                    current_field.get_regal_target_dict(player,opponent)
+                    (action_num,card_id,target_id)=self.play_out_policy.decide(player,opponent,\
                         current_field)
  
-                    end_flg=current_field.players[player_num].execute_action(current_field,current_field.players[1-player_num],\
+                    end_flg=player.execute_action(current_field,opponent,\
                         action_code=(action_num,card_id,target_id),virtual=True)
 
                     if current_field.check_game_end()==True or end_flg==True:
@@ -1368,7 +1463,7 @@ class EXP3_MCTSPolicy(Policy):
                     #current_field.get_regal_target_dict(current_field.players[player_num],current_field.players[1-player_num])
                     action_count+=1
                     if action_count>100:
-                        current_field.players[player_num].show_hand()
+                        player.show_hand()
                         current_field.show_field()
                         assert False
 
@@ -1505,12 +1600,13 @@ class EXP3_MCTSPolicy(Policy):
         value = (A*np.log(A))/((e-1)*over_all_n)
         value = np.sqrt(value)
         gamma = min(1,value)
+        gamma = min(0.0001,gamma)
         #gamma = 0.01
         #mylogger.info("gamma:{}".format(gamma))
         #gamma = 0.5
         #eta = gamma / over_all_n
         #eta = 10000*gamma/np.sqrt(over_all_n)
-        eta = 100*gamma/A
+        eta = 1000000*gamma/A
         #mylogger.info("eta:{}".format(eta))
         #distribution = [0 for i in range(A)]
         #value_list=[0 for i in range(A)]
@@ -1652,6 +1748,11 @@ class Information_Set_MCTSPolicy(MCTSPolicy):
     def __init__(self):
 
 """
+class Aggro_EXP3_MCTSPolicy(EXP3_MCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.play_out_policy=AggroPolicy()
+        self.name="Aggro_EXP3_MCTSPolicy"
 
 class Information_Set():
     def __init__(self):
