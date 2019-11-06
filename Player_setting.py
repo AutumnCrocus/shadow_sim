@@ -409,6 +409,9 @@ class HumanPlayer(Player):
                 return can_play,can_attack,field.check_game_end()
             if action_num==-1:
                 print("you can evolve:{}".format(able_to_evo))
+                evo_names=["id:{} name:{}".format(ele,field.card_location[self.player_num][ele].name) for ele in able_to_evo]
+                for cell in evo_names:
+                    mylogger.info("{}".format(cell))
                 card_id=int(input("input creature id :"))
                 if card_id not in able_to_evo:
                     print("already evolved!")
@@ -441,6 +444,9 @@ class HumanPlayer(Player):
                 self.show_hand()
                 print("remain cost:",field.remain_cost[self.player_num])
                 print("able to play:{}".format(able_to_play))
+                hand_names=["id:{} name:{}".format(ele,self.hand[ele].name) for ele in able_to_play]
+                for cell in hand_names:
+                    mylogger.info("{}".format(cell))
                 card_id=int(input("input card id :"))
                 if card_id not in able_to_play:
                     print("can't play!")

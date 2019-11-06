@@ -13,6 +13,7 @@ from mulligan_setting import *
 import logging
 mylogger = get_module_logger(__name__)
 from my_enum import *
+import argparse
 import csv
 def tsv_to_deck(tsv_name):
     deck=Deck()
@@ -76,6 +77,7 @@ def game_play(Player1,Player2,D1,D2,win,lose,lib_num,virtual_flg=False):
 #import numba
 #@numba.jit
 def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
+
         Player1=copy.deepcopy(Player_1)
         Player2=copy.deepcopy(Player_2)
         Player1=Player_1
@@ -91,7 +93,9 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
             deck_type=[5,5]
         else:
             mylogger.info("deck_type:{}".format(deck_type))
-
+        deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
+                          6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune"}
+        mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name, deck_id_2_name[deck_type[1]]))
         class_pool=[0,0]
         for i,d in enumerate(D):
             if deck_type[i]==0:
@@ -186,6 +190,7 @@ def test_1(Player_1,Player_2,iteration,virtual_flg=False,deck_type=None):
                 Player2.mulligan_policy.win_data)))))
 
 def test_2(Player_1,Player_2,iteration,same_flg=False,result_name="Result.tsv"):
+        mylogger.info("{} vs {}".format(Player_1.policy.name, Player_2.policy.name))
         Player1=copy.deepcopy(Player_1)
         Player2=copy.deepcopy(Player_2)
         Player1=Player_1
@@ -350,35 +355,35 @@ def make_policy_table(n,initial_players=None,deck_type=None,same_flg=False,resul
     players = copy.deepcopy(initial_players)
     D = [Deck() for i in range(2)]
     for i,d in enumerate(D):
-        if i==0:
+        if deck_type[i]==0:
             D[i]=tsv_to_deck("Sword_Aggro.tsv")
             #Aggro
-        elif i==1:
+        elif deck_type[i]==1:
             D[i]=tsv_to_deck("Rune_Earth.tsv")
             #Aggro
-        elif i==2:
+        elif deck_type[i]==2:
             D[i]=tsv_to_deck("Sword.tsv")
             #Mid
-        elif i==3:
+        elif deck_type[i]==3:
             #D[i]=tsv_to_deck("Shadow.tsv")
             D[i]=tsv_to_deck("New-Shadow.tsv")
             #Mid
-        elif i==4:
+        elif deck_type[i]==4:
             D[i]=tsv_to_deck("Dragon_PDK.tsv")
             #Mid
-        elif i==5:
+        elif deck_type[i]==5:
             D[i]=tsv_to_deck("Haven.tsv")
             #Control
-        elif i==6:
+        elif deck_type[i]==6:
             D[i]=tsv_to_deck("Blood.tsv")
             #Control
-        elif i==7:
+        elif deck_type[i]==7:
             D[i]=tsv_to_deck("Dragon.tsv")
             #Control
-        elif i==8:
+        elif deck_type[i]==8:
             D[i]=tsv_to_deck("Forest.tsv")
             #Combo
-        elif i==9:
+        elif deck_type[i]==9:
             D[i]=tsv_to_deck("Rune.tsv")
             #Combo
     Results={}
@@ -450,7 +455,18 @@ Players.append(Player(9,True,policy=Aggro_EXP3_MCTSPolicy(),mulligan=Min_cost_mu
 
 #Player(5,True,policy=AggroPolicy(),mulligan=Min_cost_mulligan_policy)
 #Player(5,False,policy=GreedyPolicy(),mulligan=Min_cost_mulligan_policy)
+parser = argparse.ArgumentParser(description='対戦実行コード')
 
+parser.add_argument('--N',help='試行回数')
+parser.add_argument('--playertype1',help='プレイヤー1のAIタイプ')
+parser.add_argument('--playertype2',help='プレイヤー2のAIタイプ')
+parser.add_argument('--decktype1',help='プレイヤー1のデッキタイプ')
+parser.add_argument('--decktype2',help='プレイヤー2のデッキタイプ')
+parser.add_argument('--filename',help='ファイル名')
+parser.add_argument('--mode',help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
+args = parser.parse_args()
+mylogger.info("args:{}".format(args))
+#assert False
 n=100
 a=0
 b=0
@@ -459,6 +475,7 @@ deck_flg=False
 p1,p2=0,0
 human_player=HumanPlayer(9,first=True)
 file_name="Result.tsv"
+"""
 if len(sys.argv)>=2:
     n=int(sys.argv[1])
 if len(sys.argv)>=4:
@@ -472,14 +489,16 @@ if len(sys.argv)>=6 and sys.argv[-1]!="-policy":
     p1=int(sys.argv[4])
     p2=int(sys.argv[5])
     deck_flg=True
-
+"""
 #raise Exception("Debug {} {}".format(sys.argv,len(sys.argv)))
+
 import cProfile
 import re
 import datetime
 iteration=n
 d1=None
 d2=None
+"""
 if a==-1:
     d1=human_player
 else:
@@ -488,17 +507,44 @@ if b==-1:
     d2=human_player
 else:
     d2=copy.deepcopy(Players[b])
+"""
+
 input_players=[Players[0],Players[1],Players[4],Players[8],Players[11],Players[13],Players[14],Players[15],Players[16]]
 t1=datetime.datetime.now()
-if sys.argv[-1]=="-demo":  
+#if sys.argv[-1]=="-demo":
+if args.mode=='demo':
     #cProfile.run('test_1(d1,d2,n,deck_type=[p1,p2])')
+    n=int(args.N)
+    a=int(args.playertype1)-1
+    b=int(args.playertype2)-1
+    d1=copy.deepcopy(Players[a])
+    d2=copy.deepcopy(Players[b])
+    p1=int(args.decktype1)
+    p2 = int(args.decktype2)
     test_1(d1,d2,n,deck_type=[p1,p2])
-elif sys.argv[-1]=="-shadow":
+#elif sys.argv[-1]=="-shadow":
+elif args.mode=='shadow':
     test_3(d1,d2,n)
-elif sys.argv[-1]=="-policy":
-    file_name=sys.argv[-2]
-    make_policy_table(n,initial_players=input_players,deck_type=[a+1,b+1],same_flg=a==b,result_name=file_name)
+#elif sys.argv[-1]=="-policy":
+elif args.mode=='policy':
+    #file_name=sys.argv[-2]
+    n = int(args.N)
+    if args.filename!=None:
+        file_name=args.filename
+    assert args.decktype1!=None and args.decktype2!=None,"deck1:{},deck2:{}".format(args.decktype1,args.decktype2)
+    a=int(args.decktype1)
+    b=int(args.decktype2)
+    make_policy_table(n, initial_players=input_players, deck_type=[a,b], same_flg=a == b,
+                      result_name=file_name)
+    #make_policy_table(n,initial_players=input_players,deck_type=[a+1,b+1],same_flg=a==b,result_name=file_name)
 else:
+    iteration=int(args.N)
+    a=int(args.playertype1)-1
+    b=int(args.playertype2)-1
+    d1=copy.deepcopy(Players[a])
+    d2=copy.deepcopy(Players[b])
+    if args.filename!=None:
+        file_name=args.filename
     if a==b:
         test_2(d1,d2,iteration,same_flg=True,result_name=file_name)
     else:

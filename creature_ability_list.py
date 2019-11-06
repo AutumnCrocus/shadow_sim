@@ -6,25 +6,31 @@ mylogger = get_module_logger(__name__)
 from util_ability import * 
 from my_enum import *
 
+
 def creature_ability_001(field,player,opponent,virtual,target,itself):
     restore_player_life(player,virtual,num=2)
+
 
 def creature_ability_002(field,player,opponent,virtual,target,itself):
     if itself.active_enhance_code[0]==True:
         get_damage_to_player(opponent,virtual,num=3)
 
+
 def creature_ability_003(field,player,opponent,virtual,target,itself):
     draw_cards(player,virtual,num=1)
+
 
 def creature_ability_004(field,player,opponent,virtual,target,itself):
     if target!=None and field.get_can_be_targeted(player_num=player.player_num)!=[]:
         get_damage_to_creature(field,opponent,virtual,target,num=1)
+
 
 def creature_ability_005(field,player,opponent,virtual,target,itself):
     if field.get_can_be_targeted(player_num=player.player_num)!=[]:
         if  target==None:
             raise Exception()
         get_damage_to_creature(field,opponent,virtual,target,num=4)
+
 
 def creature_ability_006(field,player,opponent,virtual,target,itself):
 
@@ -79,6 +85,7 @@ def creature_ability_009(field,player,opponent,virtual,target,itself):
         if virtual==False:
             mylogger.info("{} get +{}/0".format(itself.name,num))
 
+
 def creature_ability_010(field,player,opponent,virtual,target,itself):
 
     summon_creature(field,player,virtual,name="Steelclad Knight")
@@ -94,6 +101,7 @@ def creature_ability_011(field,player,opponent,virtual,target,itself):
 def creature_ability_012(field,player,opponent,virtual,target,itself):
     summon_creature(field,player,virtual,name="Steelclad Knight")
     summon_creature(field,player,virtual,name="Knight")
+
 
 def creature_ability_013(field,player,opponent,virtual,target,itself):
     """

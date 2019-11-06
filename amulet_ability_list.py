@@ -9,7 +9,7 @@ def amulet_ability_001(field,player,opponent,virtual,target,itself):
     if tmp!=[]:
         target_id=random.choice(tmp)
         creature=field.card_location[player.player_num][target_id]
-        buff_creature(creature,params[1,1])
+        buff_creature(creature,params=[1,1])
         if virtual==False:
             mylogger.info("Player {}'s {} get +1/+1".format(player.player_num+1,creature.name))
 

@@ -624,7 +624,7 @@ class Creature(Card):
         if self.is_in_field:
             if len(self.lastword_ability)>0:
                 RED = '\033[31m'
-                text+=RED+" ◇"
+                text+=RED+" ■"
             if len(self.trigger_ability)>0:
                 GREEN = '\033[32m'
                 text+=GREEN+" ◆"

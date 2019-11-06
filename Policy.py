@@ -1221,6 +1221,7 @@ class EXP3_MCTSPolicy(Policy):
                 self.current_node=None
                 return 0,0,0 
             else:
+                """
                 mylogger.info("roulette 0")
                 #mylogger.info("roulette(0)")
                 #mylogger.info("action_value:{}".format(self.current_node.action_value_dict))
@@ -1247,6 +1248,7 @@ class EXP3_MCTSPolicy(Policy):
                 action_probabilities.sort(key=lambda element:-element[1])
                 for action_probability in action_probabilities:
                     mylogger.info("{:<75}:{:>10%}".format(action_probability[0],action_probability[1]))
+                """
                 next_node,action,_=self.roulette(self.current_node)
                 self.next_node=next_node
                 self.prev_node=self.current_node
@@ -1269,6 +1271,7 @@ class EXP3_MCTSPolicy(Policy):
                 if self.current_node.get_able_action_list()==[(0,0,0)]:
                     self.current_node = None
                     return 0,0,0
+                """"
                 mylogger.info("roulette 1")
                 self.current_node.print_estimated_action_value()
                 distribution=self.exp3(self.current_node)
@@ -1290,6 +1293,7 @@ class EXP3_MCTSPolicy(Policy):
                 action_probabilities.sort(key=lambda element:-element[1])
                 for action_probability in action_probabilities:
                     mylogger.info("{:<75}:{:>10%}".format(action_probability[0],action_probability[1]))
+                """
                 next_node,action,_=self.roulette(self.current_node)
                 self.next_node=next_node
                 self.prev_node=self.current_node
@@ -1297,6 +1301,7 @@ class EXP3_MCTSPolicy(Policy):
                 if action==(0,0,0):self.current_node=None
                 return action
             else:
+                """
                 mylogger.info("roulette 2")
                 #self.current_node.print_estimated_action_value()
                 #mylogger.info("distribution:{}".format(self.exp3(self.current_node)))
@@ -1322,6 +1327,7 @@ class EXP3_MCTSPolicy(Policy):
                 action_probabilities.sort(key=lambda element:-element[1])
                 for action_probability in action_probabilities:
                     mylogger.info("{:<75}:{:>10%}".format(action_probability[0],action_probability[1]))
+                """
                 next_node,action,_=self.roulette(self.current_node)
                 self.next_node=next_node
                 self.prev_node=self.current_node
@@ -1485,7 +1491,7 @@ class EXP3_MCTSPolicy(Policy):
                     sum_of_value += 1.0
                     return (sum_of_value/(i+1))
                 else:
-                    assert self.state_value(current_field,player_num)>0,"{},{}".format(self.state_value(current_field,player_num),current_field.check_game_end())
+                    assert self.state_value(current_field,player_num)>=0,"{},{}".format(self.state_value(current_field,player_num),current_field.check_game_end())
                     sum_of_value += self.state_value(current_field,player_num)
             else:
                 assert False,"finite:True"
@@ -1499,7 +1505,7 @@ class EXP3_MCTSPolicy(Policy):
             if action not in node.parent_node.action_value_dict:
                 node.parent_node.action_value_dict[action]=0.0
                 #mylogger.info("append {} to action_value_dict:{}".format(action,node.parent_node.action_value_dict))
-            assert result/probability!=0.0,"result:{} probability:{} sum_of_value:{}".format(result,probability,sum_of_value)
+            assert result/probability>=0.0,"result:{} probability:{} sum_of_value:{}".format(result,probability,sum_of_value)
             node.parent_node.action_value_dict[action]+=result/probability
             #mylogger.info("{}:{},visit_num:{} depth:{}".format(action,result,node.visit_num,node.depth))
             #mylogger.info("now_value:{}".format(node.parent_node.action_value_dict[action]))
@@ -1591,10 +1597,7 @@ class EXP3_MCTSPolicy(Policy):
         #A = len(node.child_nodes)
         dict_key_list=list(node.action_value_dict.keys())
         A = len(dict_key_list)
-
         assert A>0,"child_nodes:{} child_moves:{} able_to_actions:{}".format(node.child_nodes,node.children_moves,node.get_exist_action())
-
-
         e = np.e
         #value = (A*np.log(A))/((e-1)*over_all_n)
         value = (A*np.log(A))/((e-1)*over_all_n)
