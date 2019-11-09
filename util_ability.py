@@ -230,7 +230,7 @@ def add_ability_until_end_of_player_turn(field,player,creature,virtual,add_abili
     def ability_until_end_of_player_turn(field,player,opponent,virtual,target,self_creature):
         if field.turn_player_num==player.player_num:
             for ability in add_ability:
-                if ability not in card_setting.creature_list[self_creature.card_id][3]:
+                if ability not in card_setting.creature_list[self_creature.card_id][3] and ability in self_creature.ability:
                     self_creature.ability.remove(ability)
             #self_creature.turn_end_ability=[]
             while True:
@@ -253,7 +253,7 @@ def add_ability_until_end_of_opponent_turn(field,player,creature,virtual,add_abi
     def ability_until_end_of_opponent_turn(field,player,opponent,virtual,target,self_creature):
         if field.turn_player_num==opponent.player_num:
             for ability in add_ability:
-                if ability not in card_setting.creature_list[self_creature.card_id][3]:
+                if ability not in card_setting.creature_list[self_creature.card_id][3] and ability in self_creature.ability:
                     self_creature.ability.remove(ability)
             #self_creature.turn_end_ability=[]
             while True:
