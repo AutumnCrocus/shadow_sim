@@ -147,7 +147,7 @@ tornado==6.0.3
 tox==3.13.2
 tqdm==4.32.2
 traitlets==4.3.2
-Twisted==17.9.0
+Twisted==19.7.0
 typing==3.6.6
 typing-extensions==3.6.6
 ufw==0.35
