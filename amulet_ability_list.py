@@ -7,6 +7,7 @@ from util_ability import *
 
 
 def amulet_ability_001(field, player, opponent, virtual, target, itself):
+    if field.turn_player_num != player.player_num:return
     tmp = field.get_creature_location()[player.player_num]
     # mylogger.info("tmp:{}".format(tmp))
     if tmp != []:
@@ -18,11 +19,14 @@ def amulet_ability_001(field, player, opponent, virtual, target, itself):
 
 
 def amulet_ability_002(field, player, opponent, virtual, target, itself):
-    summon_creature(field, player, virtual, name="Windblast Dragon")
+    if field.turn_player_num == player.player_num:
+        summon_creature(field, player, virtual, name="Windblast Dragon")
 
 
 def amulet_ability_003(field, player, opponent, virtual, target, itself):
     if field.graveyard.shadows[player.player_num] < 30:
+        return
+    if field.turn_player_num != player.player_num:
         return
     if not virtual:
         mylogger.info("Deal 6 damage to all opponent")
@@ -79,17 +83,21 @@ def amulet_ability_009(field, player, opponent, virtual, target, itself):
 
 
 def amulet_ability_010(field, player, opponent, virtual, target, itself):
-    get_damage_to_player(player, virtual, num=1)
-    get_damage_to_player(opponent, virtual, num=1)
+    if field.turn_player_num == player.player_num:
+        get_damage_to_player(player, virtual, num=1)
+        get_damage_to_player(opponent, virtual, num=1)
 
 
 def amulet_ability_011(field, player, opponent, virtual, target, itself):
     """Whitefang Temple's end_of_turn ability"""
-    restore_player_life(player, virtual, num=1)
+    if field.turn_player_num == player.player_num:
+        field.restore_player_life(player = player,num=1,virtual=virtual)
 
 
 def amulet_ability_012(field, player, opponent, virtual, target, itself):
-    """Whitefang Temple's lastword ability"""
+    """
+    Last Words: Summon a Holywing Dragon.
+    """
     summon_creature(field, player, virtual, name="Holywing Dragon", num=1)
 
 
@@ -147,13 +155,32 @@ def amulet_ability_019(field, player, opponent, virtual, target, itself):
 
     if virtual == False:
         mylogger.info(
-            "Player{} get ability:'At the start of your next turn, put 3 random followers from your deck into your hand'".format(
+            "Player{} get ability:'At the start of your next turn, put 3 random followers from your deck into your "
+            "hand'".format(
                 player.player_num))
     field.player_ability[player.player_num].append(search_three_followers)
 
 
-amulet_ability_dict = {1: amulet_ability_001, 2: amulet_ability_002, 3: amulet_ability_003, 4: amulet_ability_004,
-                       5: amulet_ability_005, 6: amulet_ability_006, 7: amulet_ability_007, 8: amulet_ability_008,
-                       9: amulet_ability_009,10: amulet_ability_010, 11: amulet_ability_011, 12: amulet_ability_012,
-                       13: amulet_ability_013, 14: amulet_ability_014, 15: amulet_ability_015,16: amulet_ability_016,
-                       17: amulet_ability_017, 18: amulet_ability_018, 19: amulet_ability_019}
+def amulet_ability_020(field, player, opponent, virtual, target, itself):
+    """
+    Countdown (4)
+    Last Words: Summon a Pegasus.
+    """
+    summon_creature(field, player, virtual, name="Pegasus")
+
+
+def amulet_ability_021(field, player, opponent, virtual, target, itself):
+    """
+    Countdown (2)
+    Last Words: Summon 2 Holyflame Tigers.
+    """
+    summon_creature(field, player, virtual, name="Holyflame Tiger",num=2)
+
+
+amulet_ability_dict = \
+    {1: amulet_ability_001, 2: amulet_ability_002, 3: amulet_ability_003, 4: amulet_ability_004,
+    5: amulet_ability_005, 6: amulet_ability_006, 7: amulet_ability_007, 8: amulet_ability_008,
+    9: amulet_ability_009,10: amulet_ability_010, 11: amulet_ability_011, 12: amulet_ability_012,
+    13: amulet_ability_013, 14: amulet_ability_014, 15: amulet_ability_015,16: amulet_ability_016,
+    17: amulet_ability_017, 18: amulet_ability_018, 19: amulet_ability_019, 20: amulet_ability_020,
+    21: amulet_ability_021}

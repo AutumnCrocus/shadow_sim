@@ -178,26 +178,38 @@ creature_start_of_turn_ability = tsv_2_ability_dict("All_start_of_turn_list.tsv"
 creature_has_target = tsv_2_ability_dict("All_fanfare_target_list.tsv", name_to_id=creature_name_to_id)
 creature_evo_effect = tsv_2_ability_dict("All_evo_effect_list.tsv", name_to_id=creature_name_to_id)
 creature_has_evo_effect_target = {29: 1, 41: 1, 83: 2, 96: 1}
-creature_target_regulation = {46: lambda x: x.power >= 5, 48: lambda x: x.origin_cost == 1,
-                              88: lambda card: card.card_category == "Creature" and card.card_class.name == "NEUTRAL",
-                              creature_name_to_id["Little Soulsquasher"]: lambda card: card.evolved == True}
-another_target_func = lambda creature, itself: creature != itself
-evo_target_regulation = {83: another_target_func}
+creature_target_regulation = {
+    creature_name_to_id["Tsubaki"]: lambda x: x.power >= 5,
+    creature_name_to_id["Princess Vanguard"]: lambda x: x.origin_cost == 1,
+    creature_name_to_id["Sahaquiel"]: lambda card: card.card_category == "Creature" and card.card_class.name == "NEUTRAL",
+    creature_name_to_id["Little Soulsquasher"]: lambda card: card.evolved,
+    creature_name_to_id["White General"]: lambda card: card.trait.name == "OFFICER"}
+another_target_func = lambda creature, itself: id(creature) != id(itself)
+evo_target_regulation = {
+    creature_name_to_id["Wind Reader Zell"]: another_target_func}
 player_attack_regulation = \
     {16: lambda player: len(player.field.get_creature_location()[1 - player.player_num]) < 2}
-creature_in_battle_ability_list = {47: 1, 89: 2}
+creature_in_battle_ability_list = \
+    {creature_name_to_id["Young Ogrehunter Momo"]: 1,
+     creature_name_to_id["Israfil"]: 2,
+     creature_name_to_id["Dark Elf Faure"]: 3,
+     creature_name_to_id["Disaster Dragon"]: 4}
 creature_cost_change_ability_list = {97: 2}
 can_only_attack_check = lambda field, player: field.check_word()[1 - player.player_num] == True
 creature_can_only_attack_list = {49: can_only_attack_check}
 creature_trigger_ability_dict = {60: 1, 63: 4, 64: 5, 79: 6, 95: 7, 100: 8,
                                  creature_name_to_id["Prime Dragon Keeper"]: 10,
-                                 creature_name_to_id["Shadow Reaper"]: 11}
-special_evo_stats_id = {26: 1, 27: 3, 29: 1, 41: 1, 52: 1, 66: 1, 77: 1}
+                                 creature_name_to_id["Shadow Reaper"]: 11,
+                                 creature_name_to_id["Okami"]:12,
+                                 creature_name_to_id["Toy Soldier"]:13,
+                                 creature_name_to_id["Dragonrider"]:-1}
+special_evo_stats_id = {26: 1, 27: 3, 29: 1, 41: 1, 52: 1, 66: 1, 77: 1,
+    creature_name_to_id["Puppeteer"]:2}
 evo_stats = {1: [1, 1], 2: [0, 0], 3: [3, 1]}
 creature_earth_rite_list = [67, 68, 71, 90]
 # 1:相手のフォロワー,2:自分のフォロワー,3:相手のフォロワーと相手リーダー,
 # 4:自分と相手のフォロワー,5:自分と相手の全てのカード,6:自分の場のカード,7:自分の場のカードと相手の場のフォロワー,8:自分の他の手札
-# 9:相手の場の全てのカード
+# 9:相手の場の全てのカード 10:自分のフォロワーと自分リーダー
 creature_enhance_list = {3: [6], 10: [6], 87: [10], 98: [9]}
 creature_enhance_target_list = {}
 creature_enhance_target_regulation_list = {}
@@ -207,13 +219,18 @@ creature_accelerate_card_id_list = {90: {1: -2}}
 creature_accelerate_target_list = {}
 creature_accelerate_target_regulation_list = {}
 # spell_list=tsv_to_card_list("ALL_Spell_Card_List.tsv")
-creature_active_ability_card_id_list = {creature_name_to_id["Dark Dragoon Forte"]: Active_Ability_Check_Code.OVERFLOW.value,
-                                        creature_name_to_id["Prime Dragon Keeper"]: Active_Ability_Check_Code.OVERFLOW.value,
-                                        creature_name_to_id["Bahamut"]: Active_Ability_Check_Code.BAHAMUT.value}
+creature_active_ability_card_id_list = {
+    creature_name_to_id["Dark Dragoon Forte"]: Active_Ability_Check_Code.OVERFLOW.value,
+    creature_name_to_id["Prime Dragon Keeper"]: Active_Ability_Check_Code.OVERFLOW.value,
+    creature_name_to_id["Firstborn Dragon"]: Active_Ability_Check_Code.OVERFLOW.value,
+    creature_name_to_id["Dragonguard"]: Active_Ability_Check_Code.OVERFLOW.value,
+    creature_name_to_id["Bahamut"]: Active_Ability_Check_Code.BAHAMUT.value}
 
 creature_active_ability_list = {
     creature_name_to_id["Dark Dragoon Forte"]: [KeywordAbility.CANT_BE_ATTACKED.value],
     creature_name_to_id["Prime Dragon Keeper"]: [KeywordAbility.CANT_BE_ATTACKED.value],
+    creature_name_to_id["Firstborn Dragon"]: [KeywordAbility.WARD.value],
+    creature_name_to_id["Dragonguard"]: [KeywordAbility.WARD.value],
     creature_name_to_id["Bahamut"]: [KeywordAbility.CANT_ATTACK_TO_PLAYER.value]
 }
 active_ability_check_func_list = {
@@ -224,47 +241,18 @@ active_ability_check_func_list = {
         player.field.get_creature_location()[1 - player.player_num]) >= 2}
 
 spell_list = tsv_to_card_list("New-All_Spell_Card_List.tsv")
-"""
-spell_list={1:[2,[3,[False],-1],"Witch Snap"],2:[1,[3,[False],-1],"Insight"],3:[4,[3,[False],-1],"Nova Flare"],4:[3,[2,-1],"Forge Weaponry"],\
-    5:[6,[7,-1],"Themis's Decree"],6:[5,[0,-1],"Dance of Death"],7:[6,[2,-1],"Alwida's Command"],8:[2,[4,-1],"Dragon Oracle"],\
-    9:[2,[3,[False],-1],"Magic Missile"],10:[2,[3,[False],-1],"Conjure Golem"],11:[2,[3,[True,False],-1],"Wind Blast"],\
-    12:[5,[3,[True,True],-1],"Fate's Hand"],13:[8,[3,[True,True],-1],"Fiery Embrace"],14:[4,[3,[True,False],-1],"Fire Chain"],\
-    15:[1,[0,-1],"Angelic Snipe"],16:[20,[3,[True,True],-1],"Dimension Shift"],17:[2,[3,[False],-1],"Kaleidoscopic Glow"],\
-
-    18:[2,[6,-1],"Blood Pact"],19:[2,[6,-1],"Razory Claw"],20:[5,[6,-1],"Diabolic Drain"],21:[8,[6,-1],"Revelation"],\
-
-    22:[2,[5,-1],"Undying Resentment"],23:[4,[5,-1],"Phantom Howl"],24:[6,[5,-1],"Death's Breath"],\
-
-    25:[2,[7,-1],"Blackened Scripture"],\
-    
-    26:[1,[1,-1],"Nature's Guidance"],27:[1,[1,-1],"Fairy Circle"],28:[1,[1,-1],"Airbound Barrage"],\
-    29:[2,[1,-1],"Sylvan Justice"],30:[2,[1,-1],"Pixie Mischief"],31:[5,[1,-1],"Will of the Forest"],\
-
-    32:[1,[4,-1],"Blazing Breath"],33:[2,[4,-1],"Breath of the Salamander"],34:[5,[4,-1],"Draconic Fervor"],\
-    35:[6,[4,-1],"Lightning Blast"],\
-    
-    36:[2,[0,-1],"Seraphic Blade"],\
-
-    -1:[2,[3,[False],-1],"Veridic Ritual"],-2:[1,[3,[False],-1],"Orichalcum Golem(Accelerate 1)"]\
-    }
-"""
 spell_name_to_id = {}
 for key in list(spell_list.keys()):
     spell_name_to_id[spell_list[key][-1]] = key
-# spell_has_target={1:1,4:2,6:1,9:3,11:1,13:1,15:3,17:5,19:3,20:1,22:1,25:1,26:6,28:7,29:1,30:6,32:1,33:1,35:9,36:9,\
-#    -1:3\
-#    }
+spell_triggered_ability = tsv_2_ability_dict("All_spell_effect_list.tsv", name_to_id=spell_name_to_id)
 spell_has_target = tsv_2_ability_dict("All_spell_target_list.tsv", name_to_id=spell_name_to_id)
 # 1:相手のフォロワー,2:自分のフォロワー,3:相手のフォロワーと相手リーダー,
 # 4:自分と相手のフォロワー,5:自分と相手の全てのカード,6:自分の場のカード,7:自分の場のカードと相手の場のフォロワー,8:自分の他の手札
 # 9:相手の場の全てのカード
-# spell_triggered_ability={1:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,11:11,12:12,13:13,\
-#    14:14,15:15,16:16,17:17,18:18,19:19,20:20,21:21,22:22,23:23,24:24,25:25,26:26,27:27,\
-#    28:28,29:29,30:30,31:31,32:32,33:33,34:34,35:35,36:36,\
-#    -1:-1,-2:-2} 
-spell_triggered_ability = tsv_2_ability_dict("All_spell_effect_list.tsv", name_to_id=spell_name_to_id)
-spell_target_regulation = {17: lambda x: x.origin_cost <= 2, 25: lambda x: x.toughness <= 3,
-                           36: lambda x: x.origin_cost <= 2}
+spell_target_regulation = {
+    spell_name_to_id["Kaleidoscopic Glow"]: lambda x: x.origin_cost <= 2,
+    spell_name_to_id["Blackened Scripture"]: lambda x: x.toughness <= 3,
+    spell_name_to_id["Seraphic Blade"]: lambda x: x.origin_cost <= 2}
 spell_cost_change_ability_list = {20: 1, 21: 1}
 spell_earth_rite_list = []
 spell_enhance_list = {33: [6], 35: [10], 36: [6]}
@@ -277,16 +265,6 @@ spell_accelerate_target_list = {}
 spell_accelerate_target_regulation_list = {}
 # amulet_list=tsv_to_card_list("ALL_Amulet_Card_List.tsv")
 amulet_list = tsv_to_card_list("New-All_Amulet_Card_List.tsv")
-"""
-amulet_list={1:[2,[],[0,-1],False,"Well of Destiny"],2:[9,[],[4,-1],False,"Polyphonic Roar"],3:[4,[],[0,-1],False,"Path to Purgatory"],4:[1,[],[7,-1],3,"Sacred Plea"],5:[2,[],[7,-1],1,"Heretical Inquiry"],\
-    6:[1,[],[7,-1],2,"Pinion Prayer"],7:[2,[],[7,-1],2,"Beastly Vow"],8:[3,[],[7,-1],2,"Divine Birdsong"],9:[5,[],[7,-1],3,"Forgotten Sanctuary"],\
-    10:[1,[],[6,-1],4,"Bloodfed Flowerbed"],11:[3,[],[7,-1],False,"Elana's Prayer"],12:[3,[],[7,-1],8,"Whitefang Temple"],\
-    13:[2,[],[7,-1],2,"Moriae Encomium"],14:[4,[],[7,-1],3,"Tribunal of Good and Evil"],\
-    15:[1,[],[3,[False],-2],False,"Scrap Iron Smelter"],16:[2,[],[3,[False],-2],False,"Silent Laboratory"],17:[1,[],[3,[False],-2],False,"Witch's Cauldron"],\
-        
-        
-    -1:[1,[],[3,[False],-2],False,"Earth Essence"]}
-"""
 amulet_name_to_id = {}
 for key in list(amulet_list.keys()):
     amulet_name_to_id[amulet_list[key][-1]] = key
@@ -298,7 +276,10 @@ amulet_end_of_turn_ability = {3: 3, 10: 10, 12: 11}
 amulet_fanfare_ability = {9: 9, 13: 13, 14: 15, 15: 16, 16: 17,
                           amulet_name_to_id["Staircase to Paradise"]: 18}
 amulet_lastword_ability = {4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 12: 12, 13: 14, 14: 14, 17: 13,
-                           amulet_name_to_id["Staircase to Paradise"]: 19}
+                           amulet_name_to_id["Staircase to Paradise"]: 19,
+                           amulet_name_to_id["Summon Pegasus"]:20,
+                           amulet_name_to_id["Dual Flames"]: 21
+                           }
 amulet_has_target = {14: 1}
 amulet_trigger_ability_dict = {11: 2, 12: 3,
                                amulet_name_to_id["Staircase to Paradise"]: 9}
@@ -319,7 +300,7 @@ amulet_active_ability_card_id_list = {}
 
 amulet_active_ability_list = {}
 class_card_list = {}
-for i in range(8):
+for i in range(9):
     class_card_list[i] = {"Creature": {}, "Spell": {}, "Amulet": {}}
 for i in list(creature_list):
     class_num = creature_list[i][4][0]
@@ -555,6 +536,11 @@ class Creature(Card):
         else:
             return 0
 
+    def restore_toughness(self,amount):
+        tmp = int(self.damage)
+        self.damage = max(0,self.damage-amount)
+        return tmp - self.damage
+
     def get_current_toughness(self):
         return self.toughness - self.damage
 
@@ -603,6 +589,25 @@ class Creature(Card):
             if ability_id in self.ability:
                 self.ability.remove(ability_id)
 
+    def eq(self,other):
+        """
+        :param other:
+        :return:
+        """
+        if other is None:
+            return False
+        if self.name != other.name:
+            return False
+        if self.power != other.power:
+            return False
+        if self.get_current_toughness() != other.get_current_toughness():
+            return False
+        if self.ability != other.ability:
+            return False
+
+        return True
+
+
     def __str__(self):
         text = ""
         default_color = "\033[0m"
@@ -632,7 +637,7 @@ class Creature(Card):
             if len(self.lastword_ability) > 0:
                 RED = '\033[31m'
                 text += RED + " ■"
-            if len(self.trigger_ability) > 0:
+            if len(self.trigger_ability) > 0 or len(self.in_battle_ability)>0:
                 GREEN = '\033[32m'
                 text += GREEN + " ◆"
         text += "\033[0m"
@@ -702,6 +707,22 @@ class Spell(Card):
                 spell.spell_boost = int(self.spell_boost)
                 spell.cost_down = self.cost_down
         return spell
+
+    def eq(self,other):
+        """
+        :param other:
+        :return:
+        """
+        if other is None:
+            return False
+
+        if self.name != other.name:
+            return False
+        if self.card_class.name == "RUNE":
+            if self.spell_boost != other.spell_boost:
+                return False
+
+        return True
 
     def __str__(self):
         text = "name:" + '{:<25}'.format(self.name) + " cost: " + '{:<2}'.format(str(self.cost))
@@ -831,6 +852,25 @@ class Amulet(Card):
             self.is_in_field = False
             self.current_count = self.ini_count
 
+    def eq(self,other):
+        """
+        :param other:
+        :return:
+        """
+        if other is None:
+            return False
+        if self.name != other.name:
+            return False
+        if self.countdown!=other.countdown:
+            return False
+        if self.countdown:
+            if self.current_count != other.current_count:
+                return False
+        if self.ability != other.ability:
+            return False
+
+        return True
+
     def __str__(self):
         tmp = ""
         if not self.is_in_field:
@@ -891,6 +931,15 @@ class Deck:
         self.deck_type = DeckType(type_num)
         mylogger.info("Deck_Type:{}".format(self.deck_type.name))
         # 1はAggro,2はMid,3はControl,4はCombo
+
+    def get_name_set(self):
+        name_list={}
+        for card in self.deck:
+            if card.name not in name_list:
+                name_list[card.name] = {"used_num":0,"win_num":0}
+
+        return name_list
+
 
     def get_cost_histgram(self):
         histgram_dict = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0}

@@ -7,8 +7,9 @@ from util_ability import *
 from my_enum import *
 
 
+
 def creature_ability_001(field, player, opponent, virtual, target, itself):
-    restore_player_life(player, virtual, num=2)
+    field.restore_player_life(player=player, num=2, virtual=virtual)
 
 
 def creature_ability_002(field, player, opponent, virtual, target, itself):
@@ -74,14 +75,11 @@ def creature_ability_009(field, player, opponent, virtual, target, itself):
     # itself.power+=num
     # itself.buff[0]+=num
     buff_creature(itself, params=[num, 0])
+    if virtual == False:
+        mylogger.info("{} get +{}/0".format(itself.name, num))
     if num >= 3:
-        itself.can_not_be_targeted = True
-        itself.ability.append(KeywordAbility.CANT_BE_TARGETED.value)
-        if virtual == False:
-            mylogger.info("{} get +{}/0 and can't be targeted".format(itself.name, num))
-    else:
-        if virtual == False:
-            mylogger.info("{} get +{}/0".format(itself.name, num))
+        # itself.ability.append(KeywordAbility.CANT_BE_TARGETED.value)
+        add_ability_to_creature(field, player, itself, virtual, add_ability=[KeywordAbility.CANT_BE_TARGETED.value])
 
 
 def creature_ability_010(field, player, opponent, virtual, target, itself):
@@ -107,7 +105,7 @@ def creature_ability_013(field, player, opponent, virtual, target, itself):
     """
     if field.turn_player_num == player.player_num:
         if not itself.evolved:
-            restore_player_life(player, virtual, num=4)
+            field.restore_player_life(player=player, num=4, virtual=virtual)
 
         else:
             get_damage_to_player(opponent, virtual, num=4)
@@ -144,14 +142,17 @@ def creature_ability_019(field, player, opponent, virtual, target, itself):
 
 def creature_ability_020(field, player, opponent, virtual, target, itself):
     if player.check_vengeance():
-        itself.ability.append(KeywordAbility.STORM.value)
+        add_ability_to_creature(field, player, itself, virtual, add_ability=[KeywordAbility.STORM.value])
+        # itself.ability.append(KeywordAbility.STORM.value)
 
 
 def creature_ability_021(field, player, opponent, virtual, target, itself):
     # Wardrobe Raider's evolve ability
-    if field.get_can_be_targeted(player_num=player.player_num) != [] and target != None:
+    if target is not None:
+        assert target in field.get_regal_targets(itself, target_type=0, player_num=player.player_num), \
+            "illigal target error"
         get_damage_to_creature(field, opponent, virtual, target, num=2)
-    restore_player_life(player, virtual, num=2)
+    field.restore_player_life(player=player, num=2, virtual=virtual)
 
 
 def creature_ability_022(field, player, opponent, virtual, target, itself):
@@ -164,7 +165,7 @@ def creature_ability_023(field, player, opponent, virtual, target, itself):
         get_damage_to_player(opponent, virtual, num=5)
     elif field.get_can_be_targeted(player_num=player.player_num) != []:
         get_damage_to_creature(field, opponent, virtual, target, num=5)
-    restore_player_life(player, virtual, num=5)
+    field.restore_player_life(player=player, num=5, virtual=virtual)
 
 
 def creature_ability_024(field, player, opponent, virtual, target, itself):
@@ -182,9 +183,15 @@ def creature_ability_025(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_026(field, player, opponent, virtual, target, itself):
-    if target is not None:
+    if target is not None and target < len(field.card_location[opponent.player_num]):
         if itself.target_regulation(field.card_location[opponent.player_num][target]):
             destroy_opponent_creature(field, opponent, virtual, target)
+    elif target is not None:
+        able_targets = field.get_regal_targets(itself, target_type=1, player_num=player.player_num)
+        mylogger.info("target_id:{} not in {}".format(target, able_targets))
+        field.show_field()
+        mylogger.info("{} vs {}".format(player.policy.name, opponent.policy.name))
+        assert False
 
 
 def creature_ability_027(field, player, opponent, virtual, target, itself):
@@ -237,7 +244,7 @@ def creature_ability_032(field, player, opponent, virtual, target, itself):
     Last Words: Draw a card.
     """
     if not virtual:
-        mylogger.info("Player{}'s followers in hand get Last Words: Draw a card.".format(player.player_num+1))
+        mylogger.info("Player{}'s followers in hand get Last Words: Draw a card.".format(player.player_num + 1))
     for card in player.hand:
         if card.card_category == "Creature":
             card.lastword_ability.append(creature_ability_003)
@@ -272,7 +279,7 @@ def creature_ability_037(field, player, opponent, virtual, target, itself):
     if power_list != []:
         target_id = random.choice(power_list)
         destroy_opponent_creature(field, opponent, virtual, target_id)
-        restore_player_life(player, virtual, num=max_power)
+        field.restore_player_life(player=player, num=max_power, virtual=virtual)
 
 
 def creature_ability_038(field, player, opponent, virtual, target, itself):
@@ -300,12 +307,12 @@ def creature_ability_039(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_040(field, player, opponent, virtual, target, itself):
-    restore_player_life(player, virtual, num=3)
+    field.restore_player_life(player=player, num=3, virtual=virtual)
     draw_cards(player, virtual, num=1)
 
 
 def creature_ability_041(field, player, opponent, virtual, target, itself):
-    restore_player_life(player, virtual, num=2)
+    field.restore_player_life(player=player, num=2, virtual=virtual)
 
 
 def creature_ability_042(field, player, opponent, virtual, target, itself):
@@ -439,9 +446,12 @@ def creature_ability_057(field, player, opponent, virtual, target, itself):
 
 #
 def creature_ability_058(field, player, opponent, virtual, target, itself):
-    if player.check_overflow() == True and target is not None:
+    if player.check_overflow() and target is not None:
+        if target >= len(field.card_location[player.player_num]):
+            regal_targets = field.get_regal_targets(itself, target_type=0, player_num=player.player_num)
+            assert False, "out-of-range({} not in regal_targets:{})".format(target, regal_targets)
         target_creature = field.card_location[player.player_num][target]
-        add_ability_to_creature(field, player, target_creature, virtual, add_ability=[1])
+        add_ability_to_creature(field, player, target_creature, virtual, add_ability=[KeywordAbility.STORM.value])
 
 
 def creature_ability_059(field, player, opponent, virtual, target, itself):
@@ -452,7 +462,7 @@ def creature_ability_059(field, player, opponent, virtual, target, itself):
 def creature_ability_060(field, player, opponent, virtual, target, itself):
     if field.turn_player_num == player.player_num:
         if player.check_overflow():
-            restore_player_life(player, virtual, num=3)
+            field.restore_player_life(player=player, num=3, virtual=virtual)
 
 
 def creature_ability_061(field, player, opponent, virtual, target, itself):
@@ -463,7 +473,7 @@ def creature_ability_061(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_062(field, player, opponent, virtual, target, itself):
-    restore_player_life(player, virtual, num=3)
+    field.restore_player_life(player=player, num=3, virtual=virtual)
     put_card_in_hand(field, player, virtual, name="Ouroboros", card_category="Creature", num=1)
 
 
@@ -489,9 +499,13 @@ def creature_ability_064(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_065(field, player, opponent, virtual, target, itself):
-    if type(target) == int:
+    if target is not None:
         creature = player.hand.pop(target)
-        assert creature.card_category == "Creature", "target_id:{}".format(target)
+        if creature.card_category != "Creature":
+            player.show_hand()
+            field.show_field()
+            mylogger.info("target_id:{} name:{}".format(target, creature.name))
+            assert False
         if not virtual:
             mylogger.info("Player{} put {} to field from hand".format(player.player_num + 1, creature.name))
         field.set_card(creature, player.player_num, virtual=virtual)
@@ -505,7 +519,7 @@ def creature_ability_066(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_067(field, player, opponent, virtual, target, itself):
-    restore_player_life(player, virtual, num=4)
+    field.restore_player_life(player=player, num=4, virtual=virtual)
 
 
 def creature_ability_068(field, player, opponent, virtual, target, itself):
@@ -617,7 +631,7 @@ def creature_ability_079(field, player, opponent, virtual, target, itself):
     At the start of your turn, restore 2 defense to your leader.
     """
     if field.turn_player_num == player.player_num:
-        restore_player_life(player, virtual, num=2)
+        field.restore_player_life(player=player, num=2, virtual=virtual)
 
 
 def creature_ability_080(field, player, opponent, virtual, target, itself):
@@ -633,8 +647,15 @@ def creature_ability_081(field, player, opponent, virtual, target, itself):
     """
     if target is None: return
     if necromancy(field, player, num=4, virtual=virtual):
+        if target not in field.get_creature_location()[opponent.player_num]:
+            mylogger.info("target_id:{}".format(target))
+            field.show_field()
+            assert False
         target_creature = field.card_location[opponent.player_num][target]
-        assert itself.target_regulation(target_creature) == True, "illigal target error"
+        if itself.target_regulation(target_creature) == False:
+            mylogger.info("illigal target error(target={})".format(target))
+            field.show_field()
+            assert False
         destroy_opponent_creature(field, opponent, virtual, target)
 
 
@@ -660,36 +681,273 @@ def creature_ability_083(field, player, opponent, virtual, target, itself):
     summon_creature(field, player, virtual, name="Skeleton", num=2)
 
 
-creature_ability_dict = {0: None, 1: creature_ability_001, 2: creature_ability_002, 3: creature_ability_003,
-                         4: creature_ability_004, 5: creature_ability_005, 6: creature_ability_006,
-                         7: creature_ability_007, 8: creature_ability_008,
-                         9: creature_ability_009, 10: creature_ability_010, 11: creature_ability_011,
-                         12: creature_ability_012, 13: creature_ability_013,
-                         14: creature_ability_014, 15: creature_ability_015, 16: creature_ability_016,
-                         17: creature_ability_017, 18: creature_ability_018,
-                         19: creature_ability_019, 20: creature_ability_020, 21: creature_ability_021,
-                         22: creature_ability_022, 23: creature_ability_023,
-                         24: creature_ability_024, 25: creature_ability_025, 26: creature_ability_026,
-                         27: creature_ability_027, 28: creature_ability_028,
-                         29: creature_ability_029, 30: creature_ability_030, 31: creature_ability_031,
-                         32: creature_ability_032, 33: creature_ability_033,
-                         34: creature_ability_034, 35: creature_ability_035, 36: creature_ability_036,
-                         37: creature_ability_037, 38: creature_ability_038,
-                         39: creature_ability_039, 40: creature_ability_040, 41: creature_ability_041,
-                         42: creature_ability_042, 43: creature_ability_043,
-                         44: creature_ability_044, 45: creature_ability_045, 46: creature_ability_046,
-                         47: creature_ability_047, 48: creature_ability_048,
-                         49: creature_ability_049, 50: creature_ability_050, 51: creature_ability_051,
-                         52: creature_ability_052, 53: creature_ability_053,
-                         54: creature_ability_054, 55: creature_ability_055, 56: creature_ability_056,
-                         57: creature_ability_057, 58: creature_ability_058,
-                         59: creature_ability_059, 60: creature_ability_060, 61: creature_ability_061,
-                         62: creature_ability_062, 63: creature_ability_063,
-                         64: creature_ability_064, 65: creature_ability_065, 66: creature_ability_066,
-                         67: creature_ability_067, 68: creature_ability_068,
-                         69: creature_ability_069, 70: creature_ability_070, 71: creature_ability_071,
-                         72: creature_ability_072, 73: creature_ability_073,
-                         74: creature_ability_074, 75: creature_ability_075, 76: creature_ability_076,
-                         77: creature_ability_077, 78: creature_ability_078,
-                         79: creature_ability_079, 80: creature_ability_080, 81: creature_ability_081,
-                         82: creature_ability_082, 83: creature_ability_083}
+def creature_ability_084(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Gain +1/+1 and Ward if at least 2 other cards were played this turn.
+    """
+    if field.players_play_num >= 2:
+
+        buff_creature(itself, params=[1, 1])
+        if not virtual:
+            mylogger.info("{} get +1/+1".format(itself.name))
+        add_ability_to_creature(field, player, itself, virtual,
+                                add_ability=[KeywordAbility.WARD.value])
+
+
+def creature_ability_085(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Gain +2/+2 if at least 2 other cards were played this turn.
+    """
+    if field.players_play_num >= 2:
+        buff_creature(itself, params=[2, 2])
+        if not virtual:
+            mylogger.info("{} get +2/+2".format(itself.name))
+
+
+def creature_ability_086(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Deal 1 damage to a random enemy follower 2 times.
+    """
+    get_damage_to_random_creature(field, opponent, virtual, num=1)
+    get_damage_to_random_creature(field, opponent, virtual, num=1)
+
+
+def creature_ability_087(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Give +1/+1 to all allied followers
+    if at least 2 other cards were played this turn.
+    """
+    if field.players_play_num >= 2:
+        for card in field.card_location[player.player_num]:
+            if card.card_category == "Creature" and card != itself:
+                buff_creature(card, params=[1, 1])
+                if not virtual:
+                    mylogger.info("{} get +1/+1".format(card.name))
+
+
+def creature_ability_087(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Summon a Heavy Knight.
+    """
+    summon_creature(field, player, virtual, name="Heavy Knight")
+
+
+def creature_ability_088(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Give +2/+0 to an allied Officer follower.
+    """
+    if target is None:
+        return
+    assert target < len(field.card_location[player.player_num]), "Out-of-range!"
+    target_creature = field.card_location[player.player_num][target]
+    assert itself.target_regulation(target_creature), "invalid target!(name:{})".format(target_creature.name)
+    buff_creature(target_creature, params=[2, 0])
+    if not virtual:
+        mylogger.info("{} get +2/0".format(target_creature.name))
+
+
+def creature_ability_089(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Both players draw a card.
+    """
+    draw_cards(player, virtual)
+    if field.check_game_end():
+        return
+    draw_cards(opponent, virtual)
+
+
+def creature_ability_090(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Necromancy (4) - Summon a Zombie.
+    """
+    if necromancy(field, player, num=4, virtual=virtual):
+        summon_creature(field, player, virtual, name="Zombie")
+
+
+def creature_ability_091(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Gain 2 shadows.
+    """
+    field.graveyard.shadows[player.player_num] += 2
+    if not virtual:
+        mylogger.info("Gain 2 shadow")
+
+
+def creature_ability_092(field, player, opponent, virtual, target, itself):
+    """
+    Last Words: Summon a Zombie.
+    """
+    summon_creature(field, player, virtual, name="Zombie")
+
+
+def creature_ability_093(field, player, opponent, virtual, target, itself):
+    """
+    Last Words: Give Ward to a random allied follower.
+    """
+    length = len(field.get_creature_location()[player.player_num])
+    if length > 0:
+        target_id = random.randint(0, length - 1)
+        target_creature = field.card_location[player.player_num][target_id]
+        add_ability_to_creature(field, player, target_creature, virtual, add_ability=[KeywordAbility.WARD.value])
+
+
+def creature_ability_094(field, player, opponent, virtual, target, itself):
+    """
+    Last Words: Summon 2 Zombies.
+    """
+    summon_creature(field, player, virtual, name="Zombie", num=2)
+
+
+def creature_ability_095(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Gain +2/+0 if Vengeance is active for you.
+    """
+    if player.check_vengeance():
+        buff_creature(itself, params=[2, 0])
+
+
+def creature_ability_096(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Deal 5 damage to an enemy follower if Vengeance is active for you.
+    """
+    if target is None:
+        return
+    if player.check_vengeance():
+        assert target < len(field.card_location[opponent.player_num]), "Out-of-range"
+        get_damage_to_creature(field, opponent, virtual, target, num=5)
+
+
+def creature_ability_097(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Restore 5 defense to an ally.
+    """
+    assert target is not None, "non-target-error"
+    if target == -1:
+        field.restore_player_life(player=player, num=5, virtual=virtual)
+    else:
+        assert target in field.get_creature_location()[player.player_num], \
+            "illegal target error {} not in {}".format(target, field.get_creature_location()[player.player_num])
+        target_follower = field.card_location[player.player_num][target]
+        field.restore_follower_toughness(follower=target_follower, num=5, virtual=virtual)
+
+
+def creature_ability_098(field, player, opponent, virtual, target, itself):
+    """
+    Evolve: Put a Puppet into your hand. Give a random Puppet in your hand Bane.
+    """
+    put_card_in_hand(field, player, virtual, name="Puppet", card_category="Creature")
+    target_ids = []
+    for card_id, card in enumerate(player.hand):
+        if card.name == "Puppet":
+            target_ids.append(card_id)
+    if len(target_ids) > 0:
+        target_id = random.choice(target_ids)
+        target_follower = player.hand[target_id]
+        add_ability_to_creature(field, player, target_follower, virtual,
+                                add_ability=[KeywordAbility.BANE.value])
+
+
+def creature_ability_099(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: If Resonance is active for you, gain Rush.
+    """
+    if player.check_resonance():
+        add_ability_to_creature(field,player,itself,virtual,
+                                add_ability=[KeywordAbility.RUSH.value])
+def creature_ability_100(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Put 2 Analyzing Artifacts into your deck.
+    """
+    cards = []
+    cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
+    cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
+    put_cards_into_deck(field,player,cards,virtual)
+
+def creature_ability_101(field, player, opponent, virtual, target, itself):
+    """
+    Put a Puppet into your hand.
+    """
+    put_card_in_hand(field, player, virtual, name="Puppet",card_category="Creature")
+
+def creature_ability_102(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Put 2 Radiant Artifacts into your deck.
+    """
+    cards = []
+    cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
+    cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
+    put_cards_into_deck(field,player,cards,virtual)
+
+
+def creature_ability_103(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Put a random Artifact card from your deck into your hand.
+    """
+    condition = lambda card: card.trait.name == "ARTIFACT"
+    search_cards(player, condition, virtual)
+
+def token_creature_ability_001(field, player, opponent, virtual, target, itself):
+    """
+    Last Words: If it is your turn, then put a random Artifact card from your deck into your hand.
+    If it is your opponent's turn, draw a card.
+    """
+    if field.turn_player_num == player.player_num:
+        condition = lambda card: card.trait.name == "ARTIFACT"
+        search_cards(player, condition, virtual)
+    else:
+        draw_cards(player, virtual)
+
+
+def token_creature_ability_002(field, player, opponent, virtual, target, itself):
+    """
+    At the end of your opponent's turn, destroy this follower.
+    """
+    if field.turn_player_num == opponent.player_num:
+        itself_index = field.card_location[player.player_num].index(itself)
+        destroy_opponent_creature(field, player, virtual, itself_index)
+        # field.remove_card([player.player_num,itself_index],virtual)
+
+
+creature_ability_dict = {
+    0: None, 1: creature_ability_001, 2: creature_ability_002, 3: creature_ability_003,
+    4: creature_ability_004, 5: creature_ability_005, 6: creature_ability_006,
+    7: creature_ability_007, 8: creature_ability_008,
+    9: creature_ability_009, 10: creature_ability_010, 11: creature_ability_011,
+    12: creature_ability_012, 13: creature_ability_013,
+    14: creature_ability_014, 15: creature_ability_015, 16: creature_ability_016,
+    17: creature_ability_017, 18: creature_ability_018,
+    19: creature_ability_019, 20: creature_ability_020, 21: creature_ability_021,
+    22: creature_ability_022, 23: creature_ability_023,
+    24: creature_ability_024, 25: creature_ability_025, 26: creature_ability_026,
+    27: creature_ability_027, 28: creature_ability_028,
+    29: creature_ability_029, 30: creature_ability_030, 31: creature_ability_031,
+    32: creature_ability_032, 33: creature_ability_033,
+    34: creature_ability_034, 35: creature_ability_035, 36: creature_ability_036,
+    37: creature_ability_037, 38: creature_ability_038,
+    39: creature_ability_039, 40: creature_ability_040, 41: creature_ability_041,
+    42: creature_ability_042, 43: creature_ability_043,
+    44: creature_ability_044, 45: creature_ability_045, 46: creature_ability_046,
+    47: creature_ability_047, 48: creature_ability_048,
+    49: creature_ability_049, 50: creature_ability_050, 51: creature_ability_051,
+    52: creature_ability_052, 53: creature_ability_053,
+    54: creature_ability_054, 55: creature_ability_055, 56: creature_ability_056,
+    57: creature_ability_057, 58: creature_ability_058,
+    59: creature_ability_059, 60: creature_ability_060, 61: creature_ability_061,
+    62: creature_ability_062, 63: creature_ability_063,
+    64: creature_ability_064, 65: creature_ability_065, 66: creature_ability_066,
+    67: creature_ability_067, 68: creature_ability_068,
+    69: creature_ability_069, 70: creature_ability_070, 71: creature_ability_071,
+    72: creature_ability_072, 73: creature_ability_073,
+    74: creature_ability_074, 75: creature_ability_075, 76: creature_ability_076,
+    77: creature_ability_077, 78: creature_ability_078,
+    79: creature_ability_079, 80: creature_ability_080, 81: creature_ability_081,
+    82: creature_ability_082, 83: creature_ability_083, 84: creature_ability_084,
+    85: creature_ability_085, 86: creature_ability_086, 87: creature_ability_087,
+    88: creature_ability_088, 89: creature_ability_089, 90: creature_ability_090,
+    91: creature_ability_091, 92: creature_ability_092, 93: creature_ability_093,
+    94: creature_ability_094, 95: creature_ability_095, 96: creature_ability_096,
+    97: creature_ability_097, 98: creature_ability_098, 99: creature_ability_099,
+    100: creature_ability_100, 101: creature_ability_101, 102: creature_ability_102,
+    103: creature_ability_103,
+
+    -1: token_creature_ability_001, -2: token_creature_ability_002}

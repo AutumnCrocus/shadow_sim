@@ -17,6 +17,7 @@ class __Trait(Enum):
     NONE = -1
     OFFICER = 0
     COMMANDER = 1
+    ARTIFACT = 2
 
 Trait=__Trait
 
@@ -64,13 +65,15 @@ class __State_Code(Enum):
     ATTACK_TO_FOLLOWER = 5
     ATTACK_TO_PLAYER = 6
     RESTORE_PLAYER_LIFE = 7
-    START_OF_TURN = 8
-    END_OF_TURN = 9
-    GET_DAMAGE = 10
+    RESTORE_FOLLOWER_TOUGHNESS = 8
+    START_OF_TURN = 9
+    END_OF_TURN = 10
+    GET_DAMAGE = 11
 
 State_Code=__State_Code
 
 class __Action_Code(Enum):
+    ERROR = -10
     EVOLVE = -1
     TURN_END = 0
     PLAY_CARD = 1
@@ -87,3 +90,19 @@ class __Active_Ability_Check_Code(Enum):
     BAHAMUT = 3
 
 Active_Ability_Check_Code=__Active_Ability_Check_Code
+
+class __Target_Type(Enum):
+    ENEMY_FOLLOWER = 1
+    ALLIED_FOLLOWER = 2
+    ENEMY = 3
+    FOLLOWER = 4
+    CARD = 5
+    ALLIED_CARD = 6
+    ALLIED_CARD_AND_ENEMY_FOLLOWER = 7
+    CARD_IN_HAND = 8
+    ENEMY_CARD = 9
+    ALLY = 10
+    ALLIED_AMULET = 11
+
+Target_Type = __Target_Type
+
