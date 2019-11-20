@@ -208,6 +208,8 @@ class Player:
         while True:
             policy_count += 1
             if policy_count > 20:
+                if not(can_play or can_attack or can_evo):
+                    return Action_Code.TURN_END.value,0,0
                 mylogger.info("action_code:{}".format((action_num, card_id, target_id)))
                 self.show_hand()
                 field.show_field()
@@ -234,7 +236,7 @@ class Player:
                 if re_check:
                     if not virtual:
                         mylogger.info("{}".format(msg))
-                    self.policy.current_node=None
+                    self.policy.current_node = None
                     continue
             (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
             if action_num == Action_Code.ERROR.value:
@@ -328,17 +330,17 @@ class Player:
         (action_num, card_id, target_id) = action_code
 
         if action_num == Action_Code.EVOLVE.value:
-            self.creature_evolve(field.card_location[self.player_num][card_id], \
+            self.creature_evolve(field.card_location[self.player_num][card_id],
                                  field, virtual=virtual, target=target_id)
         elif action_num == Action_Code.TURN_END.value:
             field.turn_end = True
             return True
         elif action_num == Action_Code.PLAY_CARD.value:
             if not virtual:
-                if self.hand[card_id].have_enhance == True \
+                if self.hand[card_id].have_enhance \
                         and self.hand[card_id].active_enhance_code[0] == True:
                     mylogger.info("play_cost:{}".format(self.hand[card_id].active_enhance_code[1]))
-                elif self.hand[card_id].have_accelerate == True \
+                elif self.hand[card_id].have_accelerate \
                         and self.hand[card_id].active_accelerate_code[0] == True:
                     mylogger.info("play_cost:{}".format(self.hand[card_id].active_accelerate_code[1]))
                 else:
@@ -395,14 +397,14 @@ class HumanPlayer(Player):
         print("remain_cost:{}".format(field.remain_cost[player.player_num]))
         print("shadows:{}".format(field.graveyard.shadows[player.player_num]))
         choices = [0]
-        if can_evo == True:
+        if can_evo:
             print("if you want to evolve creature,input -1")
             choices.append(-1)
-        if can_play == True:
+        if can_play:
             print("if you want to play card, input 1")
             choices.append(1)
 
-        if can_attack == True:
+        if can_attack:
             if len(can_be_attacked) > 0:
                 print("if you want to attack to creature, input 2")
                 choices.append(2)
@@ -542,7 +544,5 @@ class HumanPlayer(Player):
 
         field.check_death(player_num=self.player_num, virtual=virtual)
         field.solve_field_trigger_ability(virtual=virtual, player_num=self.player_num)
-        # if field.stack!=[]:
-        #    field.solve_lastword_ability(virtual=virtual,player_num=self.player_num)
         field.ability_resolution(virtual=virtual, player_num=self.player_num)
         return field.check_game_end()
