@@ -51,14 +51,14 @@ def buff_creature_until_end_of_turn(creature, params=[0, 0]):
 def get_damage_to_creature(field, opponent, virtual, target, num=0):
     if target in field.get_creature_location()[opponent.player_num]:
         damage = field.card_location[opponent.player_num][target].get_damage(num)
-        if virtual == False:
-            mylogger.info("Player {}'s {} get {} damage".format(opponent.player_num + 1, \
+        if not virtual:
+            mylogger.info("Player {}'s {} get {} damage".format(opponent.player_num + 1,
                                                                 field.card_location[opponent.player_num][target].name,
                                                                 damage))
 
         # if field.card_location[opponent.player_num][target].is_in_graveyard==True:
         #    field.remove_card([opponent.player_num,target],virtual)
-    elif target != None:
+    elif target is not None:
         mylogger.info("player_num:{} can_be_targeted:{} field_len:{} target:{}".format(1 - opponent.player_num,
                                                                                        field.get_can_be_targeted(
                                                                                            player_num=opponent.player_num),
@@ -135,19 +135,16 @@ def destroy_opponent_creature(field, opponent, virtual, target):
 def get_damage_to_all_creature(field, virtual, num=0):
     for i, side in enumerate(field.get_creature_location()):
         for j in side:
-            creature = field.card_location[i][j]
-            creature.get_damage(num)
+            follower = field.card_location[i][j]
+            follower.get_damage(num)
 
     field.check_death(field.turn_player_num, virtual)
 
 
 def get_damage_to_all_enemy_follower(field, opponent, virtual, num=0):
-    target_index = 0
-    while target_index < len(field.card_location[opponent.player_num]):
-        target_card = field.card_location[opponent.player_num][target_index]
-        if target_card.card_category == "Creatrue":
-            get_damage_to_creature(field, opponent, virtual, target_index, num=num)
-        target_index += 1
+    for card_id in field.get_creature_location()[opponent.player_num]:
+        follower = field.card_location[opponent.player_num][card_id]
+        follower.get_damage(num)
 
     field.check_death(field.turn_player_num, virtual)
 
@@ -159,7 +156,7 @@ def return_card_to_hand(field, target_location, virtual):
 def search_cards(player, condition, virtual, num=1):
     option_cards_id = []
     for j, card in enumerate(player.deck.deck):
-        if condition(card) == True:
+        if condition(card):
             option_cards_id.append(j)
     search_cards_id = []
     if len(option_cards_id) >= num:
@@ -171,7 +168,7 @@ def search_cards(player, condition, virtual, num=1):
         cards = []
         for card_id in search_cards_id:
             cards.append(player.deck.deck.pop(card_id))
-        if virtual == False:
+        if not virtual:
             for card in cards:
                 mylogger.info("Player{} append {} to hand from deck".format(player.player_num + 1, card.name))
         player.append_cards_to_hand(cards)
@@ -180,7 +177,7 @@ def search_cards(player, condition, virtual, num=1):
 def necromancy(field, player, num=1, virtual=False):
     if field.graveyard.shadows[player.player_num] >= num:
         field.graveyard.shadows[player.player_num] -= num
-        if virtual == False:
+        if not virtual:
             mylogger.info("necromancy({}) is actived".format(num))
         return True
     else:

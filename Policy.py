@@ -49,7 +49,8 @@ class RandomPolicy(Policy):
         (can_play, can_attack, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) \
             = field.get_flag_and_choices(player, opponent, regal_targets)
         target_id = 0
-        length = len(able_to_play + able_to_attack) + 1
+        #length = len(able_to_play + able_to_creature_attack) + 1
+        length = len(able_to_play + able_to_creature_attack)
 
         depth = 1 - len(able_to_evo)
         if not can_evo:
@@ -66,10 +67,11 @@ class RandomPolicy(Policy):
                     target_id = random.choice(choices)
             return Action_Code.EVOLVE.value, card_id, target_id
 
-        if tmp == 1 or (not can_play and not can_attack):
+        #if tmp == 1 or (not can_play and not can_attack):
+        if (length+len(able_to_evo))==0:
             return Action_Code.TURN_END.value, 0, 0
 
-        if 1 < tmp <= len(able_to_play) + 1 and can_play:
+        if 0 <= tmp <= len(able_to_play) - 1 and can_play:
 
             card_id = random.choice(able_to_play)
             if player.hand[card_id].have_target == 0:
@@ -80,7 +82,7 @@ class RandomPolicy(Policy):
                     target_id = random.choice(regal_targets[card_id])
                 return Action_Code.PLAY_CARD.value, card_id, target_id
 
-        elif tmp > len(able_to_play) + 1 and len(able_to_creature_attack) > 0:
+        elif tmp > len(able_to_play) - 1 and len(able_to_creature_attack) > 0:
             card_id = random.choice(able_to_creature_attack)
             if ward_list != []:
                 target_id = random.choice(ward_list)
@@ -88,7 +90,12 @@ class RandomPolicy(Policy):
 
             else:
                 if len(can_be_attacked) > 0:
-                    target_id = random.choice(can_be_attacked)
+                    targets = can_be_attacked
+                    if card_id in able_to_attack:
+                        targets.append(-1)
+                    target_id = random.choice(targets)
+                    if target_id == -1:
+                        return Action_Code.ATTACK_TO_PLAYER.value, card_id, None
                     return Action_Code.ATTACK_TO_FOLLOWER.value, card_id, target_id
 
                 elif card_id in able_to_attack:
@@ -780,6 +787,10 @@ class MCTSPolicy(Policy):
 
     def default_policy(self, node, player_num=0):
         if node.finite_state_flg:
+            if not node.field.check_game_end():
+                current_field = Field_setting.Field(5)
+                current_field.set_data(node.field)
+                current_field.end_of_turn(player_num, virtual=True)
             return self.state_value(node.field, player_num)
         sum_of_value = 0
         end_flg = False
@@ -1060,7 +1071,7 @@ class Test_MCTSPolicy(MCTSPolicy):
             current_field.players[1].deck.shuffle()
             player = current_field.players[player_num]
             opponent = current_field.players[1 - player_num]
-            if node.finite_state_flg == False:
+            if not node.finite_state_flg:
 
                 while True:
                     current_field.get_regal_target_dict(player, opponent)
@@ -1321,21 +1332,18 @@ class EXP3_MCTSPolicy(Policy):
             return self.expand(node, player_num=player_num)
         count = 0
         probability = 0.01
-        while node.finite_state_flg == False:
+        while not node.finite_state_flg:
             if length_of_children > 0:
 
                 if random.uniform(0, 1) < .5:
                     node, action, probability = self.roulette(node, player_num=player_num)
-                    # node, _ = self.best(node,player_num=player_num)
-                    # if node==None:
-                    #    return select_expand(self,node,action,player_num=0)
                 else:
                     check = self.fully_expand(node, player_num=player_num)
                     if check == False:
                         return self.expand(node, player_num=player_num)
                     else:
                         node, action, probability = self.roulette(node, player_num=player_num)
-                        # node, _ = self.best(node,player_num=player_num)
+
                 length_of_children = len(node.child_nodes)
             else:
                 return self.expand(node, player_num=player_num)
@@ -1350,7 +1358,7 @@ class EXP3_MCTSPolicy(Policy):
         return node, probability
 
     def default_policy(self, node, probability, player_num=0):
-        if node.finite_state_flg == True:
+        if node.finite_state_flg:
             action = None
             for cell in node.parent_node.child_nodes:
                 if cell[-1] == node:
@@ -1696,6 +1704,43 @@ class Aggro_Shallow_MCTSPolicy(Shallow_MCTSPolicy):
         super().__init__(th=th)
         self.play_out_policy = AggroPolicy()
         self.name = self.name = "Aggro_Shallow(th={})_MCTSPolicy".format(th)
+
+
+class Expanded_Aggro_MCTS_Policy(Aggro_MCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.name = "Expanded_Aggro_MCTS_Policy"
+
+    def state_value(self, field, player_num):
+        partial_observable_data=field.get_observable_data(player_num=player_num)
+        if partial_observable_data["opponent"]["life"] <= 0:
+            return WIN_BONUS
+        opponent_power_sum = 0
+        for card_id in field.get_creature_location()[1 - player_num]:
+            opponent_power_sum += field.card_location[1 - player_num][card_id].power
+        if opponent_power_sum >= partial_observable_data["player"]["life"]:
+            return -WIN_BONUS
+        estimate_term = 1
+        able_attack_power_sum = 0
+        if field.get_ward_list(player_num)==[]:
+            for card in field.card_location[player_num]:
+                if card.card_category == "Creatrue" and card.can_attack_to_player():
+                    able_attack_power_sum += card.power
+            if able_attack_power_sum >= partial_observable_data["opponent"]["life"]:
+                return WIN_BONUS
+            elif field.players[1-player_num].deck.leader_class.name == "BLOOD":
+                estimate_term = 0.5
+        life_ad = estimate_term*\
+                  (partial_observable_data["opponent"]["max_life"] - partial_observable_data["opponent"]["life"])
+        low_life_term = 1 + 10*int(partial_observable_data["player"]["life"]<= 10)
+        board_ad = (len(field.get_creature_location()[player_num]) - len(
+                   field.get_creature_location()[1 - player_num]))*low_life_term
+        return life_ad * 50 + \
+               board_ad * 50 + partial_observable_data["player"]["hand_len"]
+
+
+
+
 
 
 """"

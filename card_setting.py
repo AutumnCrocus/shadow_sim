@@ -899,6 +899,7 @@ class Deck:
         self.remain_num = 0
         self.mean_cost = 0
         self.deck_type = None
+        self.leader_class = None
 
     def append(self, card, num=1):
         for i in range(num):
@@ -931,6 +932,10 @@ class Deck:
         self.deck_type = DeckType(type_num)
         mylogger.info("Deck_Type:{}".format(self.deck_type.name))
         # 1はAggro,2はMid,3はControl,4はCombo
+    def set_leader_class(self,leader_class):
+        assert leader_class in LeaderClass.__members__,"invalid class name!"
+        self.leader_class = LeaderClass[leader_class]
+
 
     def get_name_set(self):
         name_list={}
@@ -939,6 +944,23 @@ class Deck:
                 name_list[card.name] = {"used_num":0,"win_num":0}
 
         return name_list
+
+    def get_remain_card_set(self):
+        remain_card_set = {}
+        for card in self.deck:
+            if card.name not in remain_card_set:
+                remain_card_set[card.name] = 0
+            remain_card_set[card.name] += 1
+
+        return remain_card_set
+
+    def show_remain_card_set(self):
+        remain_card_set = self.get_remain_card_set()
+        print("remain_cards_in_deck")
+        for key in sorted(list(remain_card_set.keys())):
+            print("{}:{}".format(key,remain_card_set[key]))
+        print("")
+
 
 
     def get_cost_histgram(self):

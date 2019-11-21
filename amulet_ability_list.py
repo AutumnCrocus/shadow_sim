@@ -7,7 +7,7 @@ from util_ability import *
 
 
 def amulet_ability_001(field, player, opponent, virtual, target, itself):
-    if field.turn_player_num != player.player_num:return
+    if field.turn_player_num != player.player_num: return
     tmp = field.get_creature_location()[player.player_num]
     # mylogger.info("tmp:{}".format(tmp))
     if tmp != []:
@@ -91,7 +91,7 @@ def amulet_ability_010(field, player, opponent, virtual, target, itself):
 def amulet_ability_011(field, player, opponent, virtual, target, itself):
     """Whitefang Temple's end_of_turn ability"""
     if field.turn_player_num == player.player_num:
-        field.restore_player_life(player = player,num=1,virtual=virtual)
+        field.restore_player_life(player=player, num=1, virtual=virtual)
 
 
 def amulet_ability_012(field, player, opponent, virtual, target, itself):
@@ -140,10 +140,10 @@ def amulet_ability_019(field, player, opponent, virtual, target, itself):
     """
 
     def search_three_followers(field, player, virtual, state_log=None):
-        if state_log == None: return
+        if state_log is None: return
         if state_log[0] != State_Code.START_OF_TURN.value: return
         if state_log[1] != player.player_num: return
-        if virtual == False:
+        if not virtual:
             mylogger.info("Staircase to Paradise's ability is actived")
         condition = lambda card: card.card_category == "Creature"
         search_cards(player, condition, virtual, num=3)
@@ -153,7 +153,7 @@ def amulet_ability_019(field, player, opponent, virtual, target, itself):
             else:
                 break
 
-    if virtual == False:
+    if not virtual:
         mylogger.info(
             "Player{} get ability:'At the start of your next turn, put 3 random followers from your deck into your "
             "hand'".format(
@@ -174,13 +174,13 @@ def amulet_ability_021(field, player, opponent, virtual, target, itself):
     Countdown (2)
     Last Words: Summon 2 Holyflame Tigers.
     """
-    summon_creature(field, player, virtual, name="Holyflame Tiger",num=2)
+    summon_creature(field, player, virtual, name="Holyflame Tiger", num=2)
 
 
 amulet_ability_dict = \
     {1: amulet_ability_001, 2: amulet_ability_002, 3: amulet_ability_003, 4: amulet_ability_004,
-    5: amulet_ability_005, 6: amulet_ability_006, 7: amulet_ability_007, 8: amulet_ability_008,
-    9: amulet_ability_009,10: amulet_ability_010, 11: amulet_ability_011, 12: amulet_ability_012,
-    13: amulet_ability_013, 14: amulet_ability_014, 15: amulet_ability_015,16: amulet_ability_016,
-    17: amulet_ability_017, 18: amulet_ability_018, 19: amulet_ability_019, 20: amulet_ability_020,
-    21: amulet_ability_021}
+     5: amulet_ability_005, 6: amulet_ability_006, 7: amulet_ability_007, 8: amulet_ability_008,
+     9: amulet_ability_009, 10: amulet_ability_010, 11: amulet_ability_011, 12: amulet_ability_012,
+     13: amulet_ability_013, 14: amulet_ability_014, 15: amulet_ability_015, 16: amulet_ability_016,
+     17: amulet_ability_017, 18: amulet_ability_018, 19: amulet_ability_019, 20: amulet_ability_020,
+     21: amulet_ability_021}

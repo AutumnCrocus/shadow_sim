@@ -43,9 +43,9 @@ class Field:
         self.state_log = deque()
         self.stack_num = 0
 
-    def eq(self,other):
+    def eq(self, other):
         if type(self) != type(other):
-            assert False,"NoImplemented"
+            assert False, "NoImplemented"
         if len(self.card_location[0]) != len(other.card_location[0]): return False
         if len(self.card_location[1]) != len(other.card_location[1]): return False
         for i in range(2):
@@ -56,6 +56,7 @@ class Field:
                     return False
 
         return True
+
     def set_data(self, field):
         # self.card_location=copy.deepcopy(field.card_location)
         assert len(self.card_location[0]) <= self.max_field_num, "card_num:{}".format(len(self.card_location[0]))
@@ -110,6 +111,8 @@ class Field:
             target_state_log = self.state_log[index]
             for i in range(2):
                 side_id = (i + player_num) % 2
+                for player_ability in self.player_ability[side_id]:
+                    player_ability(self, self.players[side_id], virtual, state_log=target_state_log)
                 side = self.card_location[side_id]
                 location_id = len(side) - 1
                 while location_id >= 0:
@@ -122,13 +125,12 @@ class Field:
                     location_id -= 1
             index -= 1
 
+        self.state_log.clear()
         while len(ability_list) > 0:
             tmp_ability_pair = ability_list.popleft()
             ability = tmp_ability_pair[0]
             argument = tmp_ability_pair[1]
             ability(argument[0], argument[1], argument[2], argument[3], argument[4], argument[5], state_log=argument[6])
-
-        self.state_log.clear()
 
     def ability_resolution(self, virtual=False, player_num=0):
         chain_len = 0
@@ -151,15 +153,33 @@ class Field:
                     else:
                         card.lose_active_ability()
 
-    """
-    def inform_state_code_to_field(self,state_code=None):
-        if state_code==None: return
-        for i in range(2):
-            for card in self.card_location[(i+self.turn_player_num)%2]:
-                if len(card.trigger_ability)>0:
-                    card.trigger_ability_stack.append(state_code,self.chain_num)
-                    self.chain_num
-    """
+    def get_observable_data(self, player_num=0):
+        """
+        observable_data_dict = {"life": {"player": self.players[player_num].life,
+                                         "opponent": self.players[1 - player_num].life},
+                                "hand_len": {"player": len(self.players[player_num].hand),
+                                             "opponent": len(self.players[1 - player_num].hand)},
+                                "deck_len": {"player": len(self.players[player_num].deck.deck),
+                                             "opponent": len(self.players[1 - player_num].deck.deck)},
+                                "shadows": {"player": self.graveyard.shadows[player_num],
+                                            "opponent": self.graveyard.shadows[1 - player_num]},
+                                 "pp/max_pp": {
+                "player": "{}/{}".format(self.remain_cost[player_num], self.cost[player_num]),
+                "opponent": "{}/{}".format(self.remain_cost[1 - player_num], self.cost[1 - player_num])}}
+
+        """
+        observable_data_dict = {"player":{},"opponent":{}}
+        for key in list(observable_data_dict.keys()):
+            player_id = (1-2*int(key!="player"))*player_num + int(key!="player")
+            observable_data_dict[key]["life"] = self.players[player_id].life
+            observable_data_dict[key]["max_life"] = self.players[player_id].max_life
+            observable_data_dict[key]["hand_len"] = len(self.players[player_id].hand)
+            observable_data_dict[key]["deck_len"] = len(self.players[player_id].deck.deck)
+            observable_data_dict[key]["shadows"] = self.graveyard.shadows[player_id]
+            observable_data_dict[key]["pp/max_pp"] = \
+                "{}/{}".format(self.remain_cost[player_id], self.cost[player_id])
+
+        return observable_data_dict
 
     def reset_time_stamp(self):
         self.stack = []
@@ -168,7 +188,7 @@ class Field:
             for card in self.card_location[i]:
                 card.time_stamp = 0
 
-    def restore_player_life(self, player=None,num=0, virtual=False,at_once=False):
+    def restore_player_life(self, player=None, num=0, virtual=False, at_once=False):
         tmp = num
         if player.max_life - player.life < tmp:
             tmp = player.max_life - player.life
@@ -179,17 +199,17 @@ class Field:
             self.stack_num += 1
             self.state_log.append([State_Code.RESTORE_PLAYER_LIFE.value, player.player_num, player.field.stack_num])
 
-    def restore_follower_toughness(self, follower=None, num=0, virtual=False,at_once=False):
+    def restore_follower_toughness(self, follower=None, num=0, virtual=False, at_once=False):
         side_id = 0
         if follower in self.card_location[0]:
             side_id = 0
         elif follower in self.card_location[1]:
             side_id = 1
         else:
-            assert False,"follower does not exist!"
+            assert False, "follower does not exist!"
         amount = follower.restore_toughness(num)
         if virtual == False:
-            mylogger.info("{} restore {} life".format(follower.name,amount))
+            mylogger.info("{} restore {} life".format(follower.name, amount))
         if not at_once:
             self.stack_num += 1
             self.state_log.append([State_Code.RESTORE_FOLLOWER_TOUGHNESS.value, side_id, self.stack_num])
@@ -216,7 +236,8 @@ class Field:
                 if not card.is_in_field or card.is_in_graveyard:
                     self.remove_card([(player_num + j) % 2, i], virtual=virtual)
                 elif card.card_category == "Creature":
-                    assert card.get_current_toughness() > 0,"minus-toughness_error:{}".format(card.get_current_toughness())
+                    assert card.get_current_toughness() > 0, "minus-toughness_error:{}".format(
+                        card.get_current_toughness())
                     i += 1
                 else:
                     i += 1
@@ -338,7 +359,7 @@ class Field:
         tmp.is_in_field = False
         tmp.is_in_graveyard = True
         self.graveyard.append(tmp.card_category, tmp.card_id, location[0])
-        #del self.card_location[location[0]][location[1]]
+        # del self.card_location[location[0]][location[1]]
 
     def return_card_to_hand(self, target_location, virtual=False):
         assert len(self.card_location[target_location[0]]) > target_location[1]
@@ -516,12 +537,6 @@ class Field:
         for thing in self.card_location[player_num]:
             thing.down_count(num=1, virtual=virtual)
         self.check_death(player_num, virtual=virtual)
-
-        # while self.stack!=[]:
-        # while len(self.stack)>0:
-        #    
-        #    self.solve_lastword_ability(virtual=virtual,player_num=player_num)
-        #    self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
         self.ability_resolution(virtual=virtual, player_num=player_num)
 
     def end_of_turn(self, player_num, virtual=False):
@@ -580,10 +595,7 @@ class Field:
         if self.check_game_end():
             return
         self.check_death(player_num=player_num, virtual=virtual)
-        # while self.stack!=[]:
-        # while len(self.stack)>0:
-        #    self.solve_lastword_ability(virtual=virtual,player_num=player_num)
-        #    self.solve_field_trigger_ability(virtual=virtual,player_num=player_num)
+
         self.ability_resolution(virtual=virtual, player_num=player_num)
         self.players_play_num = 0
 
@@ -943,8 +955,8 @@ class Field:
 
                 elif target_category == Target_Type.ENEMY_CARD.value:
                     for card_id, target_thing in enumerate(self.card_location[1 - player_num]):
-                        if target_thing.can_be_targeted() and  evo_target_regulation(target_thing, card):
-                                regal_targets.append(card_id)
+                        if target_thing.can_be_targeted() and evo_target_regulation(target_thing, card):
+                            regal_targets.append(card_id)
 
                 elif target_category == Target_Type.ALLY.value:
                     regal_targets = [-1]
@@ -959,10 +971,11 @@ class Field:
                                 regal_targets.append(card_id)
 
         elif target_type == 1 and \
-                ((card.have_enhance is True and card.active_enhance_code[0] is True and \
-                  card.enhance_target_regulation is None) or (card.have_target != 0 and card.target_regulation is None) \
-                 or (card.have_accelerate is True and card.active_accelerate_code[
-                            0] == True and card.accelerate_target_regulation is None)):
+                ((card.have_enhance is True and card.active_enhance_code[0] is True
+                  and card.enhance_target_regulation is None)
+                 or (card.have_target != 0 and card.target_regulation is None)
+                 or (card.have_accelerate is True and card.active_accelerate_code[0]
+                     and card.accelerate_target_regulation is None)):
             target_category = None
             if card.have_enhance is True and card.active_enhance_code[0] is True:
                 target_category = card.enhance_target
@@ -1046,8 +1059,6 @@ class Field:
 
             if regulation_func is None:
                 assert False
-            #if card.name == "Blackened Scripture":
-            #    mylogger.info("target_category:{} can_be_targeted:{}".format(target_category,can_be_targeted))
             if target_category == Target_Type.ENEMY_FOLLOWER.value:
                 for card_id in can_be_targeted:
                     target_follower = self.card_location[1 - player_num][card_id]
@@ -1107,12 +1118,12 @@ class Field:
                     if i <= itself_index:
                         if regulation_func(self.players[player_num].hand[i]):
                             regal_targets.append(i)
-                    else:#手札位置が一つずれる
+                    else:
                         if regulation_func(self.players[player_num].hand[i]):
                             regal_targets.append(i - 1)
 
             elif target_category == Target_Type.ENEMY_CARD.value:
-                for target_id,card in enumerate(self.card_location[1-player_num]):
+                for target_id, card in enumerate(self.card_location[1 - player_num]):
                     if card.can_be_attacked() and regulation_func(card):
                         regal_targets.append(target_id)
 
@@ -1130,11 +1141,6 @@ class Field:
 
     def play_turn(self, turn_player_num, win, lose, lib_num, turn, virtual_flg):
         while True:
-            # if virtual_flg==False:
-            #    time.sleep(1)
-            #    os.system('clear')
-
-            # print('\x1b[0;0H', end='')
             can_play = True
             can_attack = True
             self.untap(turn_player_num)
@@ -1167,10 +1173,6 @@ class Field:
                 lib_num += 1
                 return win, lose, lib_num, turn, True
             while True:
-                # if virtual_flg==False:
-                #    time.sleep(1)
-                #    os.system('clear')
-
                 end_flg = self.players[turn_player_num].decide(self.players[turn_player_num],
                                                                self.players[1 - turn_player_num], self,
                                                                virtual=virtual_flg)
@@ -1180,10 +1182,12 @@ class Field:
             #    os.system('clear')
 
             if not virtual_flg:
+                observable_data = self.get_observable_data(player_num=turn_player_num)
+                for key in list(observable_data.keys()):
+                    print("{}".format(key))
+                    for sub_key in list(observable_data[key].keys()):
+                        print("{}:{}".format(sub_key, observable_data[key][sub_key]))
                 self.players[turn_player_num].show_hand()
-                mylogger.info(
-                    "Player1 life:{} Player2 life:{} remain_cost:{}".format(self.players[0].life, self.players[1].life,
-                                                                            self.remain_cost[turn_player_num]))
                 self.show_field()
 
             if self.check_game_end():

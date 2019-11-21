@@ -44,9 +44,11 @@ def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False,de
     f.players[1] = Player2
     f.players[1].field = f
     f.players[0].deck = Deck()
+    f.players[0].deck.set_leader_class(D1.leader_class.name)
     for card in D1.deck:
         f.players[0].deck.deck.append(card.get_copy())
     f.players[1].deck = Deck()
+    f.players[1].deck.set_leader_class(D2.leader_class.name)
     for card in D2.deck:
         f.players[1].deck.deck.append(card.get_copy())
 
@@ -93,9 +95,11 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
     f.players[1] = Player2
     f.players[1].field = f
     f.players[0].deck = Deck()
+    f.players[0].deck.set_leader_class(D1.leader_class.name)
     for card in D1.deck:
         f.players[0].deck.deck.append(card.get_copy())
     f.players[1].deck = Deck()
+    f.players[1].deck.set_leader_class(D2.leader_class.name)
     for card in D2.deck:
         f.players[1].deck.deck.append(card.get_copy())
 
@@ -175,34 +179,44 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     for i, d in enumerate(D):
         if deck_type[i] == 0:
             D[i] = tsv_to_deck("Sword_Aggro.tsv")
+            D[i].set_leader_class("SWORD")
             # Aggro
         elif deck_type[i] == 1:
             D[i] = tsv_to_deck("Rune_Earth.tsv")
+            D[i].set_leader_class("RUNE")
             # Aggro
         elif deck_type[i] == 2:
             D[i] = tsv_to_deck("Sword.tsv")
+            D[i].set_leader_class("SWORD")
             # Mid
         elif deck_type[i] == 3:
             # D[i]=tsv_to_deck("Shadow.tsv")
             D[i] = tsv_to_deck("New-Shadow.tsv")
+            D[i].set_leader_class("SHADOW")
             # Mid
         elif deck_type[i] == 4:
             D[i] = tsv_to_deck("Dragon_PDK.tsv")
+            D[i].set_leader_class("DRAGON")
             # Mid
         elif deck_type[i] == 5:
             D[i] = tsv_to_deck("Haven.tsv")
+            D[i].set_leader_class("HAVEN")
             # Control
         elif deck_type[i] == 6:
             D[i] = tsv_to_deck("Blood.tsv")
+            D[i].set_leader_class("BLOOD")
             # Control
         elif deck_type[i] == 7:
             D[i] = tsv_to_deck("Dragon.tsv")
+            D[i].set_leader_class("DRAGON")
             # Control
         elif deck_type[i] == 8:
             D[i] = tsv_to_deck("Forest.tsv")
+            D[i].set_leader_class("FOREST")
             # Combo
         elif deck_type[i] == 9:
             D[i] = tsv_to_deck("Rune.tsv")
+            D[i].set_leader_class("RUNE")
             # Combo
         elif deck_type[i] == 10:
             D[i] = tsv_to_deck("New-Shadow.tsv")
@@ -217,6 +231,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
             #D[i] = tsv_to_deck("Blood_Basic.tsv")
             #D[i] = tsv_to_deck("Haven_Basic.tsv")
             D[i] = tsv_to_deck("Portal_Basic.tsv")
+            D[i].set_leader_class("PORTAL")
 
     Player1.class_num = class_pool[0]
     Player2.class_num = class_pool[1]
@@ -226,12 +241,6 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     D[1].mean_cost = D[1].get_mean_cost()
     assert len(D[0].deck) == 40 and len(D[1].deck) == 40,"deck_len:{},{}"\
         .format(len(D[0].deck),len(D[1].deck))
-    """
-        mylogger.info("Player1_Deck_Cost_Rate")
-        D[0].get_cost_histgram()
-        mylogger.info("Player2_Deck_Cost_Rate")
-        D[1].get_cost_histgram()
-        """
     sum_of_turn = 0
     span = max(iteration // 10, 1)
     Turn_Players = [Player1, Player2]
@@ -458,20 +467,28 @@ def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, pl
     for i in range(len(D)):
         if i == 0:
             D[i] = tsv_to_deck("Forest_Basic.tsv")
+            D[i].set_leader_class("FOREST")
         elif i == 1:
             D[i] = tsv_to_deck("Sword_Basic.tsv")
+            D[i].set_leader_class("SWORD")
         elif i == 2:
             D[i] = tsv_to_deck("Rune_Basic.tsv")
+            D[i].set_leader_class("RUNE")
         elif i == 3:
             D[i] = tsv_to_deck("Dragon_Basic.tsv")
+            D[i].set_leader_class("DRAGON")
         elif i == 4:
             D[i] = tsv_to_deck("Shadow_Basic.tsv")
+            D[i].set_leader_class("SHADOW")
         elif i == 5:
             D[i] = tsv_to_deck("Blood_Basic.tsv")
+            D[i].set_leader_class("BLOOD")
         elif i == 6:
             D[i] = tsv_to_deck("Haven_Basic.tsv")
+            D[i].set_leader_class("HAVEN")
         elif i == 7:
             D[i] = tsv_to_deck("Portal_Basic.tsv")
+            D[i].set_leader_class("PORTAL")
 
     sum_of_turn = 0
     span = max(iteration // 10, 1)
@@ -840,6 +857,7 @@ Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.1,playout=
 Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.25,playout=AggroPolicy()), mulligan=Min_cost_mulligan_policy()))  # 33
 Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.5,playout=AggroPolicy()), mulligan=Min_cost_mulligan_policy()))  # 34
 Players.append(Player(9, True, policy=Aggro_Shallow_MCTSPolicy(th=3), mulligan=Min_cost_mulligan_policy()))  # 35
+Players.append(Player(9, True, policy=Expanded_Aggro_MCTS_Policy(), mulligan=Min_cost_mulligan_policy()))  # 36
 
 parser = argparse.ArgumentParser(description='対戦実行コード')
 

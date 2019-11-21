@@ -41,6 +41,7 @@ class Player:
         player.life = self.life
         # player.deck=copy.deepcopy(self.deck)
         player.deck = Deck()
+        player.deck.set_leader_class(self.deck.leader_class.name)
         for card in self.deck.deck:
             player.deck.append(card)
         if len(player.deck.deck) == 0 and len(self.deck.deck) > 0:
@@ -186,11 +187,18 @@ class Player:
             = field.get_flag_and_choices(self, opponent, regal_targets)
         # mylogger.info("regal_targets2:{}".format(regal_targets))
         if not virtual:
+            observable_data = field.get_observable_data(player_num=self.player_num)
+            for key in list(observable_data.keys()):
+                print("{}".format(key))
+                for sub_key in list(observable_data[key].keys()):
+                    print("{}:{}".format(sub_key, observable_data[key][sub_key]))
             self.show_hand()
             field.show_field()
+            """
             mylogger.info(
-                "Player1 life:{} Player2 life:{} remain_cost:{}".format(field.players[0].life, field.players[1].life, \
+                "Player1 life:{} Player2 life:{} remain_cost:{}".format(field.players[0].life, field.players[1].life,
                                                                         field.remain_cost[self.player_num]))
+            """
             if able_to_play != []:
                 mylogger.info("able_to_play:{}".format(able_to_play))
             if able_to_creature_attack != []:
@@ -391,11 +399,14 @@ class HumanPlayer(Player):
 
         (can_play, can_attack, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) \
             = field.get_flag_and_choices(player, opponent, regal_targets)
+        observable_data = field.get_observable_data(player_num=self.player_num)
+        for key in list(observable_data.keys()):
+            for sub_key in list(observable_data[key].keys()):
+                print("{}:{}".format(key,observable_data[key][sub_key]))
+
         self.show_hand()
         field.show_field()
-        print("Your life:{},Oppornent life:{}".format(player.life, opponent.life))
-        print("remain_cost:{}".format(field.remain_cost[player.player_num]))
-        print("shadows:{}".format(field.graveyard.shadows[player.player_num]))
+        self.deck.show_remain_card_set()
         choices = [0]
         if can_evo:
             print("if you want to evolve creature,input -1")

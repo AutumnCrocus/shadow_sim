@@ -402,9 +402,9 @@ def token_spell_ability_001(field, player, opponent, virtual, target, itself):
         get_damage_to_player(player, virtual, num=3)
     else:
         get_damage_to_creature(field, opponent, virtual, target, num=3)
-    if field.check_game_end() == True:
+    if field.check_game_end():
         return
-    if earth_rite(field, player, virtual) == True:
+    if earth_rite(field, player, virtual):
         draw_cards(player, virtual, num=1)
 
 
@@ -423,7 +423,7 @@ def token_spell_ability_002(field, player, opponent, virtual, target, itself):
         else:
             get_damage_to_player(player, virtual, num=2)
 
-        if field.check_game_end() == True:
+        if field.check_game_end():
             break
 
 
