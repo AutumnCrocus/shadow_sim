@@ -5,6 +5,8 @@ import copy
 import math
 import numpy as np
 import datetime
+import heapq
+from collections import deque
 # import networkx as nx
 import Field_setting
 # import matplotlib.pyplot as plt
@@ -724,28 +726,6 @@ class MCTSPolicy(Policy):
                         break
                 mark_node = mark_node.parent_node
             self.action_seq = self.action_seq[::-1]
-        """
-        else:
-            
-            pointer = starting_node
-            count = 0
-            length_of_children = len(pointer.child_nodes)
-            while length_of_children > 0:
-                tmp_field = pointer.field
-                tmp_player = pointer.field.players[player_num]
-                next_node, tmp_move = self.best(pointer, player_num=player_num)
-                self.action_seq.append(tmp_move)
-
-                if tmp_move == (0, 0, 0):
-                    break
-                pointer = next_node
-                self.decide_node_seq.append(pointer)
-                length_of_children = len(pointer.child_nodes)
-
-                count += 1
-                if count > 100:
-                    raise Exception("Infinite loop")
-        """
 
         self.initial_seq = self.action_seq[:]
         # move = self.action_seq.pop(0)
@@ -1732,11 +1712,85 @@ class Expanded_Aggro_MCTS_Policy(Aggro_MCTSPolicy):
                 estimate_term = 0.5
         life_ad = estimate_term*\
                   (partial_observable_data["opponent"]["max_life"] - partial_observable_data["opponent"]["life"])
-        low_life_term = 1 + 10*int(partial_observable_data["player"]["life"]<= 10)
+        low_life_term = 1 + 10*int(partial_observable_data["player"]["life"] <= 10)
         board_ad = (len(field.get_creature_location()[player_num]) - len(
                    field.get_creature_location()[1 - player_num]))*low_life_term
         return life_ad * 50 + \
                board_ad * 50 + partial_observable_data["player"]["hand_len"]
+
+class Genetic_GreedyPolicy(GreedyPolicy):
+    def __init__(self,N=10):
+        self.name="Genetic_Greedy(N={})Policy".format(N)
+        self.policy_type = 4
+        self.epic_num = 0
+        self.population = None
+        self.population_num = N
+        self.parameters={}
+        self.parameters_range={0:100,1:100,2:20,3:100,4:100,5:100}
+        for i in range(6):
+            self.parameters[i] = random.randint(0,self.parameters_range[i])
+        self.fitness={}
+        self.better_parameters=deque()
+
+    def set_fitness(self,win_late):
+        input_key=(self.parameters[0],self.parameters[1],self.parameters[2],self.parameters[3],self.parameters[4],self.parameters[5])
+        self.fitness[input_key] = win_late
+        if len(self.better_parameters)<self.population_num:
+            self.better_parameters.append((win_late,input_key))
+        elif min(self.better_parameters)[0]<win_late:
+            update_flg=True
+            for cell in self.better_parameters:
+                if cell[1] == input_key:
+                    update_flg=False
+            if update_flg:
+                self.better_parameters.append((win_late,input_key))
+                self.better_parameters.remove(min(self.better_parameters))
+        if len(self.better_parameters)<self.population_num:
+            for i in range(6):
+                self.parameters[i] = random.randint(0,self.parameters_range[i])
+        else:
+            if random.random() < 0.5:
+                best = max(self.better_parameters)[1]
+                for j in range(6):
+                    self.parameters[j] = best[j]
+                    if random.random()<0.1:
+                        self.parameters[j] = random.randint(0,self.parameters_range[j])
+            else:
+                crossover = random.sample(self.better_parameters,k=2)
+                choice_parameter_id = random.sample(list(range(6)),k=3)
+                for j in range(6):
+                    if j in choice_parameter_id:
+                        self.parameters[j] = crossover[0][1][j]
+                    else:
+                        self.parameters[j] = crossover[1][1][j]
+
+    def state_value(self, field, player_num):
+        partial_observable_data=field.get_observable_data(player_num=player_num)
+        if partial_observable_data["opponent"]["life"] <= 0:
+            return WIN_BONUS
+        opponent_power_sum = 0
+        for card_id in field.get_creature_location()[1 - player_num]:
+            opponent_power_sum += field.card_location[1 - player_num][card_id].power
+        if opponent_power_sum >= partial_observable_data["player"]["life"]:
+            return -WIN_BONUS
+        estimate_term = self.parameters[0]
+        able_attack_power_sum = 0
+        if field.get_ward_list(player_num)==[]:
+            for card in field.card_location[player_num]:
+                if card.card_category == "Creatrue" and card.can_attack_to_player():
+                    able_attack_power_sum += card.power
+            if able_attack_power_sum >= partial_observable_data["opponent"]["life"]:
+                return WIN_BONUS
+            elif field.players[1-player_num].deck.leader_class.name == "BLOOD":
+                estimate_term = self.parameters[1]
+        life_ad = estimate_term*\
+                  (partial_observable_data["opponent"]["max_life"] - partial_observable_data["opponent"]["life"])
+        low_life_term = 1 + 10*int(partial_observable_data["player"]["life"] <= self.parameters[2])
+        board_ad = (len(field.get_creature_location()[player_num]) - len(
+                   field.get_creature_location()[1 - player_num]))*low_life_term
+        return life_ad * self.parameters[3] + \
+               board_ad * self.parameters[4] + partial_observable_data["player"]["hand_len"]*self.parameters[5]
+
 
 
 

@@ -604,6 +604,14 @@ class Creature(Card):
             return False
         if self.ability != other.ability:
             return False
+        if self.can_be_attacked() != other.can_be_attacked():
+            return False
+        if self.can_be_targeted() != other.can_be_targeted():
+            return False
+        if self.can_attack_to_follower() != other.can_attack_to_follower():
+            return False
+        if self.can_attack_to_player() != other.can_attack_to_player():
+            return False
 
         return True
 
