@@ -107,13 +107,14 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
     f.players[1].deck.shuffle()
     f.players[0].draw(f.players[0].deck, 3)
     f.players[1].draw(f.players[1].deck, 3)
+    #f.evo_point = [1,2]
     G = Game()
     (w, l, lib, turn) = G.start(f, virtual_flg=virtual_flg)
     win += w
     lose += l
     first = w
     lib_num += lib
-    if virtual_flg == False:
+    if not  virtual_flg:
         mylogger.info("Game end")
         mylogger.info("Player1 life:{} Player2 life:{}".format(f.players[0].life, f.players[1].life))
         f.show_field()
@@ -167,12 +168,13 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     lose = 0
     lib_num = 0
     D = [Deck(), Deck()]
-    if deck_type == None:
+    if deck_type is None:
         deck_type = [5, 5]
     else:
         mylogger.info("deck_type:{}".format(deck_type))
     deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
-                      6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune",-1:"TEST"}
+                      6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune",-1:"Forest_Basic",-2:"Sword_Basic",-3:"Rune_Basic",
+                      -4:"Dragon_Basic",-5:"FOREST_Basic",-6:"Blood_Basic",-7:"Haven_Basic",-8:"Portal_Basic"}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
@@ -222,6 +224,8 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
             D[i] = tsv_to_deck("New-Shadow.tsv")
             # Combo
         elif deck_type[i] == -1:
+            D[i] = tsv_to_deck("Forest_Basic.tsv")
+            D[i].set_leader_class("FOREST")
             #テスト
             #D[i] = tsv_to_deck("Forest_Basic.tsv")
             #D[i] = tsv_to_deck("Sword_Basic.tsv")
@@ -230,8 +234,30 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
             #D[i] = tsv_to_deck("Shadow_Basic.tsv")
             #D[i] = tsv_to_deck("Blood_Basic.tsv")
             #D[i] = tsv_to_deck("Haven_Basic.tsv")
+
+        elif deck_type[i] == -2:
+            D[i] = tsv_to_deck("Sword_Basic.tsv")
+            D[i].set_leader_class("SWORD")
+        elif deck_type[i] == -3:
+            D[i] = tsv_to_deck("Rune_Basic.tsv")
+            D[i].set_leader_class("RUNE")
+        elif deck_type[i] == -4:
+            D[i] = tsv_to_deck("Dragon_Basic.tsv")
+            D[i].set_leader_class("DRAGON")
+        elif deck_type[i] == -5:
+            D[i] = tsv_to_deck("Shadow_Basic.tsv")
+            D[i].set_leader_class("SHADOW")
+        elif deck_type[i] == -6:
+            D[i] = tsv_to_deck("Blood_Basic.tsv")
+            D[i].set_leader_class("BLOOD")
+        elif deck_type[i] == -7:
+            D[i] = tsv_to_deck("Haven_Basic.tsv")
+            D[i].set_leader_class("HAVEN")
+        elif deck_type[i] == -8:
             D[i] = tsv_to_deck("Portal_Basic.tsv")
             D[i].set_leader_class("PORTAL")
+
+
 
     Player1.class_num = class_pool[0]
     Player2.class_num = class_pool[1]
@@ -746,7 +772,7 @@ def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_re
 
 def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, result_name="Policy_table_result.tsv"):
     deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
-                      6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune",-1:"Forest_basic",-2:"Sword_basic"}
+                      6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune",-1:"Forest_basic",-2:"Sword_basic",-3:"Rune_basic"}
     mylogger.info("{} vs {}".format(deck_id_2_name[deck_type[0]], deck_id_2_name[deck_type[1]]))
     policy_id_2_name={}
     for i,target_player in enumerate(initial_players):
@@ -808,6 +834,9 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
         elif deck_type[i] == -2:
             D[i] = tsv_to_deck("Sword_Basic.tsv")
             D[i].set_leader_class("SWORD")
+        elif deck_type[i] == -3:
+            D[i] = tsv_to_deck("Rune_Basic.tsv")
+            D[i].set_leader_class("RUNE")
 
     Results = {}
     for policy1_id, player1 in enumerate(players):
@@ -893,6 +922,14 @@ Players.append(Player(9, True, policy=Aggro_Shallow_MCTSPolicy(th=3), mulligan=M
 Players.append(Player(9, True, policy=Expanded_Aggro_MCTS_Policy(), mulligan=Min_cost_mulligan_policy()))  # 36
 Players.append(Player(9, True, policy=Genetic_GreedyPolicy(N=10), mulligan=Min_cost_mulligan_policy()))  # 37
 Players.append(Player(9, True, policy=Genetic_GreedyPolicy(N=20), mulligan=Min_cost_mulligan_policy()))  # 38
+Players.append(Player(9, True, policy=Genetic_New_GreedyPolicy(N=10), mulligan=Min_cost_mulligan_policy()))  # 39
+Players.append(Player(9, True, policy=Genetic_New_GreedyPolicy(N=20), mulligan=Min_cost_mulligan_policy()))  # 40
+Players.append(Player(9, True, policy=Genetic_Aggro_MCTSPolicy(N=10), mulligan=Min_cost_mulligan_policy()))  # 41
+Players.append(Player(9, True, policy=Double_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 42
+Players.append(Player(9, True, policy=Triple_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 43
+Players.append(Player(9, True, policy=Quadruple_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 44
+Players.append(Player(9, True, policy=Quadruple_Aggro_EXP3_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 45
+Players.append(Player(9, True, policy=Information_Set_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 46
 
 parser = argparse.ArgumentParser(description='対戦実行コード')
 

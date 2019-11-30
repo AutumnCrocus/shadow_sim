@@ -51,7 +51,7 @@ class RandomPolicy(Policy):
         (can_play, can_attack, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) \
             = field.get_flag_and_choices(player, opponent, regal_targets)
         target_id = 0
-        #length = len(able_to_play + able_to_creature_attack) + 1
+        # length = len(able_to_play + able_to_creature_attack) + 1
         length = len(able_to_play + able_to_creature_attack)
 
         depth = 1 - len(able_to_evo)
@@ -69,8 +69,8 @@ class RandomPolicy(Policy):
                     target_id = random.choice(choices)
             return Action_Code.EVOLVE.value, card_id, target_id
 
-        #if tmp == 1 or (not can_play and not can_attack):
-        if (length+len(able_to_evo))==0:
+        # if tmp == 1 or (not can_play and not can_attack):
+        if (length + len(able_to_evo)) == 0:
             return Action_Code.TURN_END.value, 0, 0
 
         if 0 <= tmp <= len(able_to_play) - 1 and can_play:
@@ -220,13 +220,11 @@ class GreedyPolicy(Policy):
         length = len(able_to_play + able_to_creature_attack) + 1
         end_field_id_list = []
 
-        # tmp_field_list=[copy.deepcopy(field) for i in range(length)]
-        # mylogger.info("len:{}".format(length))
         tmp_field_list = []
         for i in range(length):
             new_field = Field_setting.Field(5)
             new_field.set_data(field)
-            # new_field.get_flag_and_choices(new_field.players[player.player_num],new_field.players[opponent.player_num],regal_targets)
+
             tmp_field_list.append(new_field)
         state_value_list = [0 for i in range(length)]  # 各行動後の状態価値のリスト
         state_value_list[0] = self.state_value(tmp_field_list[0], first)
@@ -264,22 +262,15 @@ class GreedyPolicy(Policy):
             evo_field.players[first].execute_action(evo_field, evo_field.players[1 - first],
                                                     action_code=(Action_Code.EVOLVE.value, evo_id, target_id),
                                                     virtual=True)
-            # evo_field.players[first].creature_evolve(evo_field.card_location[first][able_to_evo[evo_id]],evo_field,virtual=True,target=target_id)
-            # evo_field.solve_field_trigger_ability(virtual=True,player_num=player.player_num)
-            # if evo_field.stack!=[]:
-            # if len(evo_field.stack)>0:
-            #    evo_field.solve_lastword_ability(virtual=True,player_num=player.player_num)
-            # evo_field.ability_resolution(virtual=True,player_num=player.player_num)
+
             tmp_state_value = self.state_value(evo_field, first)
             if max_state_value < tmp_state_value:
                 max_state_value = tmp_state_value
                 dicision = [Action_Code.EVOLVE.value, evo_id, target_id]
 
         if can_play == True:
-            # mylogger.info(range(1,len(able_to_play)+1))
             for i in range(1, len(able_to_play) + 1):
                 assert i not in end_field_id_list, "{} {}".format(i, end_field_id_list)
-                # mylogger.info("i(play):{}".format(i))
                 target_id = None
                 card_id = able_to_play[i - 1]
                 card = player.hand[card_id]
@@ -295,13 +286,7 @@ class GreedyPolicy(Policy):
                                                                 action_code=(
                                                                     Action_Code.PLAY_CARD.value, card_id, target_id),
                                                                 virtual=True)
-                # tmp_field_list[i].players[first].play_card(tmp_field_list[i],able_to_play[i-1],tmp_field_list[i].players[first],\
-                #    tmp_field_list[i].players[1-first],virtual=True,target=target_id)
-                # tmp_field_list[i].ability_resolution(virtual=True,player_num=player.player_num)
-                # tmp_field_list[i].solve_field_trigger_ability(virtual=True,player_num=player.player_num)
-                # if tmp_field_list[i].stack!=[]:
-                # if len(tmp_field_list[i].stack)>0:
-                #    tmp_field_list[i].solve_lastword_ability(virtual=True,player_num=player.player_num)
+
                 state_value_list[i] = self.state_value(tmp_field_list[i], first)
                 end_field_id_list.append(i)
                 if max_state_value < state_value_list[i] and tmp_field_list[i].players[first].life > 0:
@@ -319,10 +304,9 @@ class GreedyPolicy(Policy):
                                             for i in ward_list]
                 able_to_creature_attack_power = [field.card_location[player.player_num][i].power for i in
                                                  able_to_creature_attack]
-                # mylogger.info(range(len(able_to_play)+1,length))
+
                 for i in range(len(able_to_play) + 1, length):
                     assert i not in end_field_id_list, "{} {}".format(i, end_field_id_list)
-                    # mylogger.info("i(attack):{}".format(i))
                     target_id = None
                     attacker_id = able_to_creature_attack[i - len(able_to_play) + 1 - 2]
                     attacker_power = tmp_field_list[i].card_location[first][attacker_id].power
@@ -333,16 +317,10 @@ class GreedyPolicy(Policy):
                                                                         action_code=(
                                                                             Action_Code.ATTACK_TO_FOLLOWER.value,
                                                                             attacker_id, target_id), virtual=True)
-                        # tmp_field_list[i].players[first].attack_to_follower(tmp_field_list[i],attacker_id,target_id,virtual=True)
-                        # tmp_field_list[i].solve_field_trigger_ability(virtual=True,player_num=player.player_num)
-                        # end_field_id_list.append(i)
-                        # if tmp_field_list[i].stack!=[]:
-                        # if len(tmp_field_list[i].stack)>0:
-                        #    tmp_field_list[i].solve_lastword_ability(virtual=True,player_num=player.player_num)
+
                         state_value_list[i] += self.state_value(tmp_field_list[i], first)
                         if max_state_value < state_value_list[i] and target_id != None:
                             max_state_value = state_value_list[i]
-                            # mylogger.info("target_id:{},name:{}".format(target_id,field.card_location[opponent.player_num][target_id].name))
                             dicision = [Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id]
             else:
                 for i in range(len(able_to_play) + 1, length):
@@ -371,12 +349,6 @@ class GreedyPolicy(Policy):
                                                                         action_code=(
                                                                             Action_Code.ATTACK_TO_FOLLOWER.value,
                                                                             attacker_id, target_id), virtual=True)
-                        # tmp_field_list[i].players[first].attack_to_follower(tmp_field_list[i],attacker_id,target_id,virtual=True)
-                        # tmp_field_list[i].solve_field_trigger_ability(virtual=True,player_num=player.player_num)
-                        # if tmp_field_list[i].stack!=[]:
-                        # if len(tmp_field_list[i].stack)>0:
-                        #    tmp_field_list[i].solve_lastword_ability(virtual=True,player_num=player.player_num)
-                        #    tmp_field_list[i].solve_field_trigger_ability(virtual=True,player_num=player.player_num)
                         state_value_list[i] += self.state_value(tmp_field_list[i], first)
                         end_field_id_list.append(i)
 
@@ -395,10 +367,7 @@ class GreedyPolicy(Policy):
                                 dicision = [Action_Code.ATTACK_TO_PLAYER.value, attacker_id, 0]
                         if direct_flg == False and opponent_creatures_toughness != [] and target_id != None:
                             max_state_value = state_value_list[i]
-                            # mylogger.info("target_id:{},name:{}".format(target_id,field.card_location[opponent.player_num][target_id].name))
                             dicision = [Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id]
-
-        # mylogger.info("Interval")
         return dicision[0], dicision[1], dicision[2]
 
 
@@ -486,6 +455,7 @@ class Node:
         self.action_value_dict = {}
         self.current_probability = None
         self.children_moves = [(0, 0, 0)]
+        self.player_num = player_num
         # self.node_id=node_id
         # if self.field!=None:
         #    self.parent_node=None
@@ -550,7 +520,7 @@ class Node:
         #    self.action_value_dict[action]=0
 
     def print_tree(self, single=False):
-        if self.is_root == True:
+        if self.is_root:
             print("ROOT(id:{})".format(id(self)))
         # if self.parent_node!=None:
         #    print("   "*self.depth+("parent_id:{})".format(id(self.parent_node))))
@@ -558,13 +528,28 @@ class Node:
                                                                                           self.finite_state_flg, int(
                 self.value / max(1, self.visit_num)), self.visit_num))
 
-        if single == False:
+        if not single:
 
             if self.child_nodes != []:
                 print("   " * self.depth + "child_node_num:{}".format(len(self.child_nodes)))
                 print("   " * self.depth + "child_node_set:{")
                 for child in self.child_nodes:
-                    print("   " * self.depth + "action:{}".format(child[0]))
+                    action_name = Action_Code(child[0][0]).name
+                    txt = ""
+                    if child[0][0] == Action_Code.PLAY_CARD.value:
+                        play_card_name = self.field.players[self.player_num].hand[child[0][1]].name
+                        txt = "{},{},{}".format(action_name, play_card_name, child[0][2])
+                    elif child[0][0] == Action_Code.ATTACK_TO_FOLLOWER.value:
+                        attacker_name = self.field.card_location[self.player_num][child[0][1]].name
+                        defencer_name = self.field.card_location[1 - self.player_num][child[0][2]].name
+                        txt = "{},{},{}".format(action_name, attacker_name, defencer_name)
+                    elif child[0][0] == Action_Code.ATTACK_TO_PLAYER.value:
+                        attacker_name = self.field.card_location[self.player_num][child[0][1]].name
+                        txt = "{},{}".format(action_name, attacker_name)
+                    else:
+                        txt = "{}".format(action_name)
+
+                    print("   " * self.depth + "action:{}".format(txt))
                     child[1].print_tree()
                 print("   " * self.depth + "}")
 
@@ -614,6 +599,7 @@ class MCTSPolicy(Policy):
         self.policy_type = 3
         self.name = "MCTSPolicy"
         self.type = "root"
+        self.iteration = 100
 
     # import numba
     # @numba.jit
@@ -626,28 +612,20 @@ class MCTSPolicy(Policy):
         if power_sum >= field.players[player_num].life:
             return -WIN_BONUS
 
-        # return (field.players[1-player_num].max_life-field.players[1-player_num].life)*100 + \
-        #    (len(field.get_creature_location()[player_num])-len(field.get_creature_location()[1-player_num]))*10 + len(field.players[player_num].hand)
         return (field.players[1 - player_num].max_life - field.players[1 - player_num].life) * 50 + \
                (len(field.get_creature_location()[player_num]) - len(
                    field.get_creature_location()[1 - player_num])) * 50 + len(field.players[player_num].hand)
 
     def decide(self, player, opponent, field):
-        # if self.current_node is None:
-        #    self.action_seq = []
         if self.current_node is None:
 
             action = self.uct_search(player, opponent, field)
             self.end_count += 1
-            # mylogger.info("make_tree_count = {}".format(self.end_count))
             tmp_move = action
             if len(self.current_node.child_nodes) > 0:
                 next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
                 self.current_node = next_node
-                # self.next_node = next_node
             self.node_index = 0
-            # mylogger.info("Root")
-
             self.type = "root"
             if tmp_move == (0, 0, 0):
                 self.current_node = None
@@ -696,7 +674,7 @@ class MCTSPolicy(Policy):
         self.decide_node_seq.append(starting_node)
         if starting_node.get_able_action_list() == [(0, 0, 0)]:
             return 0, 0, 0
-        for i in range(ITERATION):
+        for i in range(self.iteration):
 
             node = self.tree_policy(starting_node, player_num=player_num)
             if node.field.players[1 - player_num].life <= 0 and node.field.players[player_num].life > 0:
@@ -708,8 +686,8 @@ class MCTSPolicy(Policy):
             self.back_up(node, value, player_num=player_num)
 
             if starting_node.max_child_visit_num[0] is not None and starting_node.max_child_visit_num[1] is not None:
-                if starting_node.max_child_visit_num[1].visit_num - starting_node.max_child_visit_num[
-                    0].visit_num > ITERATION - i:
+                if starting_node.max_child_visit_num[1].visit_num - \
+                        starting_node.max_child_visit_num[0].visit_num > ITERATION - i:
                     break
 
             elif starting_node.max_child_visit_num[1] is not None:
@@ -836,7 +814,7 @@ class MCTSPolicy(Policy):
             next_node = Node(field=next_field, player_num=player_num, finite_state_flg=True, depth=node.depth + 1)
         else:
             if move[0] == 1:
-                if move[2] == None and node.regal_targets[move[1]] != []:
+                if move[2] is None and node.regal_targets[move[1]] != []:
                     mylogger.info("in_node:{}".format(node.regal_targets[move[1]]))
                     assert False, "null target error"
                 elif move[2] is not None and \
@@ -1055,9 +1033,9 @@ class Test_MCTSPolicy(MCTSPolicy):
 
                 while True:
                     current_field.get_regal_target_dict(player, opponent)
-                    (action_num, card_id, target_id) = self.play_out_policy.decide(player, opponent, \
+                    (action_num, card_id, target_id) = self.play_out_policy.decide(player, opponent,
                                                                                    current_field)
-                    end_flg = player.execute_action(current_field, opponent, \
+                    end_flg = player.execute_action(current_field, opponent,
                                                     action_code=(action_num, card_id, target_id), virtual=True)
 
                     if current_field.check_game_end() == True or end_flg == True:
@@ -1123,6 +1101,30 @@ class Aggro_MCTSPolicy(MCTSPolicy):
         self.name = "Aggro_MCTSPolicy"
         # RandomPolicyとAggroPolicyのPlayOutでの比較
         self.play_out_policy = AggroPolicy()
+
+
+class Double_Aggro_MCTSPolicy(MCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.name = "Double_Aggro_MCTSPolicy"
+        self.play_out_policy = AggroPolicy()
+        self.iteration = 200
+
+
+class Triple_Aggro_MCTSPolicy(MCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.name = "Triple_Aggro_MCTSPolicy"
+        self.play_out_policy = AggroPolicy()
+        self.iteration = 300
+
+
+class Quadruple_Aggro_MCTSPolicy(MCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.name = "Quadruple_Aggro_MCTSPolicy"
+        self.play_out_policy = AggroPolicy()
+        self.iteration = 400
 
 
 class New_MCTSPolicy(MCTSPolicy):
@@ -1210,6 +1212,7 @@ class EXP3_MCTSPolicy(Policy):
         self.eta = 1
         self.probability_check_func = lambda x: x >= 0 and x <= 1
         self.name = "EXP3_MCTSPolicy"
+        self.iteration = 100
 
     def state_value(self, field, player_num):
         if field.check_game_end():
@@ -1280,7 +1283,7 @@ class EXP3_MCTSPolicy(Policy):
         if starting_node.get_able_action_list() == [(0, 0, 0)]:
             # mylogger.info("check:{}".format(self.current_node==self.starting_node))
             return
-        for i in range(ITERATION):
+        for i in range(self.iteration):
 
             node, probability = self.tree_policy(starting_node, player_num=player_num)
             value = self.default_policy(node, probability, player_num=player_num)
@@ -1468,8 +1471,8 @@ class EXP3_MCTSPolicy(Policy):
                 # node.action_value_dict[move]=self.state_value(next_field,player_num)
                 assert any(self.state_value(next_field, player_num) == i for i in [0, 1]), "{}".format(
                     (self.state_value(next_field, player_num)))
-            next_node = Node(field=next_field, player_num=player_num, \
-                             finite_state_flg=flg == True, depth=node.depth + 1)
+            next_node = Node(field=next_field, player_num=player_num, finite_state_flg=flg == True,
+                             depth=node.depth + 1)
         next_node.parent_node = node
         node.child_nodes.append((move, next_node))
         next_node.current_probability = 1 / len(new_choices)
@@ -1624,6 +1627,14 @@ class Aggro_EXP3_MCTSPolicy(EXP3_MCTSPolicy):
         self.name = "Aggro_EXP3_MCTSPolicy"
 
 
+class Quadruple_Aggro_EXP3_MCTSPolicy(EXP3_MCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.play_out_policy = AggroPolicy()
+        self.name = "Quadruple_Aggro_EXP3_MCTSPolicy"
+        self.iteration = 400
+
+
 class Time_bounded_MCTSPolicy(MCTSPolicy):
     def __init__(self, limit=90, playout=RandomPolicy()):
         super().__init__()
@@ -1690,116 +1701,655 @@ class Expanded_Aggro_MCTS_Policy(Aggro_MCTSPolicy):
     def __init__(self):
         super().__init__()
         self.name = "Expanded_Aggro_MCTS_Policy"
+        self.parameters = {
+            0: 2, 1: 20, 2: 1, 3: 10, 4: 5, 5: 50
+            # Sword_basic_vs_Sword_basic
+        }
 
     def state_value(self, field, player_num):
-        partial_observable_data=field.get_observable_data(player_num=player_num)
+        partial_observable_data = field.get_observable_data(player_num=player_num)
         if partial_observable_data["opponent"]["life"] <= 0:
             return WIN_BONUS
-        opponent_power_sum = 0
-        for card_id in field.get_creature_location()[1 - player_num]:
-            opponent_power_sum += field.card_location[1 - player_num][card_id].power
-        if opponent_power_sum >= partial_observable_data["player"]["life"]:
-            return -WIN_BONUS
-        estimate_term = 1
         able_attack_power_sum = 0
-        if field.get_ward_list(player_num)==[]:
+        if field.get_ward_list(player_num) == []:
             for card in field.card_location[player_num]:
                 if card.card_category == "Creatrue" and card.can_attack_to_player():
                     able_attack_power_sum += card.power
             if able_attack_power_sum >= partial_observable_data["opponent"]["life"]:
                 return WIN_BONUS
-            elif field.players[1-player_num].deck.leader_class.name == "BLOOD":
-                estimate_term = 0.5
-        life_ad = estimate_term*\
-                  (partial_observable_data["opponent"]["max_life"] - partial_observable_data["opponent"]["life"])
-        low_life_term = 1 + 10*int(partial_observable_data["player"]["life"] <= 10)
-        board_ad = (len(field.get_creature_location()[player_num]) - len(
-                   field.get_creature_location()[1 - player_num]))*low_life_term
-        return life_ad * 50 + \
-               board_ad * 50 + partial_observable_data["player"]["hand_len"]
+        opponent_power_sum = 0
+        for card_id in field.get_creature_location()[1 - player_num]:
+            opponent_power_sum += field.card_location[1 - player_num][card_id].power
+        if opponent_power_sum >= partial_observable_data["player"]["life"]:
+            return -WIN_BONUS
+
+        life_ad = partial_observable_data["player"]["life"] * self.parameters[0] \
+                  - partial_observable_data["opponent"]["life"] * self.parameters[1]
+
+        hand_ad = partial_observable_data["player"]["hand_len"] * self.parameters[2] \
+                  - partial_observable_data["opponent"]["hand_len"] * self.parameters[3]
+
+        creature_location = field.get_creature_location()
+        board_ad = len(creature_location[player_num]) * self.parameters[4] \
+                   - len(creature_location[1 - player_num]) * self.parameters[5]
+
+        return life_ad + hand_ad + board_ad
+
 
 class Genetic_GreedyPolicy(GreedyPolicy):
-    def __init__(self,N=10):
-        self.name="Genetic_Greedy(N={})Policy".format(N)
+    def __init__(self, N=10):
+        self.name = "Genetic_Greedy(N={})Policy".format(N)
         self.policy_type = 4
         self.epic_num = 0
         self.population = None
         self.population_num = N
-        self.parameters={}
-        self.parameters_range={0:100,1:100,2:20,3:100,4:100,5:100}
+        self.parameters = {}
+        self.parameters_range = {0: 100, 1: 100, 2: 20, 3: 100, 4: 100, 5: 100}
         for i in range(6):
-            self.parameters[i] = random.randint(0,self.parameters_range[i])
-        self.fitness={}
-        self.better_parameters=deque()
+            self.parameters[i] = random.randint(0, self.parameters_range[i])
+        self.fitness = {}
+        self.better_parameters = deque()
 
-    def set_fitness(self,win_late):
-        input_key=(self.parameters[0],self.parameters[1],self.parameters[2],self.parameters[3],self.parameters[4],self.parameters[5])
+    def set_fitness(self, win_late):
+        input_key = (self.parameters[0], self.parameters[1], self.parameters[2], self.parameters[3], self.parameters[4],
+                     self.parameters[5])
         self.fitness[input_key] = win_late
-        if len(self.better_parameters)<self.population_num:
-            self.better_parameters.append((win_late,input_key))
-        elif min(self.better_parameters)[0]<win_late:
-            update_flg=True
+        if len(self.better_parameters) < self.population_num:
+            self.better_parameters.append((win_late, input_key))
+        elif min(self.better_parameters)[0] < win_late:
+            update_flg = True
             for cell in self.better_parameters:
                 if cell[1] == input_key:
-                    update_flg=False
+                    update_flg = False
             if update_flg:
-                self.better_parameters.append((win_late,input_key))
+                self.better_parameters.append((win_late, input_key))
                 self.better_parameters.remove(min(self.better_parameters))
-        if len(self.better_parameters)<self.population_num:
+        if len(self.better_parameters) < self.population_num:
             for i in range(6):
-                self.parameters[i] = random.randint(0,self.parameters_range[i])
+                self.parameters[i] = random.randint(0, self.parameters_range[i])
         else:
             if random.random() < 0.5:
                 best = max(self.better_parameters)[1]
                 for j in range(6):
                     self.parameters[j] = best[j]
-                    if random.random()<0.1:
-                        self.parameters[j] = random.randint(0,self.parameters_range[j])
+                    if random.random() < 0.05:
+                        self.parameters[j] = random.randint(0, self.parameters_range[j])
+                same_flg = True
+                for k in range(6):
+                    if self.parameters[k] != best[k]:
+                        same_flg = False
+                        break
+                if same_flg:
+                    change_num = random.randint(1, 6)
+                    change_ids = random.sample(list(range(6)), k=change_num)
+                    for change_id in change_ids:
+                        self.parameters[change_id] = random.randint(0, self.parameters_range[change_id])
             else:
-                crossover = random.sample(self.better_parameters,k=2)
-                choice_parameter_id = random.sample(list(range(6)),k=3)
+                crossover = random.sample(self.better_parameters, k=2)
+                choice_parameter_id = random.sample(list(range(6)), k=3)
                 for j in range(6):
                     if j in choice_parameter_id:
                         self.parameters[j] = crossover[0][1][j]
                     else:
                         self.parameters[j] = crossover[1][1][j]
+        self.epic_num += 1
+        if self.epic_num % self.population_num == 0:
+            mylogger.info("populations:{}".format(self.better_parameters))
 
     def state_value(self, field, player_num):
-        partial_observable_data=field.get_observable_data(player_num=player_num)
+        partial_observable_data = field.get_observable_data(player_num=player_num)
         if partial_observable_data["opponent"]["life"] <= 0:
             return WIN_BONUS
-        opponent_power_sum = 0
-        for card_id in field.get_creature_location()[1 - player_num]:
-            opponent_power_sum += field.card_location[1 - player_num][card_id].power
-        if opponent_power_sum >= partial_observable_data["player"]["life"]:
-            return -WIN_BONUS
         estimate_term = self.parameters[0]
         able_attack_power_sum = 0
-        if field.get_ward_list(player_num)==[]:
+        if field.get_ward_list(player_num) == []:
             for card in field.card_location[player_num]:
                 if card.card_category == "Creatrue" and card.can_attack_to_player():
                     able_attack_power_sum += card.power
             if able_attack_power_sum >= partial_observable_data["opponent"]["life"]:
                 return WIN_BONUS
-            elif field.players[1-player_num].deck.leader_class.name == "BLOOD":
+            elif field.players[1 - player_num].deck.leader_class.name == "BLOOD":
                 estimate_term = self.parameters[1]
-        life_ad = estimate_term*\
+        opponent_power_sum = 0
+        for card_id in field.get_creature_location()[1 - player_num]:
+            opponent_power_sum += field.card_location[1 - player_num][card_id].power
+        if opponent_power_sum >= partial_observable_data["player"]["life"]:
+            return -WIN_BONUS
+
+        life_ad = estimate_term * \
                   (partial_observable_data["opponent"]["max_life"] - partial_observable_data["opponent"]["life"])
-        low_life_term = 1 + 10*int(partial_observable_data["player"]["life"] <= self.parameters[2])
+        low_life_term = 1 + 10 * int(partial_observable_data["player"]["life"] <= self.parameters[2])
         board_ad = (len(field.get_creature_location()[player_num]) - len(
-                   field.get_creature_location()[1 - player_num]))*low_life_term
+            field.get_creature_location()[1 - player_num])) * low_life_term
         return life_ad * self.parameters[3] + \
-               board_ad * self.parameters[4] + partial_observable_data["player"]["hand_len"]*self.parameters[5]
+               board_ad * self.parameters[4] + partial_observable_data["player"]["hand_len"] * self.parameters[5]
 
 
+class Genetic_New_GreedyPolicy(Genetic_GreedyPolicy):
+    def __init__(self, N=10):
+        self.name = "Genetic_New_Greedy(N={})Policy".format(N)
+        self.policy_type = 4
+        self.epic_num = 0
+        self.population = None
+        self.population_num = N
+        self.parameters = {}
+        self.parameters_range = {0: 100, 1: 100, 2: 100, 3: 100, 4: 100, 5: 100}
+        for i in range(6):
+            self.parameters[i] = random.randint(0, self.parameters_range[i])
+        self.fitness = {}
+        self.better_parameters = deque()
+
+    def state_value(self, field, player_num):
+        partial_observable_data = field.get_observable_data(player_num=player_num)
+        if partial_observable_data["opponent"]["life"] <= 0:
+            return WIN_BONUS
+        able_attack_power_sum = 0
+        if field.get_ward_list(player_num) == []:
+            for card in field.card_location[player_num]:
+                if card.card_category == "Creatrue" and card.can_attack_to_player():
+                    able_attack_power_sum += card.power
+            if able_attack_power_sum >= partial_observable_data["opponent"]["life"]:
+                return WIN_BONUS
+        opponent_power_sum = 0
+        for card_id in field.get_creature_location()[1 - player_num]:
+            opponent_power_sum += field.card_location[1 - player_num][card_id].power
+        if opponent_power_sum >= partial_observable_data["player"]["life"]:
+            return -WIN_BONUS
+
+        life_ad = partial_observable_data["player"]["life"] * self.parameters[0] \
+                  - partial_observable_data["opponent"]["life"] * self.parameters[1]
+
+        hand_ad = partial_observable_data["player"]["hand_len"] * self.parameters[2] \
+                  - partial_observable_data["opponent"]["hand_len"] * self.parameters[3]
+
+        creature_location = field.get_creature_location()
+        board_ad = len(creature_location[player_num]) * self.parameters[4] \
+                   - len(creature_location[1 - player_num]) * self.parameters[5]
+
+        return life_ad + hand_ad + board_ad
 
 
+class Genetic_Aggro_MCTSPolicy(Aggro_MCTSPolicy):
+    def __init__(self, N=10):
+        super().__init__()
+        self.name = "Genetic_Aggro_MCTS_Policy(N={})".format(N)
+        self.epic_num = 0
+        self.population = None
+        self.population_num = N
+        self.parameters = {}
+        self.parameters_range = {0: 100, 1: 100, 2: 100, 3: 100, 4: 100, 5: 100}
+        for i in range(6):
+            self.parameters[i] = random.randint(0, self.parameters_range[i])
+        self.fitness = {}
+        self.better_parameters = deque()
+
+    def set_fitness(self, win_late):
+        # input_key = (self.parameters[0], self.parameters[1], self.parameters[2], self.parameters[3],
+        # self.parameters[4],self.parameters[5])
+        input_key = tuple(self.parameters.values())
+        self.fitness[input_key] = win_late
+        if len(self.better_parameters) < self.population_num:
+            self.better_parameters.append((win_late, input_key))
+        elif min(self.better_parameters)[0] < win_late:
+            update_flg = True
+            for cell in self.better_parameters:
+                if cell[1] == input_key:
+                    update_flg = False
+            if update_flg:
+                self.better_parameters.append((win_late, input_key))
+                self.better_parameters.remove(min(self.better_parameters))
+        if len(self.better_parameters) < self.population_num:
+            for i in range(6):
+                self.parameters[i] = random.randint(0, self.parameters_range[i])
+        else:
+            if random.random() < 0.5:
+                best = max(self.better_parameters)[1]
+                for j in range(6):
+                    self.parameters[j] = best[j]
+                    if random.random() < 0.05:
+                        self.parameters[j] = random.randint(0, self.parameters_range[j])
+                same_flg = True
+                for k in range(6):
+                    if self.parameters[k] != best[k]:
+                        same_flg = False
+                        break
+                if same_flg:
+                    change_num = random.randint(1, 6)
+                    change_ids = random.sample(list(range(6)), k=change_num)
+                    for change_id in change_ids:
+                        self.parameters[change_id] = random.randint(0, self.parameters_range[change_id])
+            else:
+                crossover = random.sample(self.better_parameters, k=2)
+                choice_parameter_id = random.sample(list(range(6)), k=3)
+                for j in range(6):
+                    if j in choice_parameter_id:
+                        self.parameters[j] = crossover[0][1][j]
+                    else:
+                        self.parameters[j] = crossover[1][1][j]
+        self.epic_num += 1
+        if self.epic_num % self.population_num == 0:
+            mylogger.info("better_parameters")
+            for cell in sorted(list(self.better_parameters), key=lambda ele: -ele[0]):
+                mylogger.info("{:%}:{}".format(cell[0], cell[1]))
+
+    def state_value(self, field, player_num):
+        partial_observable_data = field.get_observable_data(player_num=player_num)
+        if partial_observable_data["opponent"]["life"] <= 0:
+            return WIN_BONUS
+        able_attack_power_sum = 0
+        if field.get_ward_list(player_num) == []:
+            for card in field.card_location[player_num]:
+                if card.card_category == "Creatrue" and card.can_attack_to_player():
+                    able_attack_power_sum += card.power
+            if able_attack_power_sum >= partial_observable_data["opponent"]["life"]:
+                return WIN_BONUS
+        opponent_power_sum = 0
+        for card_id in field.get_creature_location()[1 - player_num]:
+            opponent_power_sum += field.card_location[1 - player_num][card_id].power
+        if opponent_power_sum >= partial_observable_data["player"]["life"]:
+            return -WIN_BONUS
+
+        life_ad = partial_observable_data["player"]["life"] * self.parameters[0] \
+                  - partial_observable_data["opponent"]["life"] * self.parameters[1]
+
+        hand_ad = partial_observable_data["player"]["hand_len"] * self.parameters[2] \
+                  - partial_observable_data["opponent"]["hand_len"] * self.parameters[3]
+
+        creature_location = field.get_creature_location()
+        board_ad = len(creature_location[player_num]) * self.parameters[4] \
+                   - len(creature_location[1 - player_num]) * self.parameters[5]
+
+        return life_ad + hand_ad + board_ad
 
 
+class New_Node:
 
-""""
-class Information_Set():
+    def __init__(self, field=None, player_num=0, finite_state_flg=False, depth=0):
+        self.field = field
+        self.finite_state_flg = finite_state_flg
+        self.value = 0.0
+        self.visit_num = 0
+        self.is_root = False
+        self.uct = 0.0
+        self.depth = depth
+        self.child_nodes = []
+        self.child_actions = []
+        self.max_child_visit_num = [None, None]
+        self.parent_node = None
+        self.regal_targets = {}
+        self.action_value_dict = {}
+        self.current_probability = None
+        self.children_moves = [(0, 0, 0)]
+        self.node_id_2_edge_action = {}
+        self.edge_action_2_node_id = {}
+        self.player_num = player_num
+
+        children_moves = []
+        end_flg = field.check_game_end()
+        if not end_flg:
+            field.update_hand_cost(player_num=player_num)
+            (ward_list, _, can_be_attacked, regal_targets) = \
+                field.get_situation(field.players[player_num], field.players[1 - player_num])
+
+            (_, _, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) = \
+                field.get_flag_and_choices(field.players[player_num], field.players[1 - player_num], regal_targets)
+            self.regal_targets = regal_targets
+            children_moves.append((0, 0, 0))
+            for play_id in able_to_play:
+                if field.players[player_num].hand[play_id].card_category != "Spell" and len(
+                        field.card_location[player_num]) >= field.max_field_num:
+                    continue
+                if len(regal_targets[play_id]) > 0:
+                    for i in range(len(regal_targets[play_id])):
+                        children_moves.append((1, play_id, regal_targets[play_id][i]))
+                else:
+                    if field.players[player_num].hand[play_id].card_category == "Spell":
+                        if field.players[player_num].hand[play_id].have_target == 0:
+                            children_moves.append((1, play_id, None))
+                    else:
+                        children_moves.append((1, play_id, None))
+
+            if len(ward_list) == 0:
+                for attacker_id in able_to_creature_attack:
+                    for target_id in can_be_attacked:
+                        children_moves.append((2, attacker_id, target_id))
+                for attacker_id in able_to_attack:
+                    children_moves.append((3, attacker_id, None))
+            else:
+                for attacker_id in able_to_creature_attack:
+                    for target_id in ward_list:
+                        children_moves.append((2, attacker_id, target_id))
+
+            if can_evo:
+                for evo_id in able_to_evo:
+                    evo_creature = field.card_location[player_num][evo_id]
+                    if evo_creature.evo_target is None:
+                        children_moves.append((-1, evo_id, None))
+                    else:
+                        targets = field.get_regal_targets(evo_creature, target_type=0, player_num=player_num)
+                        for target_id in targets:
+                            children_moves.append((-1, evo_id, target_id))
+
+            self.children_moves = children_moves
+
+
+class Information_Set_MCTSPolicy():
     def __init__(self):
+        self.num_simulations = 0
+        self.uct_c = 1. / np.sqrt(2)
+        self.play_out_policy = RandomPolicy()
+        self.starting_node = None
+        self.current_node = None
+        self.next_node = None
+        self.node_index = 0
+        self.policy_type = 3
+        self.name = "Information_Set_MCTSPolicy"
+        self.type = "root"
+        self.iteration = 100
+
+    def state_value(self, field, player_num):
+        if field.players[1 - player_num].life <= 0:
+            return WIN_BONUS
+        power_sum = 0
+        for card_id in field.get_creature_location()[1 - player_num]:
+            power_sum += field.card_location[1 - player_num][card_id].power
+        if power_sum >= field.players[player_num].life:
+            return -WIN_BONUS
+
+        return (field.players[1 - player_num].max_life - field.players[1 - player_num].life) * 50 + \
+               (len(field.get_creature_location()[player_num]) - len(
+                   field.get_creature_location()[1 - player_num])) * 50 + len(field.players[player_num].hand)
+
+    def decide(self, player, opponent, field):
+        if self.current_node is None:
+
+            action = self.uct_search(player, opponent, field)
+            tmp_move = action
+            if len(self.current_node.child_nodes) > 0:
+                next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
+                self.current_node = next_node
+            self.node_index = 0
+            self.type = "root"
+            if tmp_move == (0, 0, 0):
+                self.current_node = None
+            return tmp_move  # action
+        else:
+            hit_flg = False
+            for child in self.current_node.child_nodes:
+                if child.field.eq(field):
+                    hit_flg = True
+                    self.current_node = child
+                    break
+            if not hit_flg:
+                mylogger.info("not exist in simulation")
+                return Action_Code.ERROR.value, 0, 0
+
+            self.type = "blanch"
+            self.node_index += 1
+
+            next_node = None
+            tmp_move = None
+            if len(self.current_node.child_nodes) == 0:
+                return Action_Code.ERROR.value, 0, 0
+            next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
+            # self.next_node = next_node
+            self.current_node = next_node
+            if tmp_move == (0, 0, 0):
+                self.current_node = None
+            return tmp_move  # action
+
+    def uct_search(self, player, opponent, field):
+        field.get_regal_target_dict(player, opponent)
+        player_num = player.player_num
+        starting_field = Field_setting.Field(5)
+        starting_field.set_data(field)
+        starting_field.get_regal_target_dict(starting_field.players[player.player_num],
+                                             starting_field.players[opponent.player_num])
+        starting_node = New_Node(field=starting_field, player_num=player.player_num)
+        mark_node = None
+        starting_node.is_root = True
+        self.starting_node = starting_node
+        self.current_node = starting_node
+        if starting_node.children_moves == [(0, 0, 0)]:
+            return 0, 0, 0
+        for i in range(self.iteration):
+
+            node = self.tree_policy(starting_node, player_num=player_num)
+            value = self.default_policy(node, player_num=player_num)
+            self.back_up(node, value, player_num=player_num)
+
+            if starting_node.max_child_visit_num[0] is not None and starting_node.max_child_visit_num[
+                1] is not None:
+                if starting_node.max_child_visit_num[1].visit_num - \
+                        starting_node.max_child_visit_num[0].visit_num > ITERATION - i:
+                    break
+
+            elif starting_node.max_child_visit_num[1] is not None:
+                if starting_node.max_child_visit_num[1].visit_num > 50:
+                    break
+
+        _, move = self.best(self.current_node, player_num=player_num)
+
+        return move
+
+    def tree_policy(self, node, player_num=0):
+
+        length_of_children = len(node.child_nodes)
+        check = self.fully_expand(node, player_num=player_num)
+        if length_of_children == 0 and not check:
+            return self.expand(node, player_num=player_num)
+        count = 0
+        field = Field_setting.Field(5)
+        while not node.finite_state_flg:
+            if length_of_children > 0:
+                if random.uniform(0, 1) < .5:
+                    field.set_data(node.field)
+                    node, move = self.best(node, player_num=player_num)
+                    if not field.eq(node.field):
+                        return self.expand(node, player_num=player_num)
+
+                else:
+                    check = self.fully_expand(node, player_num=player_num)
+                    if not check:
+                        return self.expand(node, player_num=player_num)
+                    else:
+                        field.set_data(node.field)
+                        node, move = self.best(node, player_num=player_num)
+                        if not field.eq(node.field):
+                            return self.expand(node, player_num=player_num)
+                length_of_children = len(node.child_nodes)
+            else:
+                return self.expand(node, player_num=player_num)
+
+            count += 1
+            if count > 100:
+                field = node.field
+                node.field.show_field()
+                mylogger.info("finite:{}".format(node.finite_state_flg))
+                raise Exception("infinite loop!")
+
+        return node
+
+    def default_policy(self, node, player_num=0):
+        if node.finite_state_flg:
+            if not node.field.check_game_end():
+                current_field = Field_setting.Field(5)
+                current_field.set_data(node.field)
+                current_field.end_of_turn(player_num, virtual=True)
+            return self.state_value(node.field, player_num)
+        sum_of_value = 0
+        end_flg = False
+        for i in range(10):
+            if not node.finite_state_flg:
+                current_field = Field_setting.Field(5)
+                current_field.set_data(node.field)
+
+                current_field.players[0].deck.shuffle()  # デッキの並びは不明だから
+                current_field.players[1].deck.shuffle()
+                player = current_field.players[player_num]
+                opponent = current_field.players[1 - player_num]
+                current_field.get_regal_target_dict(player, opponent)
+
+                action_count = 0
+                while True:
+                    (action_num, card_id, target_id) = self.play_out_policy.decide(player, opponent, current_field)
+
+                    end_flg = player.execute_action(current_field, opponent,
+                                                    action_code=(action_num, card_id, target_id), virtual=True)
+
+                    if current_field.check_game_end() or end_flg:
+                        break
+
+                    current_field.get_regal_target_dict(player, opponent)
+                    action_count += 1
+                    if action_count > 100:
+                        player.show_hand()
+                        current_field.show_field()
+                        assert False
+                if current_field.check_game_end():
+                    sum_of_value += WIN_BONUS
+                    return sum_of_value
+                current_field.end_of_turn(player_num, virtual=True)
+                if current_field.check_game_end():
+                    sum_of_value += WIN_BONUS
+                    return sum_of_value
+                else:
+                    sum_of_value += self.state_value(current_field, player_num)
+
+        return sum_of_value / 10
+
+    def fully_expand(self, node, player_num=0):
+        # if len(node.get_able_action_list()) == 0:
+        #    return True
+        return len(node.child_actions) == len(node.children_moves) or node.finite_state_flg  # turn_endの場合を追加
+
+    def expand(self, node, player_num=0):
+        child_node_fields = []
+        for cell in node.child_nodes:
+            child_node_fields.append(cell.field)
+        new_choices = node.children_moves
+        assert len(new_choices)>0,"non-choice-error"
+        next_node, move, exist_flg = self.execute_single_action(node, new_choices, child_node_fields,
+                                                                player_num=player_num)
+        if exist_flg:
+            new_choices = list(set(node.children_moves) - set(node.child_actions))
+            assert len(new_choices) > 0, "non-choice-error({},{})".format(node.child_moves,node.child_actions)
+            next_node, move, exist_flg = self.execute_single_action(node, new_choices, child_node_fields,
+                                                                    player_num=player_num)
+        node.node_id_2_edge_action[id(next_node)] = move
+        next_node.parent_node = node
+        node.child_nodes.append(next_node)
+        return next_node
+
+    def execute_single_action(self, node, new_choices, child_node_fields, player_num=0):
+        field = node.field
+        move = random.choice(new_choices)
+        next_field = Field_setting.Field(5)
+        next_field.set_data(field)
+        next_field.players[0].deck.shuffle()
+        next_field.players[1].deck.shuffle()
+        next_field.get_situation(next_field.players[player_num],
+                                 next_field.players[1 - player_num])
+        next_node = None
+        exist_flg = False
+        if move[0] == 0:
+            next_node = New_Node(field=next_field, player_num=player_num, finite_state_flg=True,
+                                 depth=node.depth + 1)
+            exist_flg = next_field in child_node_fields
+        else:
+            if move[0] == 1:
+                if move[2] is None and node.regal_targets[move[1]] != []:
+                    mylogger.info("in_node:{}".format(node.regal_targets[move[1]]))
+                    assert False, "null target error"
+                elif move[2] is not None and \
+                        move[2] not in next_field.get_regal_targets(next_field.players[player_num].hand[move[1]],
+                                                                    target_type=1, player_num=player_num):
+                    assert False, "ill-target error"
+            next_field.players[player_num].execute_action(next_field, next_field.players[1 - player_num],
+                                                          action_code=move, virtual=True)
+            flg = next_field.check_game_end()
+            next_node = New_Node(field=next_field, player_num=player_num,
+                                 finite_state_flg=flg, depth=node.depth + 1)
+            exist_flg = next_field in child_node_fields
+
+        return next_node, move, exist_flg
+
+    def best(self, node, player_num=0):
+        children = node.child_nodes
+        uct_values = {}
+        for i in range(len(children)):
+            uct_values[i] = self.uct(children[i], node, player_num=player_num)
+
+        uct_values_list = list(uct_values.values())
+        max_uct_value = max(uct_values_list)
+        max_list_index = uct_values_list.index(max_uct_value)
+
+        max_value_node = children[max_list_index]
+
+        # action = children[max_list_index][0]
+        action = node.node_id_2_edge_action[id(max_value_node)]
+
+        return max_value_node, action
+
+    def uct(self, child_node, node, player_num=0):
+        over_all_n = node.visit_num
+        n = child_node.visit_num
+        w = child_node.value
+        t = self.num_simulations
+        c = self.uct_c
+        epsilon = EPSILON
+        exploitation_value = w / (n + epsilon)
+        if over_all_n == 0:
+            over_all_n = 1
+        exploration_value = 2.0 * c * np.sqrt(np.log(over_all_n) / (n + epsilon))
+
+        value = exploitation_value + exploration_value
+
+        child_node.uct = value
+
+        return value
+
+    def back_up(self, last_visited, reward, player_num=0):
+        current = last_visited
+        while True:
+            current.visit_num += 1
+            current.value += reward
+
+            if current.is_root:
+                break
+
+            elif current.parent_node.is_root:
+                best_childen = current.parent_node.max_child_visit_num
+                best_node = best_childen[1]
+                second_node = best_childen[0]
+                if best_node is None:  # ベストが空
+                    best_node = current
+                elif second_node is None:  # ベストが1つのみ
+                    if current != best_node:
+                        if best_node.visit_num < current.visit_num:
+                            best_childen = [best_node, current]
+                        else:
+                            best_childen = [current, best_node]
+                else:
+                    if second_node.visit_num > best_node.visit_num:
+                        best_children = [best_node, second_node]
+
+                    different_flg = current not in best_children[0]
+                    if different_flg:
+                        if current.visit_num > best_children[1].visit_num:
+                            best_children = [best_children[1], current]
+
+                        elif current.visit_num > best_children[0].visit_num:
+                            best_children = [current, best_children[1]]
+
+            current = current.parent_node
+            if current is None:
+                break
+
+
+"""
+class Information_Set_Node():
+    def __init__(self, field=None, player_num=0, finite_state_flg=False, depth=0):
         self.nodes = []
         self.probabilities = []
 """

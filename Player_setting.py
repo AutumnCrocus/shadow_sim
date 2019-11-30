@@ -401,8 +401,9 @@ class HumanPlayer(Player):
             = field.get_flag_and_choices(player, opponent, regal_targets)
         observable_data = field.get_observable_data(player_num=self.player_num)
         for key in list(observable_data.keys()):
+            print("{}".format(key))
             for sub_key in list(observable_data[key].keys()):
-                print("{}:{}".format(key,observable_data[key][sub_key]))
+                print("{}:{}".format(sub_key, observable_data[key][sub_key]))
 
         self.show_hand()
         field.show_field()

@@ -168,16 +168,17 @@ class Field:
                 "opponent": "{}/{}".format(self.remain_cost[1 - player_num], self.cost[1 - player_num])}}
 
         """
-        observable_data_dict = {"player":{},"opponent":{}}
+        observable_data_dict = {"player": {}, "opponent": {}}
         for key in list(observable_data_dict.keys()):
-            player_id = (1-2*int(key!="player"))*player_num + int(key!="player")
+            player_id = (1 - 2 * int(key != "player")) * player_num + int(key != "player")
+            observable_data_dict[key]["leader_class"] = self.players[player_id].deck.leader_class
             observable_data_dict[key]["life"] = self.players[player_id].life
             observable_data_dict[key]["max_life"] = self.players[player_id].max_life
             observable_data_dict[key]["hand_len"] = len(self.players[player_id].hand)
             observable_data_dict[key]["deck_len"] = len(self.players[player_id].deck.deck)
             observable_data_dict[key]["shadows"] = self.graveyard.shadows[player_id]
-            observable_data_dict[key]["pp/max_pp"] = \
-                "{}/{}".format(self.remain_cost[player_id], self.cost[player_id])
+            observable_data_dict[key]["pp/max_pp"] = (self.remain_cost[player_id], self.cost[player_id])
+            observable_data_dict[key]["evo_point"] = self.evo_point[player_id]
 
         return observable_data_dict
 
@@ -316,24 +317,20 @@ class Field:
                 ability(self, player, opponent, virtual, target, new_card)
             new_card.is_in_graveyard = True
             self.graveyard.append(new_card.card_category, new_card_id, player_num)
-            # self.solve_lastword_ability(virtual=virtual,player_num=player_num)
-            # self.ability_resolution(virtual=virtual,player_num=player_num)
 
     def set_card(self, card, player_num, virtual=False):
         if len(self.card_location[player_num]) < self.max_field_num:
             self.stack_num += 1
             self.state_log.append([State_Code.SET.value, (player_num, card.card_category, card.card_id, id(card)),
                                    self.stack_num])  # 2は場に出たとき
-            # self.ability_resolution(virtual=virtual,player_num=player_num)
             self.card_location[player_num].append(card)
             self.card_num[player_num] += 1
-            # self.ability_resolution(virtual=virtual,player_num=player_num)
             card.is_tapped = True
             card.is_in_field = True
 
             card.time_stamp = self.stack_num
         else:
-            if virtual == False:
+            if not virtual:
                 mylogger.info("{} is vanished".format(card.name))
 
     def remove_card(self, location, virtual=False, by_effects=False):
@@ -359,7 +356,6 @@ class Field:
         tmp.is_in_field = False
         tmp.is_in_graveyard = True
         self.graveyard.append(tmp.card_category, tmp.card_id, location[0])
-        # del self.card_location[location[0]][location[1]]
 
     def return_card_to_hand(self, target_location, virtual=False):
         assert len(self.card_location[target_location[0]]) > target_location[1]
@@ -397,7 +393,7 @@ class Field:
         assert self.card_location[location[0]][location[1]] is not None and card is None
         if not virtual:
             mylogger.info(
-                "{}(location_id={}) is transformed into {}".format(self.card_location[location[0]][location[1]].name, \
+                "{}(location_id={}) is transformed into {}".format(self.card_location[location[0]][location[1]].name,
                                                                    location[1], card.name))
         self.card_location[location[0]][location[1]] = card
 
@@ -420,7 +416,7 @@ class Field:
                                           defencing_follower.can_be_attacked())
         attacking_follower.current_attack_num += 1
         if not virtual:
-            mylogger.info("Player {}'s {} attacks Player {}'s {}".format(attack[0] + 1, attacking_follower.name \
+            mylogger.info("Player {}'s {} attacks Player {}'s {}".format(attack[0] + 1, attacking_follower.name
                                                                          , defence[0] + 1, defencing_follower.name))
 
         for ability in attacking_follower.in_battle_ability:
@@ -435,7 +431,7 @@ class Field:
 
         self.check_death(player_num=attack[0], virtual=virtual)
         self.ability_resolution(virtual=virtual, player_num=attack[0])
-        if attacking_follower.is_in_field is False or defencing_follower.is_in_field != True:
+        if not attacking_follower.is_in_field or not defencing_follower.is_in_field:
             return
         amount = defencing_follower.get_damage(attacking_follower.power)
         if KeywordAbility.DRAIN.value in attacking_follower.ability:
@@ -471,7 +467,7 @@ class Field:
         if not attacking_follower.is_in_field:
             return
         if visible:
-            print("Player", attacker[0] + 1, "'s", attacking_follower.name, \
+            print("Player", attacker[0] + 1, "'s", attacking_follower.name,
                   "attacks directly Player", defence_player.player_num + 1)
         if not virtual:
             mylogger.info("Player {}'s {} attacks directly Player {}".format(attacker[0] + 1, attacking_follower.name
@@ -631,7 +627,7 @@ class Field:
 
             mylogger.info("first:{} policy:{}".format(first, self.players[1 - int(first)].policy.name))
             self.show_field()
-            mylogger.info(" name:{} evolved:{} evo_flg:{} able_to_evo:{}" \
+            mylogger.info(" name:{} evolved:{} evo_flg:{} able_to_evo:{}"
                           .format(creature.name, creature.evolved, self.evo_flg,
                                   self.get_able_to_evo(self.players[self.turn_player_num])))
             assert False
@@ -645,7 +641,7 @@ class Field:
         self.evo_flg = True
 
     def auto_evolve(self, creature, virtual=False):
-        assert creature.evolved == False
+        assert not creature.evolved,"Already evolved!"
         card_index = int(creature not in self.card_location[0])
         self.stack_num += 1
         self.state_log.append([State_Code.EVOLVE.value, (card_index, id(creature)), self.stack_num])  # 5は進化したとき
@@ -675,7 +671,7 @@ class Field:
 
     def update_hand_cost(self, player_num=0):
         for i, card in enumerate(self.players[player_num].hand):
-            if card.card_class.name == "RUNE" and card.spell_boost is not None and card.cost_down == True:
+            if card.card_class.name == "RUNE" and card.spell_boost is not None and card.cost_down:
                 card.cost = max(0, card.origin_cost - card.spell_boost)
             if card.cost_change_ability is not None:
                 card.cost_change_ability(card, self, self.players[player_num])

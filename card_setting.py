@@ -940,6 +940,7 @@ class Deck:
         self.deck_type = DeckType(type_num)
         mylogger.info("Deck_Type:{}".format(self.deck_type.name))
         # 1はAggro,2はMid,3はControl,4はCombo
+
     def set_leader_class(self,leader_class):
         assert leader_class in LeaderClass.__members__,"invalid class name!"
         self.leader_class = LeaderClass[leader_class]

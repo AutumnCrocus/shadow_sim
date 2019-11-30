@@ -13,7 +13,7 @@ def summon_creature(field, player, virtual, name=None, num=1):
         if len(field.card_location[player.player_num]) >= field.max_field_num:
             return
         else:
-            if virtual == False:
+            if not virtual:
                 mylogger.info("Summon {}".format(name))
             creature = card_setting.Creature(card_setting.creature_name_to_id[name])
             # mylogger.info("new creature id:{}".format(id(creature)))
@@ -27,7 +27,7 @@ def set_amulet(field, player, virtual, name=None, num=1):
         if len(field.card_location[player.player_num]) >= field.max_field_num:
             return
         else:
-            if virtual == False:
+            if not virtual:
                 mylogger.info("Set {}".format(name))
             field.set_card(card_setting.Amulet(card_setting.amulet_name_to_id[name]), player.player_num,
                            virtual=virtual)
@@ -88,7 +88,7 @@ def destroy_random_creature(field, opponent, virtual):
 
 def get_damage_to_player(player, virtual, num=0):
     damage = player.get_damage(num)
-    if virtual == False:
+    if not virtual:
         mylogger.info("Player {} get {} damage".format(player.player_num + 1, damage))
 
 
@@ -110,7 +110,7 @@ def draw_cards(player, virtual, num=1):
             player.lib_out_flg = True
             break
 
-    if virtual == False:
+    if not virtual:
         if tmp == 1:
             mylogger.info("Player {} draw a card".format(player.player_num + 1))
         elif tmp > 1:
@@ -313,12 +313,12 @@ def put_card_from_deck_in_play(field, player, virtual, condition=None):
     assert condition != None
     pop_id_list = []
     for i, card in enumerate(player.deck.deck):
-        if condition(card) == True:
+        if condition(card):
             pop_id_list.append(i)
     if len(pop_id_list) == 0: return
     pop_id = random.choice(pop_id_list)
     card_in_play = player.deck.deck.pop(pop_id)
-    if virtual == False:
+    if not virtual:
         mylogger.info("recruit {} from deck".format(card_in_play.name))
     field.set_card(card_in_play, player.player_num, virtual=virtual)
     return card_in_play
