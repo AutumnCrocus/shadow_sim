@@ -49,6 +49,13 @@ class Field:
         if len(self.card_location[0]) != len(other.card_location[0]): return False
         if len(self.card_location[1]) != len(other.card_location[1]): return False
         for i in range(2):
+            observable = self.get_observable_data(player_num=i)
+            other_observable = other.get_observable_data(player_num=i)
+            for key in list(observable.keys()):
+                for second_key in list(observable[key].keys()):
+                    if observable[key][second_key] != other_observable[key][second_key]:
+                        return False
+        for i in range(2):
             for j in range(len(self.card_location[i])):
                 first_card = self.card_location[i][j]
                 second_card = other.card_location[i][j]
@@ -171,7 +178,7 @@ class Field:
         observable_data_dict = {"player": {}, "opponent": {}}
         for key in list(observable_data_dict.keys()):
             player_id = (1 - 2 * int(key != "player")) * player_num + int(key != "player")
-            observable_data_dict[key]["leader_class"] = self.players[player_id].deck.leader_class
+            observable_data_dict[key]["leader_class"] = self.players[player_id].deck.leader_class.name
             observable_data_dict[key]["life"] = self.players[player_id].life
             observable_data_dict[key]["max_life"] = self.players[player_id].max_life
             observable_data_dict[key]["hand_len"] = len(self.players[player_id].hand)
@@ -434,9 +441,9 @@ class Field:
         if not attacking_follower.is_in_field or not defencing_follower.is_in_field:
             return
         amount = defencing_follower.get_damage(attacking_follower.power)
+        attacking_follower.get_damage(defencing_follower.power)
         if KeywordAbility.DRAIN.value in attacking_follower.ability:
             restore_player_life(self.players[attack[0]], virtual, num=amount)
-        attacking_follower.get_damage(defencing_follower.power)
         if defencing_follower.is_in_field:
             if KeywordAbility.BANE.value in attacking_follower.ability and \
                     KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value not in defencing_follower.ability:  # 必殺効果処理
@@ -744,7 +751,7 @@ class Field:
         # mylogger.info("full_flg={}".format(full_flg))
         able_to_play = []
         for i, hand_card in enumerate(player.hand):
-            if hand_card.have_enhance == True and hand_card.active_enhance_code[0] == True:
+            if hand_card.have_enhance is True and hand_card.active_enhance_code[0] is True:
                 if hand_card.active_enhance_code[1] <= self.remain_cost[player.player_num]:
                     if hand_card.card_category == "Spell":
                         if hand_card.enhance_target != 0:
@@ -766,7 +773,7 @@ class Field:
                 else:
                     if not full_flg:
                         able_to_play.append(i)
-            elif hand_card.have_accelerate == True and hand_card.active_accelerate_code[0] == True:
+            elif hand_card.have_accelerate is True and hand_card.active_accelerate_code[0] is True:
                 if hand_card.active_accelerate_code[1] <= self.remain_cost[player.player_num]:
                     if hand_card.accelerate_target != 0:
                         if regal_targets[i] != []:
@@ -836,19 +843,24 @@ class Field:
         return (can_play, can_attack, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo)
 
     def get_regal_targets(self, card, target_type=0, player_num=0, human=False):
+        if card.card_category == "Creature":
+            if card.card_id in creature_ability_condition:
+                ability_id = creature_ability_condition[card.card_id]
+                if not creature_ability_condition_dict[ability_id](self,player_num,card):
+                    return []
         # 0は進化効果の対象取得,1はプレイ時の対象選択
         can_be_targeted = self.get_can_be_targeted(player_num=player_num)
         regal_targets = []
         assert target_type in [0, 1]
         if target_type == 0:
             target_category = card.evo_target
-            if human == True and card.evo_target is not None:
+            if human and card.evo_target is not None:
                 mylogger.info(
                     "name:{} target_category:{} card.evo_target_regulation:{}".format(card.name, target_category,
                                                                                       card.evo_target_regulation))
             if card.evo_target is None:
                 return []
-            elif card.target_regulation is None:
+            elif card.evo_target_regulation is None:
                 if target_category == Target_Type.ENEMY_FOLLOWER.value:
                     for card_id in can_be_targeted:
                         regal_targets.append(card_id)

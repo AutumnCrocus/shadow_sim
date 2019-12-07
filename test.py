@@ -627,33 +627,43 @@ def test_2(Player_1, Player_2, iteration, same_flg=False, result_name="Result.ts
     for i, d in enumerate(D):
         if i == 0:
             D[i] = tsv_to_deck("Sword_Aggro.tsv")
+            D[i].set_leader_class("SWORD")
             # Aggro
         elif i == 1:
             D[i] = tsv_to_deck("Rune_Earth.tsv")
+            D[i].set_leader_class("RUNE")
             # Aggro
         elif i == 2:
             D[i] = tsv_to_deck("Sword.tsv")
+            D[i].set_leader_class("SWORD")
             # Mid
         elif i == 3:
             D[i] = tsv_to_deck("New-Shadow.tsv")
+            D[i].set_leader_class("SHADOW")
             # Mid
         elif i == 4:
             D[i] = tsv_to_deck("Dragon_PDK.tsv")
+            D[i].set_leader_class("DRAGON")
             # Mid
         elif i == 5:
             D[i] = tsv_to_deck("Haven.tsv")
+            D[i].set_leader_class("HAVEN")
             # Control
         elif i == 6:
             D[i] = tsv_to_deck("Blood.tsv")
+            D[i].set_leader_class("BLOOD")
             # Control
         elif i == 7:
             D[i] = tsv_to_deck("Dragon.tsv")
+            D[i].set_leader_class("DRAGON")
             # Control
         elif i == 8:
             D[i] = tsv_to_deck("Forest.tsv")
+            D[i].set_leader_class("FOREST")
             # Combo
         elif i == 9:
             D[i] = tsv_to_deck("Rune.tsv")
+            D[i].set_leader_class("RUNE")
             # Combo
 
     # D[0].mean_cost=D[0].get_mean_cost()

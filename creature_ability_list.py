@@ -419,12 +419,6 @@ def creature_ability_054(field, player, opponent, virtual, target, itself):
     faires = put_card_in_hand(field, player, virtual, name="Fairy", card_category="Creature", num=2)
     faires[0].cost = 0
     faires[1].cost = 0
-    """
-    if length<9:
-        player.hand[-1].cost=0
-        if length<8:
-            player.hand[-2].cost=0
-    """
 
 
 def creature_ability_055(field, player, opponent, virtual, target, itself):
@@ -562,10 +556,10 @@ def creature_ability_072(field, player, opponent, virtual, target, itself):
     """
     Evolve: Destroy an enemy follower if an allied Neutral follower is in play.
     """
-    if target == None: return
+    if target is None: return
     for card in field.card_location[player.player_num]:
         if card.card_class.value == LeaderClass.NEUTRAL.value:
-            if virtual == False:
+            if not virtual:
                 mylogger.info("hit")
             destroy_opponent_creature(field, opponent, virtual, target)
             return
@@ -617,7 +611,7 @@ def creature_ability_078(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Destroy a follower, and then put a copy of that follower into play.
     """
-    if target == None: return
+    if target is None: return
     card_index = target
     target_creature = field.card_location[card_index[0]][card_index[1]]
     card_name = target_creature.name

@@ -54,6 +54,20 @@ class Player:
             player.effect = copy.deepcopy(self.effect)
         return player
 
+    def eq(self,other):
+        if self.life != other.life:
+            return False
+        if len(self.deck.deck) != len(other.deck.deck):
+            return False
+        if len(self.hand) != len(other.hand):
+            return False
+        for i,card in enumerate(self.hand):
+            if not card.eq(other.hand[i]):
+                return False
+
+        return True
+
+
     def get_damage(self, damage):
         if len(self.effect) > 0:
             tmp = int(damage)
@@ -137,18 +151,19 @@ class Player:
     def play_card(self, field, card_id, player, opponent, virtual=False, target=None):
         if self.hand[card_id].have_enhance == True and self.hand[card_id].active_enhance_code[0] == True:
             field.remain_cost[self.player_num] -= self.hand[card_id].active_enhance_code[1]
-            if virtual == False:
+            if not virtual:
                 mylogger.info("Enhance active!")
         elif self.hand[card_id].have_accelerate == True and self.hand[card_id].active_accelerate_code[0] == True:
             field.remain_cost[self.player_num] -= self.hand[card_id].active_accelerate_code[1]
-            if virtual == False:
+            if not virtual:
                 mylogger.info("Accelerate active!")
             field.play_as_other_card(self.hand, card_id, self.player_num, virtual=virtual, target=target)
             return
         else:
             field.remain_cost[self.player_num] -= self.hand[card_id].cost
+            assert field.remain_cost[self.player_num]>=0,"minus-pp error"
 
-        if virtual == False:
+        if not virtual:
             mylogger.info("Player {} plays {}".format(self.player_num + 1, self.hand[card_id].name))
         if self.hand[card_id].card_category == "Creature":
             field.play_creature(self.hand, card_id, self.player_num, player, opponent, virtual=virtual, target=target)
@@ -269,6 +284,8 @@ class Player:
                         msg = "illegal evo-target error"
                         re_check = True
             elif action_num == Action_Code.PLAY_CARD.value:
+                if card_id not in able_to_play:
+                    re_check = True
                 if card_id not in regal_targets:
                     msg = "illigal_hand_card_error({} not in {})".format(card_id,regal_targets.keys())
                     re_check = True
@@ -362,8 +379,9 @@ class Player:
         elif action_num == Action_Code.ATTACK_TO_PLAYER.value:
             self.attack_to_player(field, card_id, opponent, virtual=virtual)
 
-        field.check_death(player_num=self.player_num, virtual=virtual)
+
         field.ability_resolution(virtual=virtual, player_num=self.player_num)
+        field.check_death(player_num=self.player_num, virtual=virtual)
         return field.check_game_end()
 
 
@@ -407,7 +425,7 @@ class HumanPlayer(Player):
 
         self.show_hand()
         field.show_field()
-        self.deck.show_remain_card_set()
+
         choices = [0]
         if can_evo:
             print("if you want to evolve creature,input -1")
@@ -435,6 +453,10 @@ class HumanPlayer(Player):
         action_num = 0
         if tmp == "":
             action_num = 0
+        elif tmp == "\x1b[C":
+            self.deck.show_remain_card_set()
+            input("input any key to quit remain_card_set:")
+            return can_play, can_attack, field.check_game_end()
         else:
             action_num = int(tmp)
         if action_num not in choices:

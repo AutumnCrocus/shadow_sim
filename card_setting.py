@@ -5,6 +5,7 @@ import numpy as np
 import random
 import math
 from creature_ability_list import creature_ability_dict
+from creature_ability_conditions import creature_ability_condition_dict
 from spell_ability_list import spell_ability_dict
 from amulet_ability_list import amulet_ability_dict
 from cost_change_ability_list import cost_change_ability_dict
@@ -187,6 +188,10 @@ creature_target_regulation = {
 another_target_func = lambda creature, itself: id(creature) != id(itself)
 evo_target_regulation = {
     creature_name_to_id["Wind Reader Zell"]: another_target_func}
+creature_ability_condition = {
+    creature_name_to_id["Maisy, Red Riding Hood"]:1,
+    creature_name_to_id["Wind Reader Zell"]:2
+}
 player_attack_regulation = \
     {16: lambda player: len(player.field.get_creature_location()[1 - player.player_num]) < 2}
 creature_in_battle_ability_list = \
@@ -251,7 +256,7 @@ spell_has_target = tsv_2_ability_dict("All_spell_target_list.tsv", name_to_id=sp
 # 9:相手の場の全てのカード
 spell_target_regulation = {
     spell_name_to_id["Kaleidoscopic Glow"]: lambda x: x.origin_cost <= 2,
-    spell_name_to_id["Blackened Scripture"]: lambda x: x.toughness <= 3,
+    spell_name_to_id["Blackened Scripture"]: lambda x: x.get_current_toughness() <= 3,
     spell_name_to_id["Seraphic Blade"]: lambda x: x.origin_cost <= 2}
 spell_cost_change_ability_list = {20: 1, 21: 1}
 spell_earth_rite_list = []
@@ -602,11 +607,15 @@ class Creature(Card):
             return False
         if self.get_current_toughness() != other.get_current_toughness():
             return False
+        if self.evolved != other.evolved:
+            return False
         if self.ability != other.ability:
             return False
         if self.can_be_attacked() != other.can_be_attacked():
             return False
         if self.can_be_targeted() != other.can_be_targeted():
+            return False
+        if self.current_attack_num != other.current_attack_num or self.can_attack_num != other.can_attack_num:
             return False
         if self.can_attack_to_follower() != other.can_attack_to_follower():
             return False

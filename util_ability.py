@@ -145,6 +145,10 @@ def get_damage_to_all_enemy_follower(field, opponent, virtual, num=0):
     for card_id in field.get_creature_location()[opponent.player_num]:
         follower = field.card_location[opponent.player_num][card_id]
         follower.get_damage(num)
+        if not virtual:
+            mylogger.info("Player {}'s {} get {} damage".format(opponent.player_num + 1,
+                                                                follower.name,
+                                                                num))
 
     field.check_death(field.turn_player_num, virtual)
 

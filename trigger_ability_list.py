@@ -37,8 +37,9 @@ class trigger_ability_005:
         if itself.is_in_field==False:return
         if state_log!=None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
             damage=1+int(itself.evolved)
-            for creature_id in field.get_creature_location()[opponent.player_num]:
-                get_damage_to_creature(field,opponent,virtual,creature_id,num=damage)
+            get_damage_to_all_enemy_follower(field, opponent, virtual, num=damage)
+            #for creature_id in field.get_creature_location()[opponent.player_num]:
+            #    get_damage_to_creature(field,opponent,virtual,creature_id,num=damage)
 
 
 class trigger_ability_006:
