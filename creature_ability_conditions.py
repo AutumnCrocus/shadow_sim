@@ -13,9 +13,8 @@ def ability_condition_001(field,player_num,itself):
     return False
 
 def ability_condition_002(field,player_num,itself):
-    if field.players[player_num].check_overflow():
-        return True
-    return False
+    return field.players[player_num].check_overflow()
+
 
 creature_ability_condition_dict={
     1:ability_condition_001,

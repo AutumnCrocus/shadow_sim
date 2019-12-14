@@ -121,12 +121,16 @@ def destroy_opponent_creature(field, opponent, virtual, target):
     tmp = field.get_can_be_targeted(player_num=1 - opponent.player_num)
     if tmp != []:
         target_id = target
-        if target == None:  # or target > num-1:
-            return
+        if target is None:  # or target > num-1:
             mylogger.info("targeted_player_num:{}".format(opponent.player_num))
             field.show_field()
             mylogger.info("target is decided at random")
             raise Exception("Debug")
+        if target_id >= len(field.card_location[opponent.player_num]):
+            field.show_field()
+            assert False,"illigal target_error,target:{},len:{} player_num:{}({})"\
+                .format(target_id,len(field.card_location[opponent.player_num]),
+                        field.turn_player_num,1-opponent.player_num)
         if KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value \
                 not in field.card_location[opponent.player_num][target_id].ability:
             field.remove_card([opponent.player_num, target_id], virtual=virtual)

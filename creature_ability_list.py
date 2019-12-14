@@ -7,7 +7,6 @@ from util_ability import *
 from my_enum import *
 
 
-
 def creature_ability_001(field, player, opponent, virtual, target, itself):
     field.restore_player_life(player=player, num=2, virtual=virtual)
 
@@ -556,7 +555,10 @@ def creature_ability_072(field, player, opponent, virtual, target, itself):
     """
     Evolve: Destroy an enemy follower if an allied Neutral follower is in play.
     """
+
     if target is None: return
+    #if virtual:
+    ##    mylogger.info("first:{},turn_player_num:{}".format(first,field.turn_player_num))
     for card in field.card_location[player.player_num]:
         if card.card_class.value == LeaderClass.NEUTRAL.value:
             if not virtual:
@@ -569,9 +571,9 @@ def creature_ability_073(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Enhance (9) - Can attack 2 times per turn. Reduce damage to 0 until the end of the turn.
     """
-    if itself.active_enhance_code[0] == True:
+    if itself.active_enhance_code[0]:
         itself.can_attack_num = 2
-        if virtual == False:
+        if not virtual:
             mylogger.info("{} get 'can attack 2 times per turn' ".format(itself.name))
         add_ability_until_end_of_player_turn(field, player, itself, virtual,
                                              add_ability=[KeywordAbility.REDUCE_DAMAGE_TO_ZERO.value])
@@ -719,13 +721,6 @@ def creature_ability_087(field, player, opponent, virtual, target, itself):
                     mylogger.info("{} get +1/+1".format(card.name))
 
 
-def creature_ability_087(field, player, opponent, virtual, target, itself):
-    """
-    Fanfare: Summon a Heavy Knight.
-    """
-    summon_creature(field, player, virtual, name="Heavy Knight")
-
-
 def creature_ability_088(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Give +2/+0 to an allied Officer follower.
@@ -846,8 +841,10 @@ def creature_ability_099(field, player, opponent, virtual, target, itself):
     Fanfare: If Resonance is active for you, gain Rush.
     """
     if player.check_resonance():
-        add_ability_to_creature(field,player,itself,virtual,
+        add_ability_to_creature(field, player, itself, virtual,
                                 add_ability=[KeywordAbility.RUSH.value])
+
+
 def creature_ability_100(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Put 2 Analyzing Artifacts into your deck.
@@ -855,13 +852,15 @@ def creature_ability_100(field, player, opponent, virtual, target, itself):
     cards = []
     cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
     cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
-    put_cards_into_deck(field,player,cards,virtual)
+    put_cards_into_deck(field, player, cards, virtual)
+
 
 def creature_ability_101(field, player, opponent, virtual, target, itself):
     """
     Put a Puppet into your hand.
     """
-    put_card_in_hand(field, player, virtual, name="Puppet",card_category="Creature")
+    put_card_in_hand(field, player, virtual, name="Puppet", card_category="Creature")
+
 
 def creature_ability_102(field, player, opponent, virtual, target, itself):
     """
@@ -870,7 +869,7 @@ def creature_ability_102(field, player, opponent, virtual, target, itself):
     cards = []
     cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
     cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
-    put_cards_into_deck(field,player,cards,virtual)
+    put_cards_into_deck(field, player, cards, virtual)
 
 
 def creature_ability_103(field, player, opponent, virtual, target, itself):
@@ -879,6 +878,14 @@ def creature_ability_103(field, player, opponent, virtual, target, itself):
     """
     condition = lambda card: card.trait.name == "ARTIFACT"
     search_cards(player, condition, virtual)
+
+
+def creature_ability_104(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Summon a Heavy Knight.
+    """
+    summon_creature(field, player, virtual, name="Heavy Knight")
+
 
 def token_creature_ability_001(field, player, opponent, virtual, target, itself):
     """
@@ -942,6 +949,6 @@ creature_ability_dict = {
     94: creature_ability_094, 95: creature_ability_095, 96: creature_ability_096,
     97: creature_ability_097, 98: creature_ability_098, 99: creature_ability_099,
     100: creature_ability_100, 101: creature_ability_101, 102: creature_ability_102,
-    103: creature_ability_103,
+    103: creature_ability_103, 104: creature_ability_104,
 
     -1: token_creature_ability_001, -2: token_creature_ability_002}

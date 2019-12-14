@@ -202,7 +202,9 @@ creature_in_battle_ability_list = \
 creature_cost_change_ability_list = {97: 2}
 can_only_attack_check = lambda field, player: field.check_word()[1 - player.player_num] == True
 creature_can_only_attack_list = {49: can_only_attack_check}
-creature_trigger_ability_dict = {60: 1, 63: 4, 64: 5, 79: 6, 95: 7, 100: 8,
+creature_trigger_ability_dict = {60: 1, 63: 4, 64: 5, 79: 6,
+                                 creature_name_to_id["Bladed Hedgehog"]: 7,
+                                 creature_name_to_id["Ephemera, Angelic Slacker"]: 8,
                                  creature_name_to_id["Prime Dragon Keeper"]: 10,
                                  creature_name_to_id["Shadow Reaper"]: 11,
                                  creature_name_to_id["Okami"]:12,
@@ -956,10 +958,10 @@ class Deck:
 
 
     def get_name_set(self):
-        name_list={}
+        name_list = {}
         for card in self.deck:
             if card.name not in name_list:
-                name_list[card.name] = {"used_num":0,"win_num":0}
+                name_list[card.name] = {"used_num":0,"win_num":0,"drawn_num":0,"win_num_when_drawn":0}
 
         return name_list
 

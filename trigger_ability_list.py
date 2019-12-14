@@ -59,23 +59,26 @@ class trigger_ability_007:
         """
         Whenever an enemy follower is destroyed, gain +1/+0.
         """
-        if itself.is_in_field==False:return
+        if not itself.is_in_field:return
         if state_log!=None and state_log[0]==State_Code.DESTROYED.value and state_log[1][0]==opponent.player_num:
-            if virtual==False:
+            if not virtual:
                 mylogger.info("{} get +1/0".format(itself.name))
             buff_creature(itself,params=[1,0])
+        #if not virtual:
+        #    mylogger.info("state_log:{}".format(state_log))
+
 
 class trigger_ability_008:
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
         """
         Whenever another allied follower attacks, give that follower +1/+0 until the end of the turn.
         """
-        if itself.is_in_field==False:return
+        if not itself.is_in_field:return
         if state_log!=None and (state_log[0]==State_Code.ATTACK_TO_FOLLOWER.value or state_log[0]==State_Code.ATTACK_TO_PLAYER.value):
             if state_log[1]==player.player_num and state_log[2]!=itself:
                 attacking_creature=state_log[2]
                 buff_creature_until_end_of_turn(attacking_creature,params=[1,0])
-                if virtual==False:
+                if not virtual:
                     mylogger.info("{} get +1/0 until end of turn".format(attacking_creature.name))
 
 class trigger_ability_009:
@@ -101,7 +104,7 @@ class trigger_ability_010:
         if player.check_overflow()==False or itself.is_in_field==False:return
         if state_log!=None and state_log[0]==State_Code.SET.value and state_log[1][0]==player.player_num:
             if virtual==False:
-                mylogger.info("state_log:{}".format(state_log))
+                mylogger.info("state_log:{} time_stamp:{}".format(state_log,itself.time_stamp))
             if state_log[1][1]=="Creature":
                 if card_setting.creature_list[state_log[1][2]][-2][0]==LeaderClass.DRAGON.value and card_setting.creature_list[state_log[1][2]][0]<=3:
                     get_damage_to_random_creature(field,opponent,virtual,num=2)
@@ -126,7 +129,7 @@ class trigger_ability_012:
         """
         Whenever another allied follower comes into play, gain +1/+0.
         """
-        if itself.is_in_field==False:return
+        if not itself.is_in_field:return
         if state_log is None:
             return
         if state_log[0] != State_Code.SET.value:

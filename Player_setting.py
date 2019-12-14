@@ -85,16 +85,6 @@ class Player:
 
     def restore_player_life(self, num=0, virtual=False):
         self.field.restore_player_life(player=self, num=num, virtual=virtual)
-        """
-            tmp=num
-            if self.max_life-self.life<tmp:
-                tmp=self.max_life-self.life
-            self.life+=tmp
-            if virtual==False:
-                mylogger.info("Player {} restore {} life".format(self.player_num+1,tmp))
-            self.field.stack_num+=1
-            self.field.state_log.append([State_Code.RESTORE_PLAYER_LIFE.value,self.player_num,self.field.stack_num])
-            """
 
     def check_vengeance(self):
         return self.life <= 10
@@ -110,7 +100,9 @@ class Player:
             if deck.deck == []:
                 self.lib_out_flg = True
                 return
-            self.hand.append(deck.draw())
+            card = deck.draw()
+            self.field.drawn_cards.append(card,self.player_num)
+            self.hand.append(card)
             if len(self.hand) > self.max_hand_num:
                 self.field.graveyard.shadows[self.player_num] += 1
                 self.hand.pop(-1)
@@ -209,11 +201,6 @@ class Player:
                     print("{}:{}".format(sub_key, observable_data[key][sub_key]))
             self.show_hand()
             field.show_field()
-            """
-            mylogger.info(
-                "Player1 life:{} Player2 life:{} remain_cost:{}".format(field.players[0].life, field.players[1].life,
-                                                                        field.remain_cost[self.player_num]))
-            """
             if able_to_play != []:
                 mylogger.info("able_to_play:{}".format(able_to_play))
             if able_to_creature_attack != []:
@@ -228,14 +215,20 @@ class Player:
         target_id = None
         msg = ""
         policy_count = 0
+        action_histroy = deque()
         while True:
             policy_count += 1
-            if policy_count > 20:
+            if policy_count > 100:
                 if not(can_play or can_attack or can_evo):
                     return Action_Code.TURN_END.value,0,0
                 mylogger.info("action_code:{}".format((action_num, card_id, target_id)))
                 self.show_hand()
                 field.show_field()
+                observable_data = field.get_observable_data(player_num=self.player_num)
+                for key in list(observable_data.keys()):
+                    print("{}".format(key))
+                    for sub_key in list(observable_data[key].keys()):
+                        print("{}:{}".format(sub_key, observable_data[key][sub_key]))
                 assert False, "infinite loop!"
             re_check = False
             sim_hand = None
@@ -262,6 +255,7 @@ class Player:
                     self.policy.current_node = None
                     continue
             (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
+            action_histroy.appendleft((action_num,card_id,target_id))
             if action_num == Action_Code.ERROR.value:
                 self.policy.current_node = None
                 continue
@@ -348,7 +342,8 @@ class Player:
         return end_flg
 
     def execute_action(self, field, opponent, action_code=None, virtual=False):
-
+        assert self.field == field,"diff field!"
+        #self.field.reset_time_stamp()
         field.reset_time_stamp()
         if action_code is None:
             raise Exception("action_code is None!")

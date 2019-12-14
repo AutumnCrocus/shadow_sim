@@ -27,6 +27,7 @@ class Field:
         self.turn_end = False
         self.graveyard = Graveyard()
         self.play_cards = Play_Cards()
+        self.drawn_cards = Drawn_Cards()
         self.players = [None, None]
         self.evo_point = [2, 3]
         self.able_to_evo_turn = [5, 4]
@@ -42,6 +43,8 @@ class Field:
         self.player_ability = [[], []]
         self.state_log = deque()
         self.stack_num = 0
+        self.time = time.time()
+        self.secret = False
 
     def eq(self, other):
         if type(self) != type(other):
@@ -80,6 +83,7 @@ class Field:
         self.turn_end = field.turn_end
         self.graveyard = copy.deepcopy(field.graveyard)
         self.play_cards = copy.deepcopy(field.play_cards)
+        self.drawn_cards = copy.deepcopy(field.drawn_cards)
         self.players[0] = field.players[0].get_copy(field)
         self.players[1] = field.players[1].get_copy(field)
         self.players[0].field = self
@@ -96,6 +100,7 @@ class Field:
             field.player_ability[0] = copy.deepcopy(self.player_ability[0])
         if self.player_ability[1] != []:
             field.player_ability[1] = copy.deepcopy(self.player_ability[1])
+        self.reset_time_stamp()
 
     def solve_lastword_ability(self, virtual=False, player_num=0):
         while len(self.stack) > 0:
@@ -148,6 +153,7 @@ class Field:
             self.solve_lastword_ability(virtual=virtual, player_num=player_num)
             self.check_death(player_num, virtual=virtual)
             self.solve_field_trigger_ability(virtual=virtual, player_num=player_num)
+            self.check_death(player_num, virtual=virtual)
             chain_len += 1
             assert chain_len < 100, "infinite_chain_error"
 
@@ -190,7 +196,7 @@ class Field:
         return observable_data_dict
 
     def reset_time_stamp(self):
-        self.stack = []
+        self.stack.clear()
         self.stack_num = 0
         for i in range(2):
             for card in self.card_location[i]:
@@ -455,7 +461,7 @@ class Field:
                 new_atk_index = [attack[0], self.card_location[attack[0]].index(attacking_follower)]
                 self.remove_card(new_atk_index, virtual)
         # self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
-        # self.ability_resolution(virtual=virtual,player_num=attack[0])
+        self.ability_resolution(virtual=virtual, player_num=attack[0])
 
     def attack_to_player(self, attacker, defence_player, visible=False, virtual=False):
         attacking_follower = self.card_location[attacker[0]][attacker[1]]
@@ -648,7 +654,7 @@ class Field:
         self.evo_flg = True
 
     def auto_evolve(self, creature, virtual=False):
-        assert not creature.evolved,"Already evolved!"
+        assert not creature.evolved, "Already evolved!"
         card_index = int(creature not in self.card_location[0])
         self.stack_num += 1
         self.state_log.append([State_Code.EVOLVE.value, (card_index, id(creature)), self.stack_num])  # 5は進化したとき
@@ -846,7 +852,7 @@ class Field:
         if card.card_category == "Creature":
             if card.card_id in creature_ability_condition:
                 ability_id = creature_ability_condition[card.card_id]
-                if not creature_ability_condition_dict[ability_id](self,player_num,card):
+                if not creature_ability_condition_dict[ability_id](self, player_num, card):
                     return []
         # 0は進化効果の対象取得,1はプレイ時の対象選択
         can_be_targeted = self.get_can_be_targeted(player_num=player_num)
@@ -1180,7 +1186,8 @@ class Field:
                     win += 1
                 lib_num += 1
                 return win, lose, lib_num, turn, True
-            while True:
+            self.time = time.time()
+            while time.time() - self.time < 90:
                 end_flg = self.players[turn_player_num].decide(self.players[turn_player_num],
                                                                self.players[1 - turn_player_num], self,
                                                                virtual=virtual_flg)
@@ -1289,7 +1296,7 @@ class Graveyard:
                 name_list[i][card_list[ele[1]][0]][ele[0]][card_list[ele[1]][-1]] = items[i][ele]
         self.name_list = name_list
 
-    def show_graveyard(self):
+    def show_formated_list(self):
         self.graveyard_set()
         for i in range(2):
             print("Player{} graveyards".format(i + 1))
@@ -1360,3 +1367,12 @@ class Play_Cards:
                     for name_key in sorted(list(self.name_list[i][cost_key][category_key].keys())):
                         print("{}×{}".format(name_key, self.name_list[i][cost_key][category_key][name_key]))
             print("\n")
+
+
+class Drawn_Cards:
+    def __init__(self):
+        self.name_list = [[], []]
+
+    def append(self, card, player_num):
+        if card.name not in self.name_list[player_num]:
+            self.name_list[player_num].append(card.name)

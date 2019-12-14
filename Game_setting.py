@@ -18,6 +18,7 @@ class Game:
     def start(self, f, virtual_flg=False):
         turn = 1
         win, lose, lib_num = 0, 0, 0
+        f.secret = bool(virtual_flg)
         self.mulligan(f.players[0], f.players[1], virtual=virtual_flg)
         while (True):
             end_flg = False

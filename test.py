@@ -149,6 +149,11 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
                         if name_key in deck_name_list[f.players[i].name]:
                             deck_name_list[f.players[i].name][name_key]["used_num"] += 1
                             deck_name_list[f.players[i].name][name_key]["win_num"] += win_flg[i]
+            for card_name in f.drawn_cards.name_list[i]:
+                if card_name in deck_name_list[f.players[i].name]:
+                    deck_name_list[f.players[i].name][card_name]["drawn_num"] += 1
+                    deck_name_list[f.players[i].name][card_name]["win_num_when_drawn"] += win_flg[i]
+
         #mylogger.info(deck_name_list)
 
 
@@ -226,15 +231,6 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         elif deck_type[i] == -1:
             D[i] = tsv_to_deck("Forest_Basic.tsv")
             D[i].set_leader_class("FOREST")
-            #テスト
-            #D[i] = tsv_to_deck("Forest_Basic.tsv")
-            #D[i] = tsv_to_deck("Sword_Basic.tsv")
-            #D[i] = tsv_to_deck("Rune_Basic.tsv")
-            #D[i] = tsv_to_deck("Dragon_Basic.tsv")
-            #D[i] = tsv_to_deck("Shadow_Basic.tsv")
-            #D[i] = tsv_to_deck("Blood_Basic.tsv")
-            #D[i] = tsv_to_deck("Haven_Basic.tsv")
-
         elif deck_type[i] == -2:
             D[i] = tsv_to_deck("Sword_Basic.tsv")
             D[i].set_leader_class("SWORD")
@@ -336,6 +332,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     contribution_list={"Alice":[],"Bob":[]}
+    drawn_win_rate_list = {"Alice":[],"Bob":[]}
     for i,player_key in enumerate(list(deck_name_list.keys())):
         mylogger.info("Player{}".format(i+1))
         for key in list(deck_name_list[player_key].keys()):
@@ -343,15 +340,26 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
             if target_cell["used_num"] > 0:
                 mylogger.info("{}'s contribution(used_num:{}):{:.3f}".format(key,target_cell["used_num"],target_cell["win_num"]/target_cell["used_num"]))
                 contribution_list[player_key].append((key,target_cell["win_num"]/target_cell["used_num"]))
+            if target_cell["drawn_num"] > 0:
+                mylogger.info("{}'s drawn_win_rate(drawn_num:{}):{:.3f}".format(key,target_cell["drawn_num"],target_cell["win_num_when_drawn"]/target_cell["drawn_num"]))
+                drawn_win_rate_list[player_key].append((key,target_cell["win_num_when_drawn"]/target_cell["drawn_num"]))
 
     contribution_list["Alice"].sort(key= lambda element:-element[1])
     contribution_list["Bob"].sort(key= lambda element:-element[1])
+    drawn_win_rate_list["Alice"].sort(key= lambda element:-element[1])
+    drawn_win_rate_list["Bob"].sort(key= lambda element:-element[1])
+    mylogger.info("played_win_rate_rank")
     for i,player_key in enumerate(list(contribution_list.keys())):
         mylogger.info("Player{}".format(i + 1))
         for j,cell in enumerate(contribution_list[player_key]):
             mylogger.info("No.{} {}:{:.3f}".format(j+1,cell[0],cell[1]))
         print("")
-
+    mylogger.info("drawn_win_rate_rank")
+    for i,player_key in enumerate(list(drawn_win_rate_list.keys())):
+        mylogger.info("Player{}".format(i + 1))
+        for j,cell in enumerate(drawn_win_rate_list[player_key]):
+            mylogger.info("No.{} {}:{:.3f}".format(j+1,cell[0],cell[1]))
+        print("")
     if Player1.policy.name.split("_")[0] == "Genetic":
         """
         for fit_key in sorted(list(Player1.policy.fitness.keys()),key=lambda ele:-Player1.policy.fitness[ele]):
@@ -576,6 +584,7 @@ def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, pl
 
         #mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[player1_deck_num], Player_2.policy.name,
         #                                       deck_id_2_name[deck_id]))
+        """
         contribution_list={"Alice":[],"Bob":[]}
         for i,player_key in enumerate(list(deck_name_list.keys())):
             #mylogger.info("Player{}".format(i+1))
@@ -587,30 +596,55 @@ def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, pl
 
         contribution_list["Alice"].sort(key= lambda element:-element[1])
         contribution_list["Bob"].sort(key= lambda element:-element[1])
+        """
+        contribution_list = {"Alice": [], "Bob": []}
+        drawn_win_rate_list = {"Alice": [], "Bob": []}
+        for i, player_key in enumerate(list(deck_name_list.keys())):
+            for key in list(deck_name_list[player_key].keys()):
+                target_cell = deck_name_list[player_key][key]
+                if target_cell["used_num"] > 0:
+                    contribution_list[player_key].append((key, target_cell["win_num"] / target_cell["used_num"],
+                                                          target_cell["used_num"]))
+                if target_cell["drawn_num"] > 0:
+                    drawn_win_rate_list[player_key].append(
+                        (key, target_cell["win_num_when_drawn"] / target_cell["drawn_num"], target_cell["used_num"]))
+
+        contribution_list["Alice"].sort(key=lambda element: -element[1])
+        contribution_list["Bob"].sort(key=lambda element: -element[1])
+        drawn_win_rate_list["Alice"].sort(key=lambda element: -element[1])
+        drawn_win_rate_list["Bob"].sort(key=lambda element: -element[1])
         file_name=""
-        title = "{}({})vs {}({})({} matchup)".format(Player_1.policy.name, deck_id_2_name[player1_deck_num],
+        title = "{}({})vs {}({})({} iteration)".format(Player_1.policy.name, deck_id_2_name[player1_deck_num],
                                                        Player_2.policy.name,
                                                        deck_id_2_name[deck_id], iteration)
         mylogger.info(title)
         title += "\n"
         if player1_deck_num!=deck_id:
-            file_name = "contribution_{}_vs_{}.txt".format(deck_id_2_name[player1_deck_num],deck_id_2_name[deck_id])
+            file_name = "{}_vs_{}'s_WRP_and_WRD.txt".format(deck_id_2_name[player1_deck_num],deck_id_2_name[deck_id])
         else:
-            file_name = "contribution_{}_mirror.txt".format(deck_id_2_name[deck_id])
+            file_name = "{}_mirror_WRP_and_WRD.txt".format(deck_id_2_name[deck_id])
         with open(directory_name+"/"+file_name,mode="w") as f:
 
             f.write(title)
             f.write(result_txt)
+            f.write("WRP\n")
             for i,player_key in enumerate(list(contribution_list.keys())):
                 f.write("Player{}\n".format(i + 1))
                 for j,cell in enumerate(contribution_list[player_key]):
                     txt = "No.{} {}(used_num:{}):{:.3f}\n".format(j + 1, cell[0],cell[2],cell[1])
                     f.write(txt)
-                    #mylogger.info("No.{} {}:{:.3f}".format(j+1,cell[0],cell[1]))
                 f.write("\n")
+            f.write("\nWRD\n")
+            for i,player_key in enumerate(list(drawn_win_rate_list.keys())):
+                f.write("Player{}\n".format(i + 1))
+                for j,cell in enumerate(drawn_win_rate_list[player_key]):
+                    txt = "No.{} {}(drawn_num:{}):{:.3f}\n".format(j + 1, cell[0],cell[2],cell[1])
+                    f.write(txt)
+                f.write("\n")
+
         mylogger.info("{}/{} complete".format((deck_id+1),len(D)))
 
-def test_2(Player_1, Player_2, iteration, same_flg=False, result_name="Result.tsv"):
+def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=None):
     mylogger.info("{} vs {}".format(Player_1.policy.name, Player_2.policy.name))
     Player1 = copy.deepcopy(Player_1)
     Player2 = copy.deepcopy(Player_2)
@@ -618,6 +652,8 @@ def test_2(Player_1, Player_2, iteration, same_flg=False, result_name="Result.ts
     Player2 = Player_2
     Player1.name = "Alice"
     Player2.name = "Bob"
+    if result_name is None:
+        result_name = "{}_vs_{}_{}iteration.tsv".format(Player_1.policy.name, Player_2.policy.name,iteration)
     assert Player1 != Player2
     win = 0
     lose = 0
@@ -705,7 +741,7 @@ def test_2(Player_1, Player_2, iteration, same_flg=False, result_name="Result.ts
                       6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune"}
     with open("Battle_Result/" + result_name, "w") as f:
         writer = csv.writer(f, delimiter='\t', lineterminator='\n')
-        row = ["RULE\\MCTS"]
+        row = ["{} vs {}".format(Player1.policy.name,Player2.policy.name)]
         mylogger.info("row:{}".format(row))
         mylogger.info("row:{}".format([deck_id_2_name[i] for i in range(9)]))
         row = row + [deck_id_2_name[i] for i in range(9)]
@@ -893,6 +929,20 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
                 writer.writerow(row)
 
 
+parser = argparse.ArgumentParser(description='対戦実行コード')
+
+parser.add_argument('--N', help='試行回数')
+parser.add_argument('--playertype1', help='プレイヤー1のAIタイプ')
+parser.add_argument('--playertype2', help='プレイヤー2のAIタイプ')
+parser.add_argument('--decktype1', help='プレイヤー1のデッキタイプ')
+parser.add_argument('--decktype2', help='プレイヤー2のデッキタイプ')
+parser.add_argument('--filename', help='ファイル名')
+parser.add_argument('--playerlist', help='対戦AIタイプリスト')
+parser.add_argument('--time_bound', help='計算時間上限')
+parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
+args = parser.parse_args()
+mylogger.info("args:{}".format(args))
+
 Players = []
 Players.append(Player(9, True))  # 1
 Players.append(Player(9, True, policy=AggroPolicy()))  # 2
@@ -935,24 +985,25 @@ Players.append(Player(9, True, policy=Genetic_GreedyPolicy(N=20), mulligan=Min_c
 Players.append(Player(9, True, policy=Genetic_New_GreedyPolicy(N=10), mulligan=Min_cost_mulligan_policy()))  # 39
 Players.append(Player(9, True, policy=Genetic_New_GreedyPolicy(N=20), mulligan=Min_cost_mulligan_policy()))  # 40
 Players.append(Player(9, True, policy=Genetic_Aggro_MCTSPolicy(N=10), mulligan=Min_cost_mulligan_policy()))  # 41
-Players.append(Player(9, True, policy=Double_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 42
-Players.append(Player(9, True, policy=Triple_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 43
-Players.append(Player(9, True, policy=Quadruple_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 44
-Players.append(Player(9, True, policy=Quadruple_Aggro_EXP3_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 45
-Players.append(Player(9, True, policy=Information_Set_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 46
-
-parser = argparse.ArgumentParser(description='対戦実行コード')
-
-parser.add_argument('--N', help='試行回数')
-parser.add_argument('--playertype1', help='プレイヤー1のAIタイプ')
-parser.add_argument('--playertype2', help='プレイヤー2のAIタイプ')
-parser.add_argument('--decktype1', help='プレイヤー1のデッキタイプ')
-parser.add_argument('--decktype2', help='プレイヤー2のデッキタイプ')
-parser.add_argument('--filename', help='ファイル名')
-parser.add_argument('--playerlist', help='対戦AIタイプリスト')
-parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
-args = parser.parse_args()
-mylogger.info("args:{}".format(args))
+Players.append(Player(9, True, policy=Information_Set_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 42
+Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=100), mulligan=Min_cost_mulligan_policy()))  # 43
+Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=250), mulligan=Min_cost_mulligan_policy()))  # 44
+Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=500), mulligan=Min_cost_mulligan_policy()))  # 45
+Players.append(Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=100), mulligan=Min_cost_mulligan_policy()))  # 46
+Players.append(Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=250), mulligan=Min_cost_mulligan_policy()))  # 47
+Players.append(Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=500), mulligan=Min_cost_mulligan_policy()))  # 48
+Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=100), mulligan=Min_cost_mulligan_policy()))  # 49
+Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=250), mulligan=Min_cost_mulligan_policy()))  # 50
+Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=500), mulligan=Min_cost_mulligan_policy()))  # 51
+time_bound = 1.0
+if args.time_bound is not None:
+    time_bound = float(args.time_bound)
+Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=time_bound,playout=AggroPolicy()), mulligan=Min_cost_mulligan_policy()))  # 52
+Players.append(Player(9, True, policy=Time_bounded_Information_Set_MCTSPolicy(limit=time_bound), mulligan=Min_cost_mulligan_policy()))  # 53
+Players.append(Player(9, True, policy=Test_4_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 54
+Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 55
+Players.append(Player(9, True, policy=Improved_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 56
+Players.append(Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 57
 # assert False
 n = 100
 a = 0
@@ -982,6 +1033,7 @@ if args.playerlist is not None:
         input_players.append(Players[player_id-1])
 
 t1 = datetime.datetime.now()
+mylogger.info("{}".format(t1))
 # if sys.argv[-1]=="-demo":
 if args.mode == 'demo' or args.mode == 'background_demo':
     # cProfile.run('execute_demo(d1,d2,n,deck_type=[p1,p2])')
@@ -998,7 +1050,9 @@ if args.mode == 'demo' or args.mode == 'background_demo':
         d2 = copy.deepcopy(Players[b])
     p1 = int(args.decktype1)
     p2 = int(args.decktype2)
-    execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = args.mode=='background_demo')
+    virtual_flg = args.mode == "background_demo"
+    #cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)')
+    execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)
 # elif sys.argv[-1]=="-shadow":
 elif args.mode == 'shadow':
     test_3(d1, d2, n)
@@ -1047,12 +1101,11 @@ elif args.mode == 'basic_all':
     d2 = copy.deepcopy(Players[b])
     short_name_1 = list(d1.policy.name.split("Policy"))[0]
     short_name_2 = list(d2.policy.name.split("Policy"))[0]
-    path = "{}_vs_{}_in_basic_{}times".format(short_name_1,short_name_2,iteration)
+    path = "{}_vs_{}(basic_all)_{}times_WRP_and_WRD".format(short_name_1,short_name_2,iteration)
     os.makedirs(path)
     for i in range(8):
         player1_deck_id = i
-        next_path = "/{}_vs_{}_in_basic_{}times_contributions_{}".format(short_name_1,short_name_2,
-                                                                   iteration,deck_id_2_name[i])
+        next_path = "/WRP_and_WRD_{}".format(deck_id_2_name[i])
         os.makedirs(path+next_path)
         file_name = path+next_path
         get_basic_contributions(d1, d2, iteration, virtual_flg=True, player1_deck_num=player1_deck_id,
@@ -1068,9 +1121,9 @@ else:
     if args.filename != None:
         file_name = args.filename
     if a == b:
-        test_2(d1, d2, iteration, same_flg=True, result_name=file_name)
+        make_deck_table(d1, d2, iteration, same_flg=True, result_name=file_name)
     else:
-        test_2(d1, d2, iteration, result_name=file_name)
+        make_deck_table(d1, d2, iteration, result_name=file_name)
 mylogger.info(t1)
 t2 = datetime.datetime.now()
 mylogger.info(t2)
