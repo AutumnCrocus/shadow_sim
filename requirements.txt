@@ -137,7 +137,7 @@ six==1.11.0
 ssh-import-id==5.7
 systemd-python==234
 tensorboard==1.14.0
-tensorflow==1.14.0
+tensorflow==1.15.0
 tensorflow-estimator==1.14.0
 termcolor==1.1.0
 terminado==0.8.2
