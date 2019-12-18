@@ -179,7 +179,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         mylogger.info("deck_type:{}".format(deck_type))
     deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
                       6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune",-1:"Forest_Basic",-2:"Sword_Basic",-3:"Rune_Basic",
-                      -4:"Dragon_Basic",-5:"FOREST_Basic",-6:"Blood_Basic",-7:"Haven_Basic",-8:"Portal_Basic"}
+                      -4:"Dragon_Basic",-5:"FOREST_Basic",-6:"Blood_Basic",-7:"Haven_Basic",-8:"Portal_Basic",100:"Test"}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
@@ -252,6 +252,19 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         elif deck_type[i] == -8:
             D[i] = tsv_to_deck("Portal_Basic.tsv")
             D[i].set_leader_class("PORTAL")
+        elif deck_type[i] == 100:
+
+            D[i].set_leader_class("NEUTRAL")
+            D[i].append(Creature(creature_name_to_id["Goblin"]),num=4)
+            D[i].append(Creature(creature_name_to_id["Fighter"]), num=6)
+            D[i].append(Creature(creature_name_to_id["Unicorn Dancer Unica"]), num=3)
+            D[i].append(Creature(creature_name_to_id["Ax Fighter"]), num=3)
+            D[i].append(Creature(creature_name_to_id["Mercenary Drifter"]), num=3)
+            D[i].append(Creature(creature_name_to_id["Healing Angel"]), num=3)
+            D[i].append(Creature(creature_name_to_id["Shield Angel"]), num=3)
+            D[i].append(Creature(creature_name_to_id["Golyat"]), num=3)
+            D[i].append(Creature(creature_name_to_id["Angelic Sword Maiden"]), num=9)
+            D[i].append(Creature(creature_name_to_id["Gilgamesh"]), num=3)
 
 
 
@@ -658,7 +671,7 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
     win = 0
     lose = 0
     lib_num = 0
-    D = [Deck() for i in range(9)]
+    D = [Deck() for i in range(10)]
 
     for i, d in enumerate(D):
         if i == 0:
@@ -737,8 +750,8 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
         mylogger.info("complete:{}/{}".format(j + 1, len(D)))
     # for key in list(Results.keys()):
     #    mylogger.info("({}):rate:{} first:{}".format(key,Results[key][0],Results[key][1]))
-    deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
-                      6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune"}
+    deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth(Aggro)", 2: "Mid-Sword", 3: "Mid-Shadow", 4: "Dragon_PDK(Mid)", 5: "Elana-Haven(Control)",
+                      6: "Control-Blood", 7: "Ramp-Dragon", 8: "Combo-Forest", 9: "Spll-Rune(Combo)"}
     with open("Battle_Result/" + result_name, "w") as f:
         writer = csv.writer(f, delimiter='\t', lineterminator='\n')
         row = ["{} vs {}".format(Player1.policy.name,Player2.policy.name)]
@@ -1004,6 +1017,7 @@ Players.append(Player(9, True, policy=Test_4_MCTSPolicy(), mulligan=Min_cost_mul
 Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 55
 Players.append(Player(9, True, policy=Improved_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 56
 Players.append(Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 57
+Players.append(Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(iteration=500), mulligan=Min_cost_mulligan_policy()))  # 58
 # assert False
 n = 100
 a = 0

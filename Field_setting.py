@@ -35,11 +35,9 @@ class Field:
         self.evo_flg = False
         self.ex_turn_count = [0, 0]
         self.turn_player_num = 0
-        # self.stack=[]
         self.stack = deque()
         self.chain_num = 0
         self.players_play_num = 0
-        # self.state_log=[]
         self.player_ability = [[], []]
         self.state_log = deque()
         self.stack_num = 0
@@ -105,10 +103,10 @@ class Field:
     def solve_lastword_ability(self, virtual=False, player_num=0):
         while len(self.stack) > 0:
             (ability, player_num, itself) = self.stack.pop()
-            if virtual == False:
-                mylogger.info("{}'s ability actived".format(itself.name))
+            if not virtual:
+                mylogger.info("{}'s lastword ability actived".format(itself.name))
             ability(self, self.players[player_num], self.players[1 - player_num], virtual, None, itself)
-            if self.check_game_end() == True:
+            if self.check_game_end():
                 break
 
             # if virtual==False:
@@ -230,7 +228,7 @@ class Field:
 
     def gain_max_pp(self, player_num=0, num=0, virtual=False):
         if self.cost[player_num] < self.max_cost:
-            if virtual == False:
+            if not virtual:
                 mylogger.info("Player {} gain {} max PP".format(player_num + 1, num))
             self.cost[player_num] += 1
 
@@ -365,7 +363,7 @@ class Field:
                 mylogger.info("Player {}'s {} is broken".format(location[0] + 1,
                                                                 tmp.name))
         for i in range(len(tmp.lastword_ability)):
-            self.stack.append((tmp.lastword_ability[i], location[0], copy.deepcopy(tmp)))
+            self.stack.appendleft((tmp.lastword_ability[i], location[0], copy.deepcopy(tmp)))
         tmp.is_in_field = False
         tmp.is_in_graveyard = True
         self.graveyard.append(tmp.card_category, tmp.card_id, location[0])

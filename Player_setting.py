@@ -61,9 +61,26 @@ class Player:
             return False
         if len(self.hand) != len(other.hand):
             return False
+
+        #sort_order = lambda card:card.name
+        checked_cards = []
         for i,card in enumerate(self.hand):
-            if not card.eq(other.hand[i]):
+            if card in checked_cards:
+                continue
+            origin_count = 0
+            other_count = 0
+            for player_card in self.hand:
+                if player_card.eq(card):
+                    origin_count += 1
+            for other_card in other.hand:
+                if other_card.eq(card):
+                    other_count += 1
+            if origin_count != other_count:
                 return False
+            checked_cards.append(card)
+
+            #if not card.eq(other.hand[i]):
+            #    return False
 
         return True
 
@@ -165,15 +182,12 @@ class Player:
             field.play_amulet(self.hand, card_id, self.player_num, player, opponent, virtual=virtual, target=target)
         field.players_play_num += 1
         field.ability_resolution(virtual=virtual, player_num=self.player_num)
-        # if field.stack!=[]:
-        #    field.solve_lastword_ability(virtual=virtual,player_num=self.player_num)
 
     def attack_to_follower(self, field, attacker_id, target_id, virtual=False):
         field.attack_to_follower([self.player_num, attacker_id], [1 - self.player_num, target_id], field,
                                  virtual=virtual)
 
     def attack_to_player(self, field, attacker_id, opponent, virtual=False):
-        # mylogger.info("location:{}".format([self.player_num,attacker_id]))
         field.attack_to_player([self.player_num, attacker_id], opponent, virtual=virtual)
 
     def creature_evolve(self, creature, field, target=None, virtual=False):
@@ -186,15 +200,16 @@ class Player:
         del self.hand[id]
 
     def decide(self, player, opponent, field, virtual=False):
-        field.stack = []
-        # field.get_previous_field()
+        field.stack.clear()
         (_, _, can_be_attacked, regal_targets) = field.get_situation(self, opponent)
-        # mylogger.info("regal_targets1:{}".format(regal_targets))
         (can_play, can_attack, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) \
             = field.get_flag_and_choices(self, opponent, regal_targets)
-        # mylogger.info("regal_targets2:{}".format(regal_targets))
         if not virtual:
             observable_data = field.get_observable_data(player_num=self.player_num)
+            if self.player_num == 0:
+                print("first:player")
+            else:
+                print("first:opponent")
             for key in list(observable_data.keys()):
                 print("{}".format(key))
                 for sub_key in list(observable_data[key].keys()):
@@ -323,6 +338,10 @@ class Player:
                     msg = "illegal follower-attacker error({} not in {})".format(card_id,able_to_creature_attack)
                     re_check = True
             elif action_num == Action_Code.ATTACK_TO_PLAYER.value:
+                if len(field.get_ward_list(self.player_num)) > 0:
+                    msg = "illegal leader attack(ward)"
+                    re_check = True
+                    assert False,"ward ignore error"
                 if card_id not in able_to_attack:
                     msg = "illegal player-attacker error({} not in {})".format(card_id,able_to_attack)
                     re_check = True
@@ -332,6 +351,8 @@ class Player:
             else:
                 if not virtual:
                     mylogger.info("msg:{}".format(msg))
+                if self.policy.policy_type==3 or self.policy.policy_type==4:
+                    self.policy.current_node = None
 
         if not virtual:
             mylogger.info("action_num:{} card_id:{} target_id:{}".format(action_num, card_id, target_id))
