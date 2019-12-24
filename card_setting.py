@@ -727,6 +727,10 @@ class Spell(Card):
                 spell.cost_down = self.cost_down
         return spell
 
+    def can_be_attacked(self):
+        mylogger.info("card_name:{}".format(self.name))
+        assert False
+
     def eq(self,other):
         """
         :param other:
@@ -850,11 +854,15 @@ class Amulet(Card):
         amulet.is_in_field = self.is_in_field
         amulet.current_count = int(self.current_count)
         if self.card_class.name == "RUNE":
-            self.spell_boost = None
+            #self.spell_boost = None
             if amulet_list[self.card_id][2][1][0]:
                 amulet.spell_boost = int(self.spell_boost)
                 amulet.cost_down = self.cost_down
         return amulet
+
+    def can_be_attacked(self):
+        mylogger.info("card_name:{}".format(self.name))
+        assert False
 
     def can_be_targeted(self):
         if KeywordAbility.CANT_BE_TARGETED.value in self.ability: return False
@@ -961,7 +969,7 @@ class Deck:
         name_list = {}
         for card in self.deck:
             if card.name not in name_list:
-                name_list[card.name] = {"used_num":0,"win_num":0,"drawn_num":0,"win_num_when_drawn":0}
+                name_list[card.name] = {"used_num":0,"sum_of_turn_when_used":0,"win_num":0,"drawn_num":0,"win_num_when_drawn":0}
 
         return name_list
 

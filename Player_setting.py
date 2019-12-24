@@ -279,7 +279,7 @@ class Player:
             re_check = False
             if action_num == Action_Code.TURN_END.value:
                 break
-
+            assert type(card_id) == int,"illegal card_id_type_error"
             if action_num == Action_Code.EVOLVE.value:
                 if not virtual:
                     mylogger.info("able_to_evo:{} card_id:{}".format(field.get_able_to_evo(self), card_id))
@@ -341,7 +341,20 @@ class Player:
                 if len(field.get_ward_list(self.player_num)) > 0:
                     msg = "illegal leader attack(ward)"
                     re_check = True
-                    assert False,"ward ignore error"
+                    mylogger.info("ward_list:{}".format(field.get_ward_list(self.player_num)))
+                    field.show_field()
+                    mylogger.info("in simulation")
+                    if self.policy.current_node.parent_node is not None:
+                        mylogger.info("from")
+                        mylogger.info("ward_list:{}".format(self.policy.current_node.parent_node.field.get_ward_list(self.player_num)))
+                        mylogger.info("children_moves:{}".format(self.policy.current_node.parent_node.children_moves))
+                        self.policy.current_node.parent_node.field.show_field()
+                    mylogger.info("to")
+                    mylogger.info("ward_list:{} type:{}".format(
+                        self.policy.current_node.field.get_ward_list(self.player_num),self.policy.type))
+                    mylogger.info("children_moves:{}".format(self.policy.current_node.children_moves))
+                    self.policy.current_node.field.show_field()
+                    assert False,"ward ignore error({}):({})".format(self.policy.name,(action_num, card_id, target_id))
                 if card_id not in able_to_attack:
                     msg = "illegal player-attacker error({} not in {})".format(card_id,able_to_attack)
                     re_check = True
@@ -379,10 +392,10 @@ class Player:
         elif action_num == Action_Code.PLAY_CARD.value:
             if not virtual:
                 if self.hand[card_id].have_enhance \
-                        and self.hand[card_id].active_enhance_code[0] == True:
+                        and self.hand[card_id].active_enhance_code[0]:
                     mylogger.info("play_cost:{}".format(self.hand[card_id].active_enhance_code[1]))
                 elif self.hand[card_id].have_accelerate \
-                        and self.hand[card_id].active_accelerate_code[0] == True:
+                        and self.hand[card_id].active_accelerate_code[0]:
                     mylogger.info("play_cost:{}".format(self.hand[card_id].active_accelerate_code[1]))
                 else:
                     mylogger.info("play_cost:{}".format(self.hand[card_id].cost))
@@ -393,6 +406,7 @@ class Player:
             self.attack_to_follower(field, card_id, target_id, virtual=virtual)
 
         elif action_num == Action_Code.ATTACK_TO_PLAYER.value:
+            assert len(field.get_ward_list(self.player_num)) == 0,"ward_ignore_error"
             self.attack_to_player(field, card_id, opponent, virtual=virtual)
 
 

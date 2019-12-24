@@ -56,12 +56,28 @@ class Field:
                 for second_key in list(observable[key].keys()):
                     if observable[key][second_key] != other_observable[key][second_key]:
                         return False
+        #仮実装
+        self.play_cards.play_cards_set()
+        other.play_cards.play_cards_set()
         for i in range(2):
             for j in range(len(self.card_location[i])):
                 first_card = self.card_location[i][j]
                 second_card = other.card_location[i][j]
                 if not first_card.eq(second_card):
                     return False
+            for cost_key in sorted(list(self.play_cards.name_list[i].keys())):
+                if cost_key not in other.play_cards.name_list[i]:
+                    return False
+                for category_key in sorted(list(self.play_cards.name_list[i][cost_key].keys())):
+                    if category_key not in other.play_cards.name_list[i][cost_key]:
+                        return False
+                    for name_key in sorted(list(self.play_cards.name_list[i][cost_key][category_key].keys())):
+                        if name_key not in other.play_cards.name_list[i][cost_key][category_key]:
+                            return False
+                        if other.play_cards.name_list[i][cost_key][category_key][name_key] !=\
+                            self.play_cards.name_list[i][cost_key][category_key][name_key]:
+                            return False
+
 
         return True
 
@@ -165,20 +181,6 @@ class Field:
                         card.lose_active_ability()
 
     def get_observable_data(self, player_num=0):
-        """
-        observable_data_dict = {"life": {"player": self.players[player_num].life,
-                                         "opponent": self.players[1 - player_num].life},
-                                "hand_len": {"player": len(self.players[player_num].hand),
-                                             "opponent": len(self.players[1 - player_num].hand)},
-                                "deck_len": {"player": len(self.players[player_num].deck.deck),
-                                             "opponent": len(self.players[1 - player_num].deck.deck)},
-                                "shadows": {"player": self.graveyard.shadows[player_num],
-                                            "opponent": self.graveyard.shadows[1 - player_num]},
-                                 "pp/max_pp": {
-                "player": "{}/{}".format(self.remain_cost[player_num], self.cost[player_num]),
-                "opponent": "{}/{}".format(self.remain_cost[1 - player_num], self.cost[1 - player_num])}}
-
-        """
         observable_data_dict = {"player": {}, "opponent": {}}
         for key in list(observable_data_dict.keys()):
             player_id = (1 - 2 * int(key != "player")) * player_num + int(key != "player")
@@ -253,6 +255,14 @@ class Field:
                     i += 1
                 else:
                     i += 1
+    def append_played_turn(self,card_name=None):
+        assert card_name is not None
+        if card_name not in self.play_cards.played_turn_dict[self.turn_player_num]:
+            self.play_cards.played_turn_dict[self.turn_player_num][card_name] = \
+                [self.current_turn[self.turn_player_num]]
+        else:
+            self.play_cards.played_turn_dict[self.turn_player_num][card_name].append(\
+                self.current_turn[self.turn_player_num])
 
     def play_creature(self, hand, card_id, player_num, player, opponent, virtual=False, target=None):
         if self.card_num[player_num] < self.max_field_num:
@@ -266,6 +276,7 @@ class Field:
             if tmp.fanfare_ability != None:
                 tmp.fanfare_ability(self, player, opponent, virtual, target, tmp)
             self.play_cards.append(tmp.card_category, tmp.card_id, player_num)
+            self.append_played_turn(card_name=tmp.name)
             self.check_death(player_num=player_num, virtual=virtual)
         else:
             self.players[player_num].show_hand()
@@ -283,6 +294,7 @@ class Field:
         tmp.is_in_graveyard = True
         self.graveyard.append(tmp.card_category, tmp.card_id, player_num)
         self.play_cards.append(tmp.card_category, tmp.card_id, player_num)
+        self.append_played_turn(card_name=tmp.name)
         self.check_death(player_num=player_num, virtual=virtual)
 
     def play_amulet(self, hand, card_id, player_num, player, opponent, virtual=False, target=None):
@@ -296,6 +308,7 @@ class Field:
             if tmp.fanfare_ability != None:
                 tmp.fanfare_ability(self, player, opponent, virtual, target, tmp)
             self.play_cards.append(tmp.card_category, tmp.card_id, player_num)
+            self.append_played_turn(card_name=tmp.name)
             self.check_death(player_num=player_num, virtual=virtual)
         else:
             self.players[player_num].show_hand()
@@ -315,8 +328,8 @@ class Field:
         player = self.players[player_num]
         opponent = self.players[1 - player_num]
         play_card = player.hand[card_id]
-        if play_card.have_accelerate == True and play_card.active_accelerate_code[0] == True:
-            if virtual == False: mylogger.info("Accelerate")
+        if play_card.have_accelerate and play_card.active_accelerate_code[0]:
+            if not virtual: mylogger.info("Accelerate")
             play_card = self.players[player_num].hand.pop(card_id)
             assert play_card.active_accelerate_code[1] in play_card.accelerate_card_id
             new_card_id = play_card.accelerate_card_id[play_card.active_accelerate_code[1]]
@@ -326,6 +339,7 @@ class Field:
             self.spell_boost(player_num)
             for ability in new_card.triggered_ability:
                 ability(self, player, opponent, virtual, target, new_card)
+            self.append_played_turn(card_name = play_card.name)
             new_card.is_in_graveyard = True
             self.graveyard.append(new_card.card_category, new_card_id, player_num)
 
@@ -728,7 +742,8 @@ class Field:
         can_be_attacked = self.get_can_be_attacked(player_num=player_num)
         for i in can_be_attacked:
             creature = self.card_location[1 - player_num][i]
-            if KeywordAbility.WARD.value in creature.ability: ward_list.append(i)
+            if KeywordAbility.WARD.value in creature.ability:
+                ward_list.append(i)
 
         return ward_list
 
@@ -1136,7 +1151,7 @@ class Field:
 
             elif target_category == Target_Type.ENEMY_CARD.value:
                 for target_id, card in enumerate(self.card_location[1 - player_num]):
-                    if card.can_be_attacked() and regulation_func(card):
+                    if card.can_be_targeted() and regulation_func(card):
                         regal_targets.append(target_id)
 
             elif target_category == Target_Type.ALLY.value:
@@ -1311,6 +1326,7 @@ class Play_Cards:
     def __init__(self):
         self.play_cards = [[], []]
         self.name_list = None
+        self.played_turn_dict = [{},{}]
 
     def append(self, card_category, card_id, player_num):
         self.play_cards[player_num].append((card_category, card_id))
