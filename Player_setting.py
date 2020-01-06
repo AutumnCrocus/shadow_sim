@@ -35,11 +35,9 @@ class Player:
 
     def get_copy(self, field):
         player = Player(self.max_hand_num, first=self.is_first, policy=self.policy, mulligan=self.mulligan_policy)
-        # player.hand=copy.deepcopy(self.hand)
         for card in self.hand:
             player.hand.append(card.get_copy())
         player.life = self.life
-        # player.deck=copy.deepcopy(self.deck)
         player.deck = Deck()
         player.deck.set_leader_class(self.deck.leader_class.name)
         for card in self.deck.deck:
@@ -62,7 +60,6 @@ class Player:
         if len(self.hand) != len(other.hand):
             return False
 
-        #sort_order = lambda card:card.name
         checked_cards = []
         for i,card in enumerate(self.hand):
             if card in checked_cards:
@@ -79,11 +76,26 @@ class Player:
                 return False
             checked_cards.append(card)
 
-            #if not card.eq(other.hand[i]):
-            #    return False
-
         return True
 
+    def compare_hand(self,other_hand):
+        checked_cards = []
+        for i,card in enumerate(self.hand):
+            if card in checked_cards:
+                continue
+            origin_count = 0
+            other_count = 0
+            for player_card in self.hand:
+                if player_card.eq(card):
+                    origin_count += 1
+            for other_card in other_hand:
+                if other_card.eq(card):
+                    other_count += 1
+            if origin_count != other_count:
+                return False
+            checked_cards.append(card)
+
+        return True
 
     def get_damage(self, damage):
         if len(self.effect) > 0:
@@ -255,11 +267,14 @@ class Player:
                     msg = "diff hand len error({}!={})".format(len(real_hand),len(sim_hand))
                     re_check = True
                 else:
-                    for tmp_id in range(len(self.hand)):
-                        if not real_hand[tmp_id].eq(sim_hand[tmp_id]):
-                            msg = "diff hand card error"
-                            re_check = True
-                            break
+                    if not self.compare_hand(sim_hand):
+                        msg = "diff hand card error"
+                        re_check = True
+                    #for tmp_id in range(len(self.hand)):
+                    #    if not real_hand[tmp_id].eq(sim_hand[tmp_id]):
+                    #        msg = "diff hand card error"
+                    #        re_check = True
+                    #        break
                     if re_check is False and not field.eq(sim_field):
                         msg = "diff field error"
                         re_check = True
@@ -319,7 +334,7 @@ class Player:
                 else:
                     if player.hand[card_id].card_category != "Spell":
                         if len(field.card_location[self.player_num]) == field.max_field_num and \
-                                self.hand[card_id].active_accelerate_code[0] == False:
+                                not self.hand[card_id].active_accelerate_code[0]:
                             msg = "full-field error"
                             re_check = True
                         elif self.hand[card_id].have_target != 0:
@@ -364,7 +379,7 @@ class Player:
             else:
                 if not virtual:
                     mylogger.info("msg:{}".format(msg))
-                if self.policy.policy_type==3 or self.policy.policy_type==4:
+                if self.policy.policy_type == 3 or self.policy.policy_type == 4:
                     self.policy.current_node = None
 
         if not virtual:

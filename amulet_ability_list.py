@@ -91,6 +91,8 @@ def amulet_ability_010(field, player, opponent, virtual, target, itself):
 def amulet_ability_011(field, player, opponent, virtual, target, itself):
     """Whitefang Temple's end_of_turn ability"""
     if field.turn_player_num == player.player_num:
+        if not virtual:
+            mylogger.info("Whitefang Temple's end_of_turn ability is actived")
         field.restore_player_life(player=player, num=1, virtual=virtual)
 
 
@@ -141,8 +143,12 @@ def amulet_ability_019(field, player, opponent, virtual, target, itself):
 
     def search_three_followers(field, player, virtual, state_log=None):
         if state_log is None: return
-        if state_log[0] != State_Code.START_OF_TURN.value: return
-        if state_log[1] != player.player_num: return
+        if state_log[0] != State_Code.START_OF_TURN.value:
+            #mylogger.info("state_log:{}".format(State_Code(state_log[0]).name))
+            return
+        if state_log[1] != player.player_num:
+            #mylogger.info("player_num:{}".format(state_log[0]))
+            return
         if not virtual:
             mylogger.info("Staircase to Paradise's ability is actived")
         condition = lambda card: card.card_category == "Creature"
@@ -157,7 +163,7 @@ def amulet_ability_019(field, player, opponent, virtual, target, itself):
         mylogger.info(
             "Player{} get ability:'At the start of your next turn, put 3 random followers from your deck into your "
             "hand'".format(
-                player.player_num))
+                player.player_num+1))
     field.player_ability[player.player_num].append(search_three_followers)
 
 

@@ -21,19 +21,19 @@ def creature_ability_003(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_004(field, player, opponent, virtual, target, itself):
-    if target != None and field.get_can_be_targeted(player_num=player.player_num) != []:
+    if target is not None and field.get_can_be_targeted(player_num=player.player_num) != []:
         get_damage_to_creature(field, opponent, virtual, target, num=1)
 
 
 def creature_ability_005(field, player, opponent, virtual, target, itself):
     if field.get_can_be_targeted(player_num=player.player_num) != []:
-        if target == None:
+        if target is None:
             raise Exception()
         get_damage_to_creature(field, opponent, virtual, target, num=4)
 
 
 def creature_ability_006(field, player, opponent, virtual, target, itself):
-    if virtual == False:
+    if not virtual:
         mylogger.info("All other creatures  are destroyed")
 
     for j in range(2):
@@ -49,7 +49,7 @@ def creature_ability_006(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_007(field, player, opponent, virtual, target, itself):
-    if virtual == False:
+    if not virtual:
         mylogger.info("Give +1/+1 to all other allied creatures")
 
     for creature in field.card_location[player.player_num]:
@@ -557,7 +557,7 @@ def creature_ability_072(field, player, opponent, virtual, target, itself):
     """
 
     if target is None: return
-    #if virtual:
+    # if virtual:
     ##    mylogger.info("first:{},turn_player_num:{}".format(first,field.turn_player_num))
     for card in field.card_location[player.player_num]:
         if card.card_class.value == LeaderClass.NEUTRAL.value:
@@ -864,7 +864,7 @@ def creature_ability_101(field, player, opponent, virtual, target, itself):
 
 def creature_ability_102(field, player, opponent, virtual, target, itself):
     """
-    Fanfare: Put 2 Radiant Artifacts into your deck.
+    Put 2 Radiant Artifacts into your deck.
     """
     cards = []
     cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
@@ -874,7 +874,7 @@ def creature_ability_102(field, player, opponent, virtual, target, itself):
 
 def creature_ability_103(field, player, opponent, virtual, target, itself):
     """
-    Fanfare: Put a random Artifact card from your deck into your hand.
+    Put a random Artifact card from your deck into your hand.
     """
     condition = lambda card: card.trait.name == "ARTIFACT"
     search_cards(player, condition, virtual)
@@ -885,6 +885,69 @@ def creature_ability_104(field, player, opponent, virtual, target, itself):
     Fanfare: Summon a Heavy Knight.
     """
     summon_creature(field, player, virtual, name="Heavy Knight")
+
+
+def creature_ability_105(field, player, opponent, virtual, target, itself):
+    if target is not None and field.get_can_be_targeted(player_num=player.player_num) != []:
+        get_damage_to_creature(field, opponent, virtual, target, num=2)
+
+
+def creature_ability_106(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Recover 10 play points.
+    Fanfare: Earth Rite - Banish all cards in your hand, then draw 9 cards.
+    """
+    field.resotre_pp(player_num=player.player_num, num=10, virtual=virtual)
+    if earth_rite(field, player, virtual):
+        if not virtual:
+            mylogger.info("Banish all cards in Player{}'s hand, then draw 9 cards.".format(player.player_num + 1))
+        player.hand.clear()
+        draw_cards(player, virtual, num=9)
+
+def restore_1_defense_to_all_allies(field, player, virtual, state_log=None):
+    if state_log[0] != State_Code.END_OF_TURN.value:
+        return
+    if state_log[1] != player.player_num:
+        return
+    if not virtual:
+        mylogger.info("De La Fille, Gem Princess's leader effect is actived")
+    field.restore_player_life(player=player, num=1, virtual=virtual)
+    for follower in field.card_location[player.player_num]:
+        if follower.card_category == "Creature":
+            field.restore_follower_toughness(follower=follower, num=1, virtual=virtual, at_once=True)
+
+def creature_ability_107(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Give your leader the following effect - At the end of your turn,
+    restore 1 defense to all allies. (This effect is not stackable and lasts for the rest of the match.)
+    """
+
+    if restore_1_defense_to_all_allies not in field.player_ability[player.player_num]:
+        if not virtual:
+            mylogger.info("Give Player{} the following effect - At the end of your turn,\
+                restore 1 defense to all allies. (This effect is not stackable and lasts for the rest of the match."
+                          .format(player.player_num + 1))
+        field.player_ability[player.player_num].append(restore_1_defense_to_all_allies)
+        if len(field.player_ability[player.player_num])>1:
+            mylogger.info("player_ability:{}".format(field.player_ability))
+            assert False
+
+
+def creature_ability_108(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Restore 1 defense to all allies.
+    Enhance (7): Gain +4/+4 and restore 4 defense instead.
+    """
+    value = 1
+    if itself.active_enhance_code[0]:
+        value = 4
+        buff_creature(itself, params=[4, 4])
+    if not virtual:
+        mylogger.info("Restore {} defense to all allies.".format(value))
+    field.restore_player_life(player=player, num=value, virtual=virtual)
+    for follower in field.card_location[player.player_num]:
+        if follower.card_category == "Creature":
+            field.restore_follower_toughness(follower=follower, num=value, virtual=virtual, at_once=True)
 
 
 def token_creature_ability_001(field, player, opponent, virtual, target, itself):
@@ -949,6 +1012,7 @@ creature_ability_dict = {
     94: creature_ability_094, 95: creature_ability_095, 96: creature_ability_096,
     97: creature_ability_097, 98: creature_ability_098, 99: creature_ability_099,
     100: creature_ability_100, 101: creature_ability_101, 102: creature_ability_102,
-    103: creature_ability_103, 104: creature_ability_104,
+    103: creature_ability_103, 104: creature_ability_104, 105: creature_ability_105,
+    106: creature_ability_106, 107: creature_ability_107, 108: creature_ability_108,
 
     -1: token_creature_ability_001, -2: token_creature_ability_002}

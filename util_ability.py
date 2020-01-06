@@ -340,5 +340,5 @@ def put_cards_into_deck(field, player, cards, virtual):
     player.deck.deck[:] = [inserts[pos] if pos in inserts else next(inputs)
                            for pos in final_len]
     if not virtual:
-        mylogger.info("put {} into Player{}'s deck". \
+        mylogger.info("put {} into Player{}'s deck".
                       format([card.name for card in cards], player.player_num + 1))

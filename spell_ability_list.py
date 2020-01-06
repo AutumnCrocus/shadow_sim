@@ -239,9 +239,9 @@ def spell_ability_032(field, player, opponent, virtual, target, itself):
 
 def spell_ability_033(field, player, opponent, virtual, target, itself):
     get_damage_to_creature(field, opponent, virtual, target, num=3)
-    if field.card_location[opponent.player_num][target].is_in_field == False:
+    if not field.card_location[opponent.player_num][target].is_in_field:
         field.remove_card([opponent.player_num, target], virtual=virtual)
-    if itself.active_enhance_code[0] == True:
+    if itself.active_enhance_code[0]:
         for creature_id in field.get_creature_location()[opponent.player_num]:
             get_damage_to_creature(field, opponent, virtual, creature_id, num=2)
 
@@ -253,7 +253,7 @@ def spell_ability_034(field, player, opponent, virtual, target, itself):
 
 
 def spell_ability_035(field, player, opponent, virtual, target, itself):
-    if itself.active_enhance_code[0] == False:
+    if not itself.active_enhance_code[0]:
         field.banish_card([opponent.player_num, target], virtual=virtual)
     else:
         index = 0
@@ -266,11 +266,11 @@ def spell_ability_035(field, player, opponent, virtual, target, itself):
 
 
 def spell_ability_036(field, player, opponent, virtual, target, itself):
-    if itself.active_enhance_code[0] == False:
+    if not itself.active_enhance_code[0]:
         if field.card_location[opponent.player_num][target].origin_cost > 2:
             player.show_hand()
             field.show_field()
-            raise Exception("Over Cost Error:target_name={}" \
+            raise Exception("Over Cost Error:target_name={}"
                             .format(field.card_location[opponent.player_num][target].name))
 
     field.remove_card([opponent.player_num, target], virtual=virtual)
@@ -397,6 +397,26 @@ def spell_ability_049(field, player, opponent, virtual, target, itself):
                      card_category="Creature",num=2)
     get_damage_to_all_enemy_follower(field, opponent, virtual, num=1)
 
+def spell_ability_050(field, player, opponent, virtual, target, itself):
+    """
+    Put a Conjure Guardian into your hand.
+    Enhance (6): Put 2 more into your hand.
+    Earth Rite: Subtract 1 from the cost of all Conjure Guardians in your hand.
+    """
+    put_card_in_hand(field,player,virtual,name="Conjure Guardian",card_category="Spell")
+    if itself.active_enhance_code[0]:
+        put_card_in_hand(field, player, virtual, name="Conjure Guardian", card_category="Spell",num=2)
+
+
+    if earth_rite(field,player,virtual):
+        if not virtual:
+            mylogger.info("Subtract 1 from the cost of all Conjure Guardians in Player{}'s hand."
+                          .format(player.player_num+1))
+        for card in player.hand:
+            if card.name == "Conjure Guardian":
+                card.cost = max(0,card.cost-1)
+
+
 def token_spell_ability_001(field, player, opponent, virtual, target, itself):
     if target == -1:
         get_damage_to_player(player, virtual, num=3)
@@ -427,6 +447,20 @@ def token_spell_ability_002(field, player, opponent, virtual, target, itself):
             break
 
 
+def token_spell_ability_003(field, player, opponent, virtual, target, itself):
+    """
+    Accelerate (2): Summon an Earth Essence. Put a Veridic Ritual into your hand.
+    """
+    set_amulet(field,player,virtual,name="Earth Essence")
+    put_card_in_hand(field,player,virtual,name="Veridic Ritual",card_category="Spell")
+
+
+def token_spell_ability_004(field, player, opponent, virtual, target, itself):
+    """
+    Summon a Guardian Golem.
+    """
+    summon_creature(field, player, virtual, name="Guardian Golem")
+
 
 spell_ability_dict = {1: spell_ability_001, 2: spell_ability_002, 3: spell_ability_003, 4: spell_ability_004,
                       5: spell_ability_005,
@@ -445,6 +479,7 @@ spell_ability_dict = {1: spell_ability_001, 2: spell_ability_002, 3: spell_abili
                       36: spell_ability_036, 37: spell_ability_037, 38: spell_ability_038, 39: spell_ability_039,
                       40: spell_ability_040, 41: spell_ability_041, 42: spell_ability_042, 43: spell_ability_043,
                       44: spell_ability_044, 45: spell_ability_045, 46: spell_ability_046, 47: spell_ability_047,
-                      48: spell_ability_048, 49: spell_ability_049,
+                      48: spell_ability_048, 49: spell_ability_049, 50: spell_ability_050,
 
-                      -1: token_spell_ability_001, -2: token_spell_ability_002}
+                      -1: token_spell_ability_001, -2: token_spell_ability_002, -3: token_spell_ability_003,
+                      -4: token_spell_ability_004}

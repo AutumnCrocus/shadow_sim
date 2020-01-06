@@ -12,13 +12,15 @@ class trigger_ability_001:
 
 class trigger_ability_002:
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
-        if itself.is_in_field==False:return
-        if state_log!=None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
+        if not itself.is_in_field:return
+        if state_log is not None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
+            if not virtual:
+                mylogger.info("Elana's Prayer's trigger ability is actived")
             for creature_id in field.get_creature_location()[player.player_num]:
                 creature=field.card_location[player.player_num][creature_id]
                 buff_creature(creature,params=[1,1])
-                if virtual==False:
-                    mylogger.info("player{}'s {} get +1/+1".format(player.player_num+1,creature.name))
+                if not virtual:
+                    mylogger.info("player{}'s {:<20} get +1/+1".format(player.player_num+1,creature.name))
 
 class trigger_ability_003:
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
@@ -103,13 +105,13 @@ class trigger_ability_010:
         """
         if player.check_overflow()==False or itself.is_in_field==False:return
         if state_log!=None and state_log[0]==State_Code.SET.value and state_log[1][0]==player.player_num:
-            if virtual==False:
+            if not virtual:
                 mylogger.info("state_log:{} time_stamp:{}".format(state_log,itself.time_stamp))
             if state_log[1][1]=="Creature":
                 if card_setting.creature_list[state_log[1][2]][-2][0]==LeaderClass.DRAGON.value and card_setting.creature_list[state_log[1][2]][0]<=3:
                     get_damage_to_random_creature(field,opponent,virtual,num=2)
                     get_damage_to_player(player,virtual,num=1)
-                elif virtual==False:
+                elif not virtual:
                      mylogger.info("Class:{} Cost:{}".format(LeaderClass(card_setting.creature_list[state_log[1][2]][-2][0]),\
                          card_setting.creature_list[state_log[1][2]][0]))
 

@@ -75,11 +75,11 @@ def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False,de
 
 
     f.players[0].life = 20
-    f.players[0].hand = []
+    f.players[0].hand.clear()
     f.players[0].deck = None
     f.players[0].lib_out_flg = False
     f.players[1].life = 20
-    f.players[1].hand = []
+    f.players[1].hand.clear()
     f.players[1].deck = None
     f.players[1].lib_out_flg = False
     if not virtual_flg:
@@ -145,16 +145,13 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
 
 
     f.players[0].life = 20
-    f.players[0].hand = []
+    f.players[0].hand.clear()
     f.players[0].deck = None
     f.players[0].lib_out_flg = False
     f.players[1].life = 20
-    f.players[1].hand = []
+    f.players[1].hand.clear()
     f.players[1].deck = None
     f.players[1].lib_out_flg = False
-    #if virtual_flg == False:
-    #    f.graveyard.show_graveyard()
-    #    f.play_cards.show_play_list()
 
     if deck_name_list is not None:
         f.play_cards.play_cards_set()
@@ -166,6 +163,9 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
                     for name_key in list(f.play_cards.name_list[i][cost_key][category_key].keys()):
                         if name_key in deck_name_list[f.players[i].name]:
                             deck_name_list[f.players[i].name][name_key]["used_num"] += 1
+                            turn_list = f.play_cards.played_turn_dict[i][name_key]
+                            deck_name_list[f.players[i].name][name_key]["sum_of_turn_when_used"] \
+                                += sum(turn_list)/len(turn_list)
                             deck_name_list[f.players[i].name][name_key]["win_num"] += win_flg[i]
             for card_name in f.drawn_cards.name_list[i]:
                 if card_name in deck_name_list[f.players[i].name]:
@@ -197,7 +197,8 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         mylogger.info("deck_type:{}".format(deck_type))
     deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
                       6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune",-1:"Forest_Basic",-2:"Sword_Basic",-3:"Rune_Basic",
-                      -4:"Dragon_Basic",-5:"FOREST_Basic",-6:"Blood_Basic",-7:"Haven_Basic",-8:"Portal_Basic",100:"Test"}
+                      -4:"Dragon_Basic",-5:"FOREST_Basic",-6:"Blood_Basic",-7:"Haven_Basic",-8:"Portal_Basic",100:"Test",
+                      -9:"Spell-Rune",-10:"Test-Haven"}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
@@ -270,6 +271,12 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         elif deck_type[i] == -8:
             D[i] = tsv_to_deck("Portal_Basic.tsv")
             D[i].set_leader_class("PORTAL")
+        elif deck_type[i] == -9:
+            D[i] = tsv_to_deck("SpellBoost-Rune.tsv")
+            D[i].set_leader_class("RUNE")
+        elif deck_type[i] == -10:
+            D[i] = tsv_to_deck("Test-Haven.tsv")
+            D[i].set_leader_class("HAVEN")
         elif deck_type[i] == 100:
 
             D[i].set_leader_class("NEUTRAL")
@@ -294,11 +301,14 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     D[1].mean_cost = D[1].get_mean_cost()
     assert len(D[0].deck) == 40 and len(D[1].deck) == 40,"deck_len:{},{}"\
         .format(len(D[0].deck),len(D[1].deck))
+    mylogger.info("deck detail")
+    D[0].show_all()
+    mylogger.info("")
     sum_of_turn = 0
     span = max(iteration // 10, 1)
     Turn_Players = [Player1, Player2]
     win_lose = [win, lose]
-    epoc_len = 100
+    epoc_len = span
     epoc_win_lose = [0,0]
     epoc_lib_num = 0
     first_num = 0
@@ -337,7 +347,9 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         if (i + 1) % span == 0:
             mylogger.info(
                 "Halfway {}:win={}, lose={}, libout_num={}, win_rate:{:.3f}".format(i + 1, win_lose[0], win_lose[1],
-                                                                                    lib_num, win_lose[0] / (i + 1)))
+
+                                                                lib_num, win_lose[0] / (i + 1)))
+            mylogger.info("epoc_win_rate:{:.3%}".format((win_lose[0]-epoc_win_lose[0]) / (epoc_len)))
         if (i+1) % epoc_len == 0:
             if Player1.policy.name.split("_")[0] == "Genetic":
                 Player1.policy.set_fitness((win_lose[0]-epoc_win_lose[0]) / (epoc_len))
@@ -394,6 +406,22 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     if Player1.policy.name.split("_")[0] == "Genetic":
         for fit_key in sorted(list(Player1.policy.better_parameters),key=lambda ele:-ele[0]):
             mylogger.info("{}:{}".format(fit_key[1],fit_key[0]))
+    if "MAST" in Player1.policy.name:
+        for key in list(Player1.policy.Q_dict.keys()):
+            n = Player1.policy.Q_dict[key][1]
+            mean_value = Player1.policy.Q_dict[key][0]/max(n,1)
+            mylogger.info("{}".format((Action_Code(key[0]).name,key[1])))
+            mylogger.info("n:{:<5} mean_value:{:.3f}".format(n,mean_value))
+        """
+        for action in list(Player1.policy.previous_Q_dict.keys()):
+            mylogger.info("prev_action:{},{}".format(Action_Code(action[0]).name,action[1]))
+            for second_key in list(Player1.policy.previous_Q_dict[action].keys()):
+                n = Player1.policy.previous_Q_dict[action][second_key][1]
+                mean_value = Player1.policy.previous_Q_dict[action][second_key][0]/max(n,1)
+                mylogger.info("{}".format((Action_Code(second_key[0]).name,second_key[1])))
+                mylogger.info("n:{:<5} mean_value:{:.3f}".format(n,mean_value))
+            mylogger.info("")
+        """
 
 def get_contributions(Player_1, Player_2, iteration, virtual_flg=False, player1_deck_num=None,directory_name=None):
     assert player1_deck_num is not None
@@ -646,7 +674,7 @@ def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, pl
             for i,player_key in enumerate(list(contribution_list.keys())):
                 f.write("Player{}\n".format(i + 1))
                 for j,cell in enumerate(contribution_list[player_key]):
-                    txt = "No.{} {}(used_num:{},ave_turn:{}):{:.3f}\n".format(j + 1, cell[0],cell[-1],cell[2],cell[1])
+                    txt = "No.{} {}(used_num:{},ave_turn:{:.2f}):{:.3f}\n".format(j + 1, cell[0],cell[2],cell[-1],cell[1])
                     f.write(txt)
                 f.write("\n")
             f.write("\nWRD\n")
@@ -701,8 +729,10 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
                 D[i].set_leader_class("DRAGON")
                 # Mid
             elif i == 5:
-                D[i] = tsv_to_deck("Haven.tsv")
+                D[i] = tsv_to_deck("Test-Haven.tsv")
                 D[i].set_leader_class("HAVEN")
+                #D[i] = tsv_to_deck("Haven.tsv")
+                #D[i].set_leader_class("HAVEN")
                 # Control
             elif i == 6:
                 D[i] = tsv_to_deck("Blood.tsv")
@@ -868,7 +898,7 @@ def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_re
 
 
 def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, result_name="Policy_table_result.tsv"):
-    deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
+    deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Test-Haven",
                       6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune",-1:"Forest_basic",-2:"Sword_basic",-3:"Rune_basic"}
     mylogger.info("{} vs {}".format(deck_id_2_name[deck_type[0]], deck_id_2_name[deck_type[1]]))
     policy_id_2_name={}
@@ -906,8 +936,10 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
             D[i].set_leader_class("DRAGON")
             # Mid
         elif deck_type[i] == 5:
-            D[i] = tsv_to_deck("Haven.tsv")
+            D[i] = tsv_to_deck("Test-Haven.tsv")
             D[i].set_leader_class("HAVEN")
+            #D[i] = tsv_to_deck("Haven.tsv")
+            #D[i].set_leader_class("HAVEN")
             # Control
         elif deck_type[i] == 6:
             D[i] = tsv_to_deck("Blood.tsv")
@@ -1021,8 +1053,10 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
             D[i].set_leader_class("DRAGON")
             # Mid
         elif i == 5:
-            D[i] = tsv_to_deck("Haven.tsv")
+            D[i] = tsv_to_deck("Test-Haven.tsv")
             D[i].set_leader_class("HAVEN")
+            #D[i] = tsv_to_deck("Haven.tsv")
+            #D[i].set_leader_class("HAVEN")
             # Control
         elif i == 6:
             D[i] = tsv_to_deck("Blood.tsv")
@@ -1087,6 +1121,8 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
             for key in list(deck_name_list[player_key].keys()):
                 target_cell = deck_name_list[player_key][key]
                 if target_cell["used_num"] > 0:
+                    #mylogger.info("sum_of_turn_when_used:{},used_num:{}".format(target_cell["sum_of_turn_when_used"],
+                    #                                                            target_cell["used_num"]))
                     contribution_list[player_key].append((key, target_cell["win_num"] / target_cell["used_num"],
                                                           target_cell["used_num"],
                                                           target_cell["sum_of_turn_when_used"]/target_cell["used_num"]))
@@ -1116,7 +1152,7 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
             for i,player_key in enumerate(list(contribution_list.keys())):
                 f.write("Player{}\n".format(i + 1))
                 for j,cell in enumerate(contribution_list[player_key]):
-                    txt = "No.{} {}(used_num:{},ave_turn:{}):{:.3f}\n".format(j + 1, cell[0],cell[-1],cell[2],cell[1])
+                    txt = "No.{} {}(used_num:{},ave_turn:{:.2f}):{:.3f}\n".format(j + 1, cell[0],cell[2],cell[-1],cell[1])
                     f.write(txt)
                 f.write("\n")
             f.write("\nWRD\n")
@@ -1211,14 +1247,16 @@ Players.append(Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=50),
 Players.append(Player(9, True, policy=Alter_Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 62
 Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.1), mulligan=Min_cost_mulligan_policy()))  # 63
 Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.2), mulligan=Min_cost_mulligan_policy()))  # 64
-Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.3), mulligan=Min_cost_mulligan_policy()))  # 65
-Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.4), mulligan=Min_cost_mulligan_policy()))  # 66
-Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.5), mulligan=Min_cost_mulligan_policy()))  # 67
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.1), mulligan=Min_cost_mulligan_policy()))  # 68
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.2), mulligan=Min_cost_mulligan_policy()))  # 69
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.3), mulligan=Min_cost_mulligan_policy()))  # 70
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.4), mulligan=Min_cost_mulligan_policy()))  # 71
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.5), mulligan=Min_cost_mulligan_policy()))  # 72
+Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.25), mulligan=Min_cost_mulligan_policy()))  # 65
+Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.50), mulligan=Min_cost_mulligan_policy()))  # 66
+Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.1), mulligan=Min_cost_mulligan_policy()))  # 67
+Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.2), mulligan=Min_cost_mulligan_policy()))  # 68
+Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.25), mulligan=Min_cost_mulligan_policy()))  # 69
+Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.50), mulligan=Min_cost_mulligan_policy()))  # 70
+Players.append(Player(9, True, policy=Damped_Sampling_MCTS(), mulligan=Min_cost_mulligan_policy()))  # 71
+Players.append(Player(9, True, policy=Damped_Sampling_ISMCTS(), mulligan=Min_cost_mulligan_policy()))  # 72
+Players.append(Player(9, True, policy=Sampling_ISMCTS(), mulligan=Min_cost_mulligan_policy()))  # 73
+
 # assert False
 n = 100
 a = 0
@@ -1268,7 +1306,7 @@ if args.mode == 'demo' or args.mode == 'background_demo':
     p1 = int(args.decktype1)
     p2 = int(args.decktype2)
     virtual_flg = args.mode == "background_demo"
-    #cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)')
+    #cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="cumtime")
     execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)
 # elif sys.argv[-1]=="-shadow":
 elif args.mode == 'shadow':

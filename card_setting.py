@@ -217,12 +217,17 @@ creature_earth_rite_list = [67, 68, 71, 90]
 # 1:相手のフォロワー,2:自分のフォロワー,3:相手のフォロワーと相手リーダー,
 # 4:自分と相手のフォロワー,5:自分と相手の全てのカード,6:自分の場のカード,7:自分の場のカードと相手の場のフォロワー,8:自分の他の手札
 # 9:相手の場の全てのカード 10:自分のフォロワーと自分リーダー
-creature_enhance_list = {3: [6], 10: [6], 87: [10], 98: [9]}
+creature_enhance_list = {3: [6], 10: [6], 87: [10], 98: [9],
+                         creature_name_to_id["Tender Rabbit Healer"]:[7]}
 creature_enhance_target_list = {}
 creature_enhance_target_regulation_list = {}
 
-creature_accelerate_list = {90: [1]}
-creature_accelerate_card_id_list = {90: {1: -2}}
+creature_accelerate_list = {#90: [1],
+                            creature_name_to_id["Orichalcum Golem"]:[1],
+                            creature_name_to_id["Clarke, Knowledge Seeker"]:[2]}
+creature_accelerate_card_id_list = {#90: {1: -2},
+                                    creature_name_to_id["Orichalcum Golem"]: {1: -2},
+                                    creature_name_to_id["Clarke, Knowledge Seeker"]: {2:-3}}
 creature_accelerate_target_list = {}
 creature_accelerate_target_regulation_list = {}
 # spell_list=tsv_to_card_list("ALL_Spell_Card_List.tsv")
@@ -260,10 +265,20 @@ spell_target_regulation = {
     spell_name_to_id["Kaleidoscopic Glow"]: lambda x: x.origin_cost <= 2,
     spell_name_to_id["Blackened Scripture"]: lambda x: x.get_current_toughness() <= 3,
     spell_name_to_id["Seraphic Blade"]: lambda x: x.origin_cost <= 2}
-spell_cost_change_ability_list = {20: 1, 21: 1}
+spell_cost_change_ability_list = {
+    #20: 1,
+    spell_name_to_id["Diabolic Drain"]:1,
+    #21: 1
+    spell_name_to_id["Revelation"]:1}
 spell_earth_rite_list = []
-spell_enhance_list = {33: [6], 35: [10], 36: [6]}
-spell_enhance_target_list = {33: 1, 36: 9}
+spell_enhance_list = {#33: [6],35: [10],
+                      spell_name_to_id["Breath of the Salamander"]: [6],
+                      spell_name_to_id["Lightning Blast"]: [10],
+                      spell_name_to_id["Seraphic Blade"]: [6],
+                      spell_name_to_id["Golem Assault"]: [6]}
+spell_enhance_target_list = {
+                    spell_name_to_id["Breath of the Salamander"]: 1,
+                    spell_name_to_id["Seraphic Blade"]: 9}
 spell_enhance_target_regulation_list = {}
 
 spell_accelerate_list = {}
@@ -503,14 +518,11 @@ class Creature(Card):
         creature.is_in_graveyard = self.is_in_graveyard
         creature.damage = int(self.damage)
         creature.is_tapped = self.is_tapped
-        # creature.attacked_flg=self.attacked_flg
         creature.current_attack_num = int(self.current_attack_num)
         creature.can_attack_num = int(self.can_attack_num)
         creature.evolved = self.evolved
         if len(creature.in_battle_ability) != len(self.in_battle_ability):
             creature.in_battle_ability = copy.deepcopy(self.in_battle_ability)
-        # if self.in_battle_ability!=[]:
-        #    creature.in_battle_ability=copy.deepcopy(self.in_battle_ability)
         if self.card_class.name == "RUNE":
             creature.spell_boost = None
             if creature_list[self.card_id][4][1][0]:
@@ -929,11 +941,9 @@ class Deck:
         self.leader_class = None
 
     def append(self, card, num=1):
+        self.remain_num += num
         for i in range(num):
-            # self.deck.append(copy.deepcopy(card))#各カードは別のカードなので一枚ずつ生成する必要がある
             self.deck.append(card.get_copy())
-            # self.deck.append(card)
-            self.remain_num += 1
 
     def show_all(self):
         print("Deck contents")
@@ -970,6 +980,11 @@ class Deck:
         for card in self.deck:
             if card.name not in name_list:
                 name_list[card.name] = {"used_num":0,"sum_of_turn_when_used":0,"win_num":0,"drawn_num":0,"win_num_when_drawn":0}
+                if card.have_accelerate:
+                    for accelerate_cost in card.accelerate_cost:
+                        name_list["{}(Accelerate {})".format(card.name,accelerate_cost)] =\
+                        {"used_num": 0, "sum_of_turn_when_used": 0, "win_num": 0, "drawn_num": 0,
+                         "win_num_when_drawn": 0}
 
         return name_list
 

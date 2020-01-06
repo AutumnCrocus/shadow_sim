@@ -42,7 +42,7 @@ class Field:
         self.state_log = deque()
         self.stack_num = 0
         self.time = time.time()
-        self.secret = False
+        self.secret = True
 
     def eq(self, other):
         if type(self) != type(other):
@@ -95,9 +95,18 @@ class Field:
         self.cost = field.cost[:]
         self.remain_cost = field.remain_cost[:]
         self.turn_end = field.turn_end
-        self.graveyard = copy.deepcopy(field.graveyard)
-        self.play_cards = copy.deepcopy(field.play_cards)
-        self.drawn_cards = copy.deepcopy(field.drawn_cards)
+        #self.graveyard = copy.deepcopy(field.graveyard)
+        #self.play_cards = copy.deepcopy(field.play_cards)
+        #self.drawn_cards = copy.deepcopy(field.drawn_cards)
+
+        self.graveyard.shadows = [int(field.graveyard.shadows[0]),int(field.graveyard.shadows[1])]
+        for i in range(2):
+            self.drawn_cards.name_list[i] = field.drawn_cards.name_list[i][:]
+            self.play_cards.play_cards[i] = field.play_cards.play_cards[i][:]
+            self.play_cards.played_turn_dict[i] = copy.copy(field.play_cards.played_turn_dict[i])
+            self.graveyard.graveyard[i] = field.graveyard.graveyard[i][:]
+
+
         self.players[0] = field.players[0].get_copy(field)
         self.players[1] = field.players[1].get_copy(field)
         self.players[0].field = self
@@ -162,6 +171,16 @@ class Field:
         chain_len = 0
 
         self.check_active_ability()
+        """
+        if not self.secret:
+            #if State_Code.START_OF_TURN.value in [cell[0] for cell in self.state_log]:
+            #    mylogger.info("state_logs:{}".format(self.state_log))
+            for i in range(2):
+                if len(self.player_ability[i]) > 0:
+                    mylogger.info("Player{}'s leader effect".format(i+1))
+                    for ability in self.player_ability[i]:
+                        mylogger.info("ability:{}".format(ability))
+        """
         while len(self.stack) > 0 or len(self.state_log) > 0:
             self.check_death(player_num, virtual=virtual)
             self.solve_lastword_ability(virtual=virtual, player_num=player_num)
@@ -192,6 +211,7 @@ class Field:
             observable_data_dict[key]["shadows"] = self.graveyard.shadows[player_id]
             observable_data_dict[key]["pp/max_pp"] = (self.remain_cost[player_id], self.cost[player_id])
             observable_data_dict[key]["evo_point"] = self.evo_point[player_id]
+            observable_data_dict[key]["leader_effects"] = "{}".format(self.player_ability[player_id])
 
         return observable_data_dict
 
@@ -207,7 +227,7 @@ class Field:
         if player.max_life - player.life < tmp:
             tmp = player.max_life - player.life
         player.life += tmp
-        if virtual == False:
+        if not virtual:
             mylogger.info("Player {} restore {} life".format(player.player_num + 1, tmp))
         if not at_once:
             self.stack_num += 1
@@ -222,7 +242,7 @@ class Field:
         else:
             assert False, "follower does not exist!"
         amount = follower.restore_toughness(num)
-        if virtual == False:
+        if not virtual:
             mylogger.info("{} restore {} life".format(follower.name, amount))
         if not at_once:
             self.stack_num += 1
@@ -261,7 +281,7 @@ class Field:
             self.play_cards.played_turn_dict[self.turn_player_num][card_name] = \
                 [self.current_turn[self.turn_player_num]]
         else:
-            self.play_cards.played_turn_dict[self.turn_player_num][card_name].append(\
+            self.play_cards.played_turn_dict[self.turn_player_num][card_name].append(
                 self.current_turn[self.turn_player_num])
 
     def play_creature(self, hand, card_id, player_num, player, opponent, virtual=False, target=None):
@@ -339,7 +359,8 @@ class Field:
             self.spell_boost(player_num)
             for ability in new_card.triggered_ability:
                 ability(self, player, opponent, virtual, target, new_card)
-            self.append_played_turn(card_name = play_card.name)
+            self.append_played_turn(card_name = new_card.name)
+            self.play_cards.append("Spell", new_card_id, player_num)
             new_card.is_in_graveyard = True
             self.graveyard.append(new_card.card_category, new_card_id, player_num)
 
@@ -377,7 +398,8 @@ class Field:
                 mylogger.info("Player {}'s {} is broken".format(location[0] + 1,
                                                                 tmp.name))
         for i in range(len(tmp.lastword_ability)):
-            self.stack.appendleft((tmp.lastword_ability[i], location[0], copy.deepcopy(tmp)))
+            #self.stack.appendleft((tmp.lastword_ability[i], location[0], copy.deepcopy(tmp)))
+            self.stack.appendleft((tmp.lastword_ability[i], location[0], tmp.get_copy()))
         tmp.is_in_field = False
         tmp.is_in_graveyard = True
         self.graveyard.append(tmp.card_category, tmp.card_id, location[0])
@@ -517,8 +539,8 @@ class Field:
             thing = self.card_location[player_num][i]
             if thing.turn_start_ability != []:
                 for ability in thing.turn_start_ability:
-                    # if not virtual:
-                    #    mylogger.info("{}'s start-of-turn ability acive".format(thing.name))
+                    if not virtual:
+                        mylogger.info("{}'s start-of-turn ability acive".format(thing.name))
 
                     before = len(self.card_location[player_num])
                     ability(self, self.players[player_num], self.players[1 - player_num], virtual, None, \
@@ -581,8 +603,8 @@ class Field:
             thing = self.card_location[player_num][i]
             if thing.turn_end_ability != []:
                 for ability in thing.turn_end_ability:
-                    # if not virtual:
-                    #    mylogger.info("{}'s end-of-turn ability acive".format(thing.name))
+                    if not virtual:
+                        mylogger.info("{}'s end-of-turn ability acive".format(thing.name))
                     before = len(self.card_location[player_num])
                     ability(self, self.players[player_num], self.players[1 - player_num], virtual, None, thing)
                     after = len(self.card_location[player_num])
