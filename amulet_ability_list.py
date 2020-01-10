@@ -14,7 +14,7 @@ def amulet_ability_001(field, player, opponent, virtual, target, itself):
         target_id = random.choice(tmp)
         creature = field.card_location[player.player_num][target_id]
         buff_creature(creature, params=[1, 1])
-        if virtual == False:
+        if not virtual:
             mylogger.info("Player {}'s {} get +1/+1".format(player.player_num + 1, creature.name))
 
 
@@ -30,14 +30,16 @@ def amulet_ability_003(field, player, opponent, virtual, target, itself):
         return
     if not virtual:
         mylogger.info("Deal 6 damage to all opponent")
-    opponent.get_damage(6)
+    get_damage_to_player(opponent,virtual,num=6)
+    #opponent.get_damage(6)
     if opponent.life <= 0:
         return
-    mylogger.info("opponent.life:{}".format(opponent.life))
-    for i, thing in enumerate(field.card_location[opponent.player_num]):
-        if thing.card_category == "Creature":
-            damage = thing.get_damage(6)
-            # mylogger.info("Player {}'s {} get {} damage".format(opponent.player_num+1,thing.name,damage))
+    get_damage_to_all_enemy_follower(field, opponent, virtual, num=6)
+    #mylogger.info("opponent.life:{}".format(opponent.life))
+    #for i, thing in enumerate(field.card_location[opponent.player_num]):
+    #    if thing.card_category == "Creature":
+    #        damage = thing.get_damage(6)
+    #        # mylogger.info("Player {}'s {} get {} damage".format(opponent.player_num+1,thing.name,damage))
 
     while True:
         break_flg = True
@@ -183,10 +185,22 @@ def amulet_ability_021(field, player, opponent, virtual, target, itself):
     summon_creature(field, player, virtual, name="Holyflame Tiger", num=2)
 
 
+def amulet_ability_022(field, player, opponent, virtual, target, itself):
+    restore_player_life(player,virtual,num=1)
+
+
+def amulet_ability_023(field, player, opponent, virtual, target, itself):
+    """
+    At the end of your turn, draw a card if at least 3 cards have been played this turn.
+    """
+    if field.turn_player_num == player.player_num:
+        if field.players_play_num>=3:
+            draw_cards(player,virtual)
+
 amulet_ability_dict = \
     {1: amulet_ability_001, 2: amulet_ability_002, 3: amulet_ability_003, 4: amulet_ability_004,
      5: amulet_ability_005, 6: amulet_ability_006, 7: amulet_ability_007, 8: amulet_ability_008,
      9: amulet_ability_009, 10: amulet_ability_010, 11: amulet_ability_011, 12: amulet_ability_012,
      13: amulet_ability_013, 14: amulet_ability_014, 15: amulet_ability_015, 16: amulet_ability_016,
      17: amulet_ability_017, 18: amulet_ability_018, 19: amulet_ability_019, 20: amulet_ability_020,
-     21: amulet_ability_021}
+     21: amulet_ability_021, 22:amulet_ability_022, 23:amulet_ability_023}

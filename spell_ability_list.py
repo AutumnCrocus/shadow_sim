@@ -157,7 +157,7 @@ def spell_ability_019(field, player, opponent, virtual, target, itself):
 
 def spell_ability_020(field, player, opponent, virtual, target, itself):
     get_damage_to_creature(field, opponent, virtual, target, num=4)
-    field.restore_player_life(player = player,num=2,virtual=virtual)
+    field.restore_player_life(player=player, num=2, virtual=virtual)
 
 
 def spell_ability_021(field, player, opponent, virtual, target, itself):
@@ -249,7 +249,7 @@ def spell_ability_033(field, player, opponent, virtual, target, itself):
 def spell_ability_034(field, player, opponent, virtual, target, itself):
     gain_max_pp(field, player, virtual, num=1)
     draw_cards(player, virtual, num=2)
-    field.restore_player_life(player = player,num=3,virtual=virtual)
+    field.restore_player_life(player=player, num=3, virtual=virtual)
 
 
 def spell_ability_035(field, player, opponent, virtual, target, itself):
@@ -358,24 +358,26 @@ def spell_ability_045(field, player, opponent, virtual, target, itself):
         return
     destroy_opponent_creature(field, opponent, virtual, target)
 
+
 def spell_ability_046(field, player, opponent, virtual, target, itself):
     """
     Subtract 2 from the Countdown of an allied amulet.
     Draw a card.
     """
-    assert target < field.card_num[player.player_num],"out-of-range target:{}".format(target)
+    assert target < field.card_num[player.player_num], "out-of-range target:{}".format(target)
     target_amulet = field.card_location[player.player_num][target]
-    assert target_amulet.card_category == "Amulet","illegal target error name:{}".format(target_amulet.name)
+    assert target_amulet.card_category == "Amulet", "illegal target error name:{}".format(target_amulet.name)
     target_amulet.down_count(num=2, virtual=virtual)
-    draw_cards(player,virtual)
+    draw_cards(player, virtual)
 
 
 def spell_ability_047(field, player, opponent, virtual, target, itself):
     """
     Banish an enemy follower.
     """
-    assert target < field.card_num[opponent.player_num],"out-of-range target:{}".format(target)
+    assert target < field.card_num[opponent.player_num], "out-of-range target:{}".format(target)
     field.banish_card([opponent.player_num, target], virtual=virtual)
+
 
 def spell_ability_048(field, player, opponent, virtual, target, itself):
     """
@@ -393,9 +395,10 @@ def spell_ability_049(field, player, opponent, virtual, target, itself):
     Put 2 Puppets into your hand.
     Deal 1 damage to all enemy followers.
     """
-    put_card_in_hand(field,player,virtual,name="Puppet",
-                     card_category="Creature",num=2)
+    put_card_in_hand(field, player, virtual, name="Puppet",
+                     card_category="Creature", num=2)
     get_damage_to_all_enemy_follower(field, opponent, virtual, num=1)
+
 
 def spell_ability_050(field, player, opponent, virtual, target, itself):
     """
@@ -403,18 +406,59 @@ def spell_ability_050(field, player, opponent, virtual, target, itself):
     Enhance (6): Put 2 more into your hand.
     Earth Rite: Subtract 1 from the cost of all Conjure Guardians in your hand.
     """
-    put_card_in_hand(field,player,virtual,name="Conjure Guardian",card_category="Spell")
+    put_card_in_hand(field, player, virtual, name="Conjure Guardian", card_category="Spell")
     if itself.active_enhance_code[0]:
-        put_card_in_hand(field, player, virtual, name="Conjure Guardian", card_category="Spell",num=2)
+        put_card_in_hand(field, player, virtual, name="Conjure Guardian", card_category="Spell", num=2)
 
-
-    if earth_rite(field,player,virtual):
+    if earth_rite(field, player, virtual):
         if not virtual:
             mylogger.info("Subtract 1 from the cost of all Conjure Guardians in Player{}'s hand."
-                          .format(player.player_num+1))
+                          .format(player.player_num + 1))
         for card in player.hand:
             if card.name == "Conjure Guardian":
-                card.cost = max(0,card.cost-1)
+                card.cost = max(0, card.cost - 1)
+
+
+def spell_ability_051(field, player, opponent, virtual, target, itself):
+    """
+    Draw 2 cards.
+    Earth Rite: Draw 3 cards instead. Then restore 1 defense to your leader.
+    """
+    if earth_rite(field, player, virtual):
+        draw_cards(player, virtual, num=3)
+        restore_player_life(player, virtual, num=1)
+    else:
+        draw_cards(player, virtual, num=2)
+
+
+def spell_ability_052(field, player, opponent, virtual, target, itself):
+    """
+    Return all followers to the players' hands.
+    """
+    for i in range(2):
+        side_id = (i + player.player_num) % 2
+        side = field.card_location[side_id]
+        location_id = 0
+        while location_id < len(side):
+            if side[location_id].card_category == "Creature":
+                before = len(side)
+                return_card_to_hand(field, [side_id, location_id], virtual)
+                after = len(side)
+                location_id += int(before == after)
+            else:
+                location_id += 1
+
+
+def spell_ability_053(field, player, opponent, virtual, target, itself):
+    """
+    Discard your hand. Draw a card for each card you discarded.
+    """
+    if not virtual:
+        mylogger.info("Discard Player {}'s hand.".format(player.player_num+1))
+    hand_len = len(player.hand)
+    while len(player.hand)>0:
+        field.discard_card(player,0)
+    draw_cards(player,virtual,num=hand_len)
 
 
 def token_spell_ability_001(field, player, opponent, virtual, target, itself):
@@ -451,8 +495,8 @@ def token_spell_ability_003(field, player, opponent, virtual, target, itself):
     """
     Accelerate (2): Summon an Earth Essence. Put a Veridic Ritual into your hand.
     """
-    set_amulet(field,player,virtual,name="Earth Essence")
-    put_card_in_hand(field,player,virtual,name="Veridic Ritual",card_category="Spell")
+    set_amulet(field, player, virtual, name="Earth Essence")
+    put_card_in_hand(field, player, virtual, name="Veridic Ritual", card_category="Spell")
 
 
 def token_spell_ability_004(field, player, opponent, virtual, target, itself):
@@ -479,7 +523,7 @@ spell_ability_dict = {1: spell_ability_001, 2: spell_ability_002, 3: spell_abili
                       36: spell_ability_036, 37: spell_ability_037, 38: spell_ability_038, 39: spell_ability_039,
                       40: spell_ability_040, 41: spell_ability_041, 42: spell_ability_042, 43: spell_ability_043,
                       44: spell_ability_044, 45: spell_ability_045, 46: spell_ability_046, 47: spell_ability_047,
-                      48: spell_ability_048, 49: spell_ability_049, 50: spell_ability_050,
-
+                      48: spell_ability_048, 49: spell_ability_049, 50: spell_ability_050, 51: spell_ability_051,
+                      52: spell_ability_052, 53: spell_ability_053,
                       -1: token_spell_ability_001, -2: token_spell_ability_002, -3: token_spell_ability_003,
                       -4: token_spell_ability_004}

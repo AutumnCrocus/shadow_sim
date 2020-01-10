@@ -1,6 +1,7 @@
 import random
 from my_moduler import get_module_logger
 import card_setting
+import Player_Ability_setting
 
 mylogger = get_module_logger(__name__)
 from util_ability import *
@@ -904,6 +905,8 @@ def creature_ability_106(field, player, opponent, virtual, target, itself):
         player.hand.clear()
         draw_cards(player, virtual, num=9)
 
+
+"""
 def restore_1_defense_to_all_allies(field, player, virtual, state_log=None):
     if state_log[0] != State_Code.END_OF_TURN.value:
         return
@@ -915,6 +918,8 @@ def restore_1_defense_to_all_allies(field, player, virtual, state_log=None):
     for follower in field.card_location[player.player_num]:
         if follower.card_category == "Creature":
             field.restore_follower_toughness(follower=follower, num=1, virtual=virtual, at_once=True)
+"""
+
 
 def creature_ability_107(field, player, opponent, virtual, target, itself):
     """
@@ -922,13 +927,14 @@ def creature_ability_107(field, player, opponent, virtual, target, itself):
     restore 1 defense to all allies. (This effect is not stackable and lasts for the rest of the match.)
     """
 
-    if restore_1_defense_to_all_allies not in field.player_ability[player.player_num]:
+    if Player_Ability_setting.restore_1_defense_to_all_allies \
+            not in field.player_ability[player.player_num]:
         if not virtual:
             mylogger.info("Give Player{} the following effect - At the end of your turn,\
                 restore 1 defense to all allies. (This effect is not stackable and lasts for the rest of the match."
                           .format(player.player_num + 1))
-        field.player_ability[player.player_num].append(restore_1_defense_to_all_allies)
-        if len(field.player_ability[player.player_num])>1:
+        field.player_ability[player.player_num].append(Player_Ability_setting.restore_1_defense_to_all_allies)
+        if len(field.player_ability[player.player_num]) > 1:
             mylogger.info("player_ability:{}".format(field.player_ability))
             assert False
 
@@ -948,6 +954,41 @@ def creature_ability_108(field, player, opponent, virtual, target, itself):
     for follower in field.card_location[player.player_num]:
         if follower.card_category == "Creature":
             field.restore_follower_toughness(follower=follower, num=value, virtual=virtual, at_once=True)
+
+
+def creature_ability_109(field, player, opponent, virtual, target, itself):
+    """
+    Evolve: Spellboost the cards in your hand 2 times.
+    """
+    field.spell_boost(player.player_num)
+    field.spell_boost(player.player_num)
+
+
+def creature_ability_110(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Deal a pool of 3 damage divided between all enemies.
+    First deal damage to the earliest-played enemy follower.
+    (If there is enough damage in the pool, deal damage equal to that follower's defense.)
+    Then deal damage to other enemy followers in the order they were played.
+    If any damage is left in the pool afterward, deal it to the enemy leader.
+    Spellboost: Deal 1 more damage.
+    """
+    amount = 3 + itself.spell_boost
+    for i,follower in enumerate(field.card_location[opponent.player_num]):
+        if follower.card_category == "Creature":
+            damage = min(amount,follower.get_current_toughness())
+            get_damage_to_creature(field,opponent,virtual,i,num=damage)
+            amount -= damage
+            if amount <=0:
+                assert amount == 0
+                return
+    get_damage_to_player(opponent,virtual,num=amount)
+
+def creature_ability_111(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Restore X defense to your leader. X equals the number of other cards in your hand.
+    """
+    restore_player_life(player,virtual,num=len(player.hand))
 
 
 def token_creature_ability_001(field, player, opponent, virtual, target, itself):
@@ -1014,5 +1055,6 @@ creature_ability_dict = {
     100: creature_ability_100, 101: creature_ability_101, 102: creature_ability_102,
     103: creature_ability_103, 104: creature_ability_104, 105: creature_ability_105,
     106: creature_ability_106, 107: creature_ability_107, 108: creature_ability_108,
+    109: creature_ability_109, 110: creature_ability_110, 111: creature_ability_111,
 
     -1: token_creature_ability_001, -2: token_creature_ability_002}

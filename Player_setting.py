@@ -170,6 +170,8 @@ class Player:
         deck.shuffle()
 
     def play_card(self, field, card_id, player, opponent, virtual=False, target=None):
+        if not virtual:
+            mylogger.info("Player {} plays {}".format(self.player_num + 1, self.hand[card_id].name))
         if self.hand[card_id].have_enhance == True and self.hand[card_id].active_enhance_code[0] == True:
             field.remain_cost[self.player_num] -= self.hand[card_id].active_enhance_code[1]
             if not virtual:
@@ -184,8 +186,6 @@ class Player:
             field.remain_cost[self.player_num] -= self.hand[card_id].cost
             assert field.remain_cost[self.player_num]>=0,"minus-pp error"
 
-        if not virtual:
-            mylogger.info("Player {} plays {}".format(self.player_num + 1, self.hand[card_id].name))
         if self.hand[card_id].card_category == "Creature":
             field.play_creature(self.hand, card_id, self.player_num, player, opponent, virtual=virtual, target=target)
         elif self.hand[card_id].card_category == "Spell":
@@ -204,12 +204,11 @@ class Player:
 
     def creature_evolve(self, creature, field, target=None, virtual=False):
         assert field.evo_point[self.player_num] > 0
-        if virtual == False: mylogger.info("evo_check")
         field.evo_point[self.player_num] -= 1
         field.evolve(creature, virtual=virtual, target=target)
 
-    def discard(self, id, field):
-        del self.hand[id]
+    def discard(self, hand_id, field):
+        field.discard_card(self,hand_id)
 
     def decide(self, player, opponent, field, virtual=False):
         field.stack.clear()
@@ -256,7 +255,7 @@ class Player:
                     print("{}".format(key))
                     for sub_key in list(observable_data[key].keys()):
                         print("{}:{}".format(sub_key, observable_data[key][sub_key]))
-                assert False, "infinite loop!"
+                assert False, "infinite loop!\nhistory:{}".format(action_histroy)
             re_check = False
             sim_hand = None
             if self.policy.policy_type == 3 and self.policy.current_node is not None:
@@ -270,11 +269,6 @@ class Player:
                     if not self.compare_hand(sim_hand):
                         msg = "diff hand card error"
                         re_check = True
-                    #for tmp_id in range(len(self.hand)):
-                    #    if not real_hand[tmp_id].eq(sim_hand[tmp_id]):
-                    #        msg = "diff hand card error"
-                    #        re_check = True
-                    #        break
                     if re_check is False and not field.eq(sim_field):
                         msg = "diff field error"
                         re_check = True
@@ -339,12 +333,14 @@ class Player:
                             re_check = True
                         elif self.hand[card_id].have_target != 0:
                             if regal_targets[card_id] != [] and target_id not in regal_targets[card_id]:
-                                msg = "illegal spell target error({} not in {})".format(target_id,regal_targets[card_id])
+                                msg = "illegal target error({} not in {})".format(target_id,regal_targets[card_id])
                                 re_check = True
                     elif self.hand[card_id].have_target != 0:
                         if regal_targets[card_id] == [] or target_id not in regal_targets[card_id]:
                             msg = "illegal spell target error({} not in {})".format(target_id,regal_targets[card_id])
                             re_check = True
+                    if re_check:
+                        msg += "card_name:{}".format(self.hand[card_id].name)
             elif action_num == Action_Code.ATTACK_TO_FOLLOWER.value:
                 if target_id not in can_be_attacked:
                     msg = "illegal follower-attacker error({} not in {})".format(target_id,can_be_attacked)
@@ -379,6 +375,9 @@ class Player:
             else:
                 if not virtual:
                     mylogger.info("msg:{}".format(msg))
+                    self.show_hand()
+                    self.policy.prev_node.field.players[self.player_num].show_hand()
+                    time.sleep(1)
                 if self.policy.policy_type == 3 or self.policy.policy_type == 4:
                     self.policy.current_node = None
 
@@ -387,7 +386,8 @@ class Player:
             if action_num == 1 and len(regal_targets[card_id]) > 0 and target_id is None:
                 raise Exception()
         end_flg = self.execute_action(field, opponent, action_code=(action_num, card_id, target_id), virtual=virtual)
-
+        #if field.check_game_end():
+        #    self.policy.__init__()
         return end_flg
 
     def execute_action(self, field, opponent, action_code=None, virtual=False):

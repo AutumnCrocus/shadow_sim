@@ -1,7 +1,6 @@
 import random
 import card_setting
 from my_moduler import get_module_logger
-
 mylogger = get_module_logger(__name__)
 from my_enum import *
 
@@ -56,8 +55,6 @@ def get_damage_to_creature(field, opponent, virtual, target, num=0):
                                                                 field.card_location[opponent.player_num][target].name,
                                                                 damage))
 
-        # if field.card_location[opponent.player_num][target].is_in_graveyard==True:
-        #    field.remove_card([opponent.player_num,target],virtual)
     elif target is not None:
         mylogger.info("player_num:{} can_be_targeted:{} field_len:{} target:{}".format(1 - opponent.player_num,
                                                                                        field.get_can_be_targeted(
@@ -258,7 +255,7 @@ def add_ability_to_creature(field, player, creature, virtual, add_ability=[]):
     for ability in add_ability:
         if ability not in creature.ability:
             creature.ability.append(ability)
-    if virtual == False:
+    if not virtual:
         mylogger.info("{} get {}".format(creature.name, [KeywordAbility(i).name for i in add_ability]))
 
 
@@ -266,8 +263,8 @@ def add_ability_until_end_of_player_turn(field, player, creature, virtual, add_a
     def ability_until_end_of_player_turn(field, player, opponent, virtual, target, self_creature):
         if field.turn_player_num == player.player_num:
             for ability in add_ability:
-                if ability not in card_setting.creature_list[self_creature.card_id][
-                    3] and ability in self_creature.ability:
+                if ability not in card_setting.creature_list[self_creature.card_id][3]\
+                        and ability in self_creature.ability:
                     self_creature.ability.remove(ability)
             # self_creature.turn_end_ability=[]
             while True:
@@ -279,7 +276,7 @@ def add_ability_until_end_of_player_turn(field, player, creature, virtual, add_a
     for ability in add_ability:
         if ability not in creature.ability:
             creature.ability.append(ability)
-    if virtual == False:
+    if not virtual:
         mylogger.info(
             "{} get {} until end of player turn".format(creature.name, [KeywordAbility(i).name for i in add_ability]))
 
@@ -290,8 +287,8 @@ def add_ability_until_end_of_opponent_turn(field, player, creature, virtual, add
     def ability_until_end_of_opponent_turn(field, player, opponent, virtual, target, self_creature):
         if field.turn_player_num == opponent.player_num:
             for ability in add_ability:
-                if ability not in card_setting.creature_list[self_creature.card_id][
-                    3] and ability in self_creature.ability:
+                if ability not in card_setting.creature_list[self_creature.card_id][3] \
+                        and ability in self_creature.ability:
                     self_creature.ability.remove(ability)
             # self_creature.turn_end_ability=[]
             while True:
@@ -303,7 +300,7 @@ def add_ability_until_end_of_opponent_turn(field, player, creature, virtual, add
     for ability in add_ability:
         if ability not in creature.ability:
             creature.ability.append(ability)
-    if virtual == False:
+    if not virtual:
         mylogger.info(
             "{} get {} until end of opponent turn".format(creature.name, [KeywordAbility(i).name for i in add_ability]))
     creature.turn_end_ability.append(ability_until_end_of_opponent_turn)
@@ -318,7 +315,7 @@ def restore_pp(field, player, virtual, num=0):
 
 
 def put_card_from_deck_in_play(field, player, virtual, condition=None):
-    assert condition != None
+    assert condition is not None
     pop_id_list = []
     for i, card in enumerate(player.deck.deck):
         if condition(card):

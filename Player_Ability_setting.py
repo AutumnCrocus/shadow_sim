@@ -1,27 +1,46 @@
 import random
 import card_setting
 from my_moduler import get_module_logger
+
 mylogger = get_module_logger(__name__)
 from my_enum import *
-PRIORITY_MAX_LIMIT=10
+
+PRIORITY_MAX_LIMIT = 10
+
+
 class reduce_damage_to_zero():
     def __init__(self):
-        self.priority=PRIORITY_MAX_LIMIT
-    def __call__(argument=None,state_code=None):
-        if state_code[0]==State_Code.GET_DAMAGE.value and and type(argument)==int:
+        self.priority = PRIORITY_MAX_LIMIT
+
+    def __call__(argument=None, state_code=None):
+        if state_code[0] == State_Code.GET_DAMAGE.value and type(argument) == int:
             return 0
         else:
             return argument
 
+
 class can_not_take_more_than_x_damage():
-    def __init__(self,num=0):
-        self.priority=PRIORITY_MAX_LIMIT-1
-        self.damage_upper_bound=num
-    def __call__(self,argument=None,state_code=None):
-        if state_code[0]==State_Code.GET_DAMAGE.value and type(argument)==int:
-            return (argument,self.damage_upper_bound)[argument>self.damage_upper_bound]
+    def __init__(self, num=0):
+        self.priority = PRIORITY_MAX_LIMIT - 1
+        self.damage_upper_bound = num
+
+    def __call__(self, argument=None, state_code=None):
+        if state_code[0] == State_Code.GET_DAMAGE.value and type(argument) == int:
+            return (argument, self.damage_upper_bound)[argument > self.damage_upper_bound]
         else:
             return argument
 
 
+def restore_1_defense_to_all_allies(field, player, virtual, state_log=None):
+    if state_log[0] != State_Code.END_OF_TURN.value:
+        return
+    if state_log[1] != player.player_num:
+        return
+    if not virtual:
+        mylogger.info("De La Fille, Gem Princess's leader effect is actived")
+    field.restore_player_life(player=player, num=1, virtual=virtual)
+    for follower in field.card_location[player.player_num]:
+        if follower.card_category == "Creature":
+            field.restore_follower_toughness(follower=follower, num=1, virtual=virtual, at_once=True)
 
+player_ability_name_dict = {id(restore_1_defense_to_all_allies):"restore_1_defense_to_all_allies"}

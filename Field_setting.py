@@ -6,6 +6,7 @@ from card_setting import *
 import collections
 from collections import deque
 import itertools
+import Player_Ability_setting
 from my_moduler import get_module_logger
 
 mylogger = get_module_logger(__name__)
@@ -43,6 +44,7 @@ class Field:
         self.stack_num = 0
         self.time = time.time()
         self.secret = True
+        self.state_value_history = []
 
     def eq(self, other):
         if type(self) != type(other):
@@ -211,9 +213,13 @@ class Field:
             observable_data_dict[key]["shadows"] = self.graveyard.shadows[player_id]
             observable_data_dict[key]["pp/max_pp"] = (self.remain_cost[player_id], self.cost[player_id])
             observable_data_dict[key]["evo_point"] = self.evo_point[player_id]
-            observable_data_dict[key]["leader_effects"] = "{}".format(self.player_ability[player_id])
+            observable_data_dict[key]["leader_effects"] = "{}".format([Player_Ability_setting.player_ability_name_dict[id(ability)] for ability in self.player_ability[player_id]])
 
         return observable_data_dict
+
+    def discard_card(self, player,hand_id):
+        del player.hand[hand_id]
+        self.graveyard.shadows[player.player_num] += 1
 
     def reset_time_stamp(self):
         self.stack.clear()
@@ -414,19 +420,19 @@ class Field:
         self.card_num[target_location[0]] -= 1
         card_id = tmp.card_id
         card_category = tmp.card_category
-        if virtual == False:
+        if not virtual:
             mylogger.info("Player {}'s {} return to hand".format(target_location[0] + 1,
                                                                  tmp.name))
         del self.card_location[target_location[0]][target_location[1]]
-
         card = None
         if card_category == "Creature":
             card = Creature(card_id)
         elif card_category == "Amulet":
             card = Amulet(card_id)
 
-        if card != None:
-            self.players[target_location[0]].hand.append(card)
+        if card is not None:
+            #self.players[target_location[0]].hand.append(card)
+            self.players[target_location[0]].append_cards_to_hand([card])
 
     def banish_card(self, location, virtual=False):
         assert self.card_location[location[0]][location[1]] is not None
@@ -1278,8 +1284,52 @@ class Field:
                 self.ex_turn_count[turn_player_num] -= 1
             else:
                 break
+        if self.players[turn_player_num].name == "Alice":
+            state_value = self.state_value(turn_player_num)
+            self.state_value_history.append(state_value)
+        elif self.check_game_end():
+            assert self.players[1-turn_player_num].name == "Alice","Bob!"
+            state_value = self.state_value(1-turn_player_num)
+            self.state_value_history.append(state_value)
+
 
         return win, lose, lib_num, turn, self.check_game_end()
+
+    def state_value(self, player_num):
+
+        partial_observable_data = self.get_observable_data(player_num=player_num)
+        if self.check_game_end():
+            if partial_observable_data["player"]["life"] <= 0 or self.players[player_num].lib_out_flg:
+                return 0
+            elif partial_observable_data["opponent"]["life"] <= 0 or self.players[1-player_num].lib_out_flg:
+                return 1
+        """
+        if partial_observable_data["opponent"]["life"] <= 0:
+            return 1  # WIN_BONUS
+        able_attack_power_sum = 0
+        if len(self.get_ward_list(player_num))>0:
+            for card in self.card_location[player_num]:
+                if card.card_category == "Creatrue" and card.can_attack_to_player():
+                    able_attack_power_sum += card.power
+            if able_attack_power_sum >= partial_observable_data["opponent"]["life"]:
+                return 1  # WIN_BONUS
+        opponent_power_sum = 0
+        if partial_observable_data["player"]["life"] <= 10:
+            opponent_power_sum += 3
+        for card_id in self.get_creature_location()[1 - player_num]:
+            opponent_power_sum += self.card_location[1 - player_num][card_id].power
+        if opponent_power_sum >= partial_observable_data["player"]["life"]:
+            return 0  # -WIN_BONUS
+        """
+        card_location = self.card_location
+        life_diff = partial_observable_data["player"]["life"] - partial_observable_data["opponent"]["life"]
+        life_diff /= 40
+        hand_diff = partial_observable_data["player"]["hand_len"] - partial_observable_data["opponent"]["hand_len"]
+        hand_diff /= 18
+        board_diff = len(card_location[player_num]) - len(card_location[1 - player_num])
+        board_diff /= 10
+        value = board_diff*0.45+life_diff*0.45+hand_diff*0.1
+        return 1/(1+np.exp(-(value*10)))
 
 
 class Graveyard:

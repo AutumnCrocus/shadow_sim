@@ -11,12 +11,15 @@ from amulet_ability_list import amulet_ability_dict
 from cost_change_ability_list import cost_change_ability_dict
 from battle_ability_list import battle_ability_dict
 from trigger_ability_list import trigger_ability_dict
+from numba import jit
 from my_moduler import get_module_logger
 
 mylogger = get_module_logger(__name__)
 from my_enum import *
 import csv
 import pandas as pd
+import warnings
+#warnings.simplefilter('ignore', NumbaWarning)
 
 
 def tsv_to_card_list(tsv_name):
@@ -25,6 +28,7 @@ def tsv_to_card_list(tsv_name):
     with open("Card_List_TSV/" + tsv_name) as f:
         reader = csv.reader(f, delimiter='\t', lineterminator='\n')
         for row in reader:
+            #mylogger.info("row:{}".format(row))
             card_id = int(row[0])
             # card_cost=int(row[1])
             card_cost = int(row[2])
@@ -162,6 +166,7 @@ def tsv_2_ability_dict(file_name, name_to_id=None):
     with open("Card_List_TSV/" + file_name) as f:
         reader = csv.reader(f, delimiter='\t')
         for row in reader:
+            assert row[0] in name_to_id,"name_to_id:{}".format(name_to_id)
             ability_dict[name_to_id[row[0]]] = int(row[1])
 
     return ability_dict
@@ -182,15 +187,16 @@ creature_has_evo_effect_target = {29: 1, 41: 1, 83: 2, 96: 1}
 creature_target_regulation = {
     creature_name_to_id["Tsubaki"]: lambda x: x.power >= 5,
     creature_name_to_id["Princess Vanguard"]: lambda x: x.origin_cost == 1,
-    creature_name_to_id["Sahaquiel"]: lambda card: card.card_category == "Creature" and card.card_class.name == "NEUTRAL",
+    creature_name_to_id["Sahaquiel"]: lambda
+        card: card.card_category == "Creature" and card.card_class.name == "NEUTRAL",
     creature_name_to_id["Little Soulsquasher"]: lambda card: card.evolved,
     creature_name_to_id["White General"]: lambda card: card.trait.name == "OFFICER"}
 another_target_func = lambda creature, itself: id(creature) != id(itself)
 evo_target_regulation = {
     creature_name_to_id["Wind Reader Zell"]: another_target_func}
 creature_ability_condition = {
-    creature_name_to_id["Maisy, Red Riding Hood"]:1,
-    creature_name_to_id["Wind Reader Zell"]:2
+    creature_name_to_id["Maisy, Red Riding Hood"]: 1,
+    creature_name_to_id["Wind Reader Zell"]: 2
 }
 player_attack_regulation = \
     {16: lambda player: len(player.field.get_creature_location()[1 - player.player_num]) < 2}
@@ -207,27 +213,27 @@ creature_trigger_ability_dict = {60: 1, 63: 4, 64: 5, 79: 6,
                                  creature_name_to_id["Ephemera, Angelic Slacker"]: 8,
                                  creature_name_to_id["Prime Dragon Keeper"]: 10,
                                  creature_name_to_id["Shadow Reaper"]: 11,
-                                 creature_name_to_id["Okami"]:12,
-                                 creature_name_to_id["Toy Soldier"]:13,
-                                 creature_name_to_id["Dragonrider"]:-1}
+                                 creature_name_to_id["Okami"]: 12,
+                                 creature_name_to_id["Toy Soldier"]: 13,
+                                 creature_name_to_id["Dragonrider"]: -1}
 special_evo_stats_id = {26: 1, 27: 3, 29: 1, 41: 1, 52: 1, 66: 1, 77: 1,
-    creature_name_to_id["Puppeteer"]:2}
+                        creature_name_to_id["Puppeteer"]: 2}
 evo_stats = {1: [1, 1], 2: [0, 0], 3: [3, 1]}
 creature_earth_rite_list = [67, 68, 71, 90]
 # 1:相手のフォロワー,2:自分のフォロワー,3:相手のフォロワーと相手リーダー,
 # 4:自分と相手のフォロワー,5:自分と相手の全てのカード,6:自分の場のカード,7:自分の場のカードと相手の場のフォロワー,8:自分の他の手札
 # 9:相手の場の全てのカード 10:自分のフォロワーと自分リーダー
 creature_enhance_list = {3: [6], 10: [6], 87: [10], 98: [9],
-                         creature_name_to_id["Tender Rabbit Healer"]:[7]}
+                         creature_name_to_id["Tender Rabbit Healer"]: [7]}
 creature_enhance_target_list = {}
 creature_enhance_target_regulation_list = {}
 
-creature_accelerate_list = {#90: [1],
-                            creature_name_to_id["Orichalcum Golem"]:[1],
-                            creature_name_to_id["Clarke, Knowledge Seeker"]:[2]}
-creature_accelerate_card_id_list = {#90: {1: -2},
-                                    creature_name_to_id["Orichalcum Golem"]: {1: -2},
-                                    creature_name_to_id["Clarke, Knowledge Seeker"]: {2:-3}}
+creature_accelerate_list = {  # 90: [1],
+    creature_name_to_id["Orichalcum Golem"]: [1],
+    creature_name_to_id["Clarke, Knowledge Seeker"]: [2]}
+creature_accelerate_card_id_list = {  # 90: {1: -2},
+    creature_name_to_id["Orichalcum Golem"]: {1: -2},
+    creature_name_to_id["Clarke, Knowledge Seeker"]: {2: -3}}
 creature_accelerate_target_list = {}
 creature_accelerate_target_regulation_list = {}
 # spell_list=tsv_to_card_list("ALL_Spell_Card_List.tsv")
@@ -266,19 +272,19 @@ spell_target_regulation = {
     spell_name_to_id["Blackened Scripture"]: lambda x: x.get_current_toughness() <= 3,
     spell_name_to_id["Seraphic Blade"]: lambda x: x.origin_cost <= 2}
 spell_cost_change_ability_list = {
-    #20: 1,
-    spell_name_to_id["Diabolic Drain"]:1,
-    #21: 1
-    spell_name_to_id["Revelation"]:1}
+    # 20: 1,
+    spell_name_to_id["Diabolic Drain"]: 1,
+    # 21: 1
+    spell_name_to_id["Revelation"]: 1}
 spell_earth_rite_list = []
-spell_enhance_list = {#33: [6],35: [10],
-                      spell_name_to_id["Breath of the Salamander"]: [6],
-                      spell_name_to_id["Lightning Blast"]: [10],
-                      spell_name_to_id["Seraphic Blade"]: [6],
-                      spell_name_to_id["Golem Assault"]: [6]}
+spell_enhance_list = {  # 33: [6],35: [10],
+    spell_name_to_id["Breath of the Salamander"]: [6],
+    spell_name_to_id["Lightning Blast"]: [10],
+    spell_name_to_id["Seraphic Blade"]: [6],
+    spell_name_to_id["Golem Assault"]: [6]}
 spell_enhance_target_list = {
-                    spell_name_to_id["Breath of the Salamander"]: 1,
-                    spell_name_to_id["Seraphic Blade"]: 9}
+    spell_name_to_id["Breath of the Salamander"]: 1,
+    spell_name_to_id["Seraphic Blade"]: 9}
 spell_enhance_target_regulation_list = {}
 
 spell_accelerate_list = {}
@@ -294,15 +300,38 @@ Earth_sigil_list = [-1, 15, 16]
 amulet_start_of_turn_ability = {
     amulet_name_to_id["Well of Destiny"]: 1,
     amulet_name_to_id["Polyphonic Roar"]: 2}
-amulet_end_of_turn_ability = {3: 3, 10: 10, 12: 11}
-amulet_fanfare_ability = {9: 9, 13: 13, 14: 15, 15: 16, 16: 17,
-                          amulet_name_to_id["Staircase to Paradise"]: 18}
-amulet_lastword_ability = {4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 12: 12, 13: 14, 14: 14, 17: 13,
-                           amulet_name_to_id["Staircase to Paradise"]: 19,
-                           amulet_name_to_id["Summon Pegasus"]:20,
-                           amulet_name_to_id["Dual Flames"]: 21
-                           }
-amulet_has_target = {14: 1}
+amulet_end_of_turn_ability = {
+    amulet_name_to_id["Path to Purgatory"]: 3,
+    amulet_name_to_id["Bloodfed Flowerbed"]: 10,
+    amulet_name_to_id["Whitefang Temple"]: 11,
+    amulet_name_to_id["Harvest Festival"]: 23}
+amulet_fanfare_ability = {
+    amulet_name_to_id["Forgotten Sanctuary"]: 9,
+    amulet_name_to_id["Moriae Encomium"]: 13,
+    amulet_name_to_id["Tribunal of Good and Evil"]: 15,
+    amulet_name_to_id["Scrap Iron Smelter"]: 16,
+    amulet_name_to_id["Silent Laboratory"]: 17,
+    amulet_name_to_id["Staircase to Paradise"]: 18,
+    amulet_name_to_id["Golden Bell"]: 22}
+amulet_lastword_ability = {
+   amulet_name_to_id["Sacred Plea"]: 4,
+   amulet_name_to_id["Heretical Inquiry"]: 5,
+   amulet_name_to_id["Pinion Prayer"]: 6,
+   amulet_name_to_id["Beastly Vow"]: 7,
+   amulet_name_to_id["Divine Birdsong"]: 8,
+   amulet_name_to_id["Forgotten Sanctuary"]: 9,
+   amulet_name_to_id["Whitefang Temple"]: 12,
+   amulet_name_to_id["Moriae Encomium"]: 14,
+   amulet_name_to_id["Tribunal of Good and Evil"]: 14,
+   amulet_name_to_id["Witch's Cauldron"]: 13,
+   amulet_name_to_id["Staircase to Paradise"]: 19,
+   amulet_name_to_id["Summon Pegasus"]: 20,
+   amulet_name_to_id["Dual Flames"]: 21,
+   amulet_name_to_id["Staircase to Paradise"]: 4
+   }
+amulet_has_target = {
+    amulet_name_to_id["Tribunal of Good and Evil"]: 1
+}
 amulet_trigger_ability_dict = {11: 2, 12: 3,
                                amulet_name_to_id["Staircase to Paradise"]: 9}
 # amulet_countdown_list={4:3,5:1,6:2,7:2,8:2,9:3}
@@ -368,6 +397,7 @@ class Card:
 
 
 class Creature(Card):
+    #@jit
     def __init__(self, card_id):
         self.time_stamp = 0
         self.card_id = card_id  # カードid
@@ -377,13 +407,6 @@ class Creature(Card):
         self.origin_cost = creature_list[self.card_id][0]  # カードの元々のコスト
         self.power = creature_list[self.card_id][1]  # カードの攻撃力
         self.toughness = creature_list[self.card_id][2]  # カードの体力
-        """
-        itself_df=creature_df[creature_df["Card_id"]==card_id]
-        self.cost=int(itself_df["Cost"])#カードのコスト
-        self.origin_cost=int(itself_df["Cost"])#カードの元々のコスト
-        self.power=int(itself_df["Power"])#カードの攻撃力
-        self.toughness=int(itself_df["Toughness"])#カードの体力
-        """
         self.buff = [0, 0]  # スタッツ上昇量
         self.until_turn_end_buff = [0, 0]  # ターン終了時までのスタッツ上昇量
         self.target_regulation = None
@@ -395,18 +418,12 @@ class Creature(Card):
         self.evo_stat = [2, 2]
         if card_id in special_evo_stats_id:
             self.evo_stat = evo_stats[special_evo_stats_id[card_id]]
-
-        # self.ability=copy.copy(creature_list[self.card_id][3])#カードのキーワード能力idリスト
         self.ability = creature_list[self.card_id][3][:]
         self.have_active_ability = card_id in creature_active_ability_card_id_list
         if self.have_active_ability:
             func_id = creature_active_ability_card_id_list[card_id]
             self.active_ability_check_func = active_ability_check_func_list[func_id]
             self.active_ability = creature_active_ability_list[card_id]
-        # print(itself_df)
-        """
-        self.ability=[KeywordAbility(int(ability)).value for ability in itself_df["Ability"][0]]
-        """
         self.fanfare_ability = None
         if card_id in creature_fanfare_ability:
             self.fanfare_ability = creature_ability_dict[creature_fanfare_ability[card_id]]
@@ -431,7 +448,6 @@ class Creature(Card):
 
         self.turn_start_ability = []
         if card_id in creature_start_of_turn_ability:
-            # mylogger.info("ability_id;{}".format(creature_start_of_turn_ability[card_id]))
             self.turn_start_ability.append(creature_ability_dict[creature_start_of_turn_ability[card_id]])
 
         self.turn_end_ability = []
@@ -443,12 +459,10 @@ class Creature(Card):
             self.trigger_ability_stack = []
 
         self.name = creature_list[self.card_id][-1]
-        # self.name=str(itself_df["Card_name"][0])
         self.is_in_field = False
         self.is_in_graveyard = False
         self.damage = 0
         self.is_tapped = True
-        # self.attacked_flg=False
         self.can_attack_num = 1
         self.current_attack_num = 0
         self.evolved = False
@@ -497,7 +511,7 @@ class Creature(Card):
                     self.accelerate_target_regulation = creature_accelerate_target_regulation_list[card_id]
 
         return
-
+    #@jit
     def get_copy(self):
         creature = Creature(self.card_id)
         creature.cost = int(self.cost)  # カードのコスト
@@ -555,9 +569,9 @@ class Creature(Card):
         else:
             return 0
 
-    def restore_toughness(self,amount):
+    def restore_toughness(self, amount):
         tmp = int(self.damage)
-        self.damage = max(0,self.damage-amount)
+        self.damage = max(0, self.damage - amount)
         return tmp - self.damage
 
     def get_current_toughness(self):
@@ -594,7 +608,7 @@ class Creature(Card):
         if KeywordAbility.CANT_BE_ATTACKED.value in self.ability: return False
         if KeywordAbility.AMBUSH.value in self.ability: return False
         return True
-        #return not any(i in self.ability for i in [KeywordAbility.CANT_BE_ATTACKED.value, KeywordAbility.AMBUSH.value])
+        # return not any(i in self.ability for i in [KeywordAbility.CANT_BE_ATTACKED.value, KeywordAbility.AMBUSH.value])
 
     def get_active_ability(self):
         assert self.have_active_ability == True, "invalid acitve ability error"
@@ -608,7 +622,7 @@ class Creature(Card):
             if ability_id in self.ability:
                 self.ability.remove(ability_id)
 
-    def eq(self,other):
+    def eq(self, other):
         """
         :param other:
         :return:
@@ -637,7 +651,6 @@ class Creature(Card):
             return False
 
         return True
-
 
     def __str__(self):
         text = ""
@@ -668,7 +681,7 @@ class Creature(Card):
             if len(self.lastword_ability) > 0:
                 RED = '\033[31m'
                 text += RED + " ■"
-            if len(self.trigger_ability) > 0 or len(self.in_battle_ability)>0:
+            if len(self.trigger_ability) > 0 or len(self.in_battle_ability) > 0:
                 GREEN = '\033[32m'
                 text += GREEN + " ◆"
         text += "\033[0m"
@@ -743,7 +756,7 @@ class Spell(Card):
         mylogger.info("card_name:{}".format(self.name))
         assert False
 
-    def eq(self,other):
+    def eq(self, other):
         """
         :param other:
         :return:
@@ -866,7 +879,7 @@ class Amulet(Card):
         amulet.is_in_field = self.is_in_field
         amulet.current_count = int(self.current_count)
         if self.card_class.name == "RUNE":
-            #self.spell_boost = None
+            # self.spell_boost = None
             if amulet_list[self.card_id][2][1][0]:
                 amulet.spell_boost = int(self.spell_boost)
                 amulet.cost_down = self.cost_down
@@ -891,7 +904,7 @@ class Amulet(Card):
             self.is_in_field = False
             self.current_count = self.ini_count
 
-    def eq(self,other):
+    def eq(self, other):
         """
         :param other:
         :return:
@@ -900,7 +913,7 @@ class Amulet(Card):
             return False
         if self.name != other.name:
             return False
-        if self.countdown!=other.countdown:
+        if self.countdown != other.countdown:
             return False
         if self.countdown:
             if self.current_count != other.current_count:
@@ -939,7 +952,7 @@ class Deck:
         self.mean_cost = 0
         self.deck_type = None
         self.leader_class = None
-
+    #@jit(nopython=True)
     def append(self, card, num=1):
         self.remain_num += num
         for i in range(num):
@@ -970,21 +983,21 @@ class Deck:
         mylogger.info("Deck_Type:{}".format(self.deck_type.name))
         # 1はAggro,2はMid,3はControl,4はCombo
 
-    def set_leader_class(self,leader_class):
-        assert leader_class in LeaderClass.__members__,"invalid class name!"
+    def set_leader_class(self, leader_class):
+        assert leader_class in LeaderClass.__members__, "invalid class name!"
         self.leader_class = LeaderClass[leader_class]
-
 
     def get_name_set(self):
         name_list = {}
         for card in self.deck:
             if card.name not in name_list:
-                name_list[card.name] = {"used_num":0,"sum_of_turn_when_used":0,"win_num":0,"drawn_num":0,"win_num_when_drawn":0}
+                name_list[card.name] = {"used_num": 0, "sum_of_turn_when_used": 0, "win_num": 0, "drawn_num": 0,
+                                        "win_num_when_drawn": 0}
                 if card.have_accelerate:
                     for accelerate_cost in card.accelerate_cost:
-                        name_list["{}(Accelerate {})".format(card.name,accelerate_cost)] =\
-                        {"used_num": 0, "sum_of_turn_when_used": 0, "win_num": 0, "drawn_num": 0,
-                         "win_num_when_drawn": 0}
+                        name_list["{}(Accelerate {})".format(card.name, accelerate_cost)] = \
+                            {"used_num": 0, "sum_of_turn_when_used": 0, "win_num": 0, "drawn_num": 0,
+                             "win_num_when_drawn": 0}
 
         return name_list
 
@@ -1001,10 +1014,8 @@ class Deck:
         remain_card_set = self.get_remain_card_set()
         print("remain_cards_in_deck")
         for key in sorted(list(remain_card_set.keys())):
-            print("{}:{}".format(key,remain_card_set[key]))
+            print("{}:{}".format(key, remain_card_set[key]))
         print("")
-
-
 
     def get_cost_histgram(self):
         histgram_dict = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0}
