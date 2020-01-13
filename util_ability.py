@@ -89,6 +89,13 @@ def get_damage_to_player(player, virtual, num=0):
         mylogger.info("Player {} get {} damage".format(player.player_num + 1, damage))
 
 
+def get_damage_to_enemy(field, opponent, virtual, target, num=0):
+    if target == -1:
+        get_damage_to_player(opponent,virtual,num=num)
+    else:
+        get_damage_to_creature(field,opponent,virtual,target,num=num)
+
+
 def restore_player_life(player, virtual, num=0):
     player.restore_player_life(num=num, virtual=virtual)
 

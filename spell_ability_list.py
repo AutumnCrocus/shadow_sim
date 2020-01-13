@@ -461,6 +461,16 @@ def spell_ability_053(field, player, opponent, virtual, target, itself):
     draw_cards(player,virtual,num=hand_len)
 
 
+def spell_ability_054(field, player, opponent, virtual, target, itself):
+    """
+    Deal 3 damage to an enemy follower.
+    Enhance (7): Then summon 3 Zombies.
+    """
+    get_damage_to_creature(field,opponent,virtual,target,num=3)
+    if itself.active_enhance_code[0]:
+        summon_creature(field,player,virtual,name="Zombie",num=3)
+
+
 def token_spell_ability_001(field, player, opponent, virtual, target, itself):
     if target == -1:
         get_damage_to_player(player, virtual, num=3)
@@ -506,6 +516,23 @@ def token_spell_ability_004(field, player, opponent, virtual, target, itself):
     summon_creature(field, player, virtual, name="Guardian Golem")
 
 
+def token_spell_ability_005(field, player, opponent, virtual, target, itself):
+    """
+    Deal 2 damage to an enemy.
+    """
+    get_damage_to_enemy(field, opponent, virtual, target, num=2)
+
+
+def token_spell_ability_006(field, player, opponent, virtual, target, itself):
+    """
+    Give +2/+0 to an allied follower.
+    """
+    target_follower = field.card_location[player.player_num][target]
+    if not virtual:
+        mylogger.info("Player{}'s {} get  +2/0".format(player.player_num+1,target_follower.name))
+    buff_creature(target_follower,params=[2,0])
+
+
 spell_ability_dict = {1: spell_ability_001, 2: spell_ability_002, 3: spell_ability_003, 4: spell_ability_004,
                       5: spell_ability_005,
                       6: spell_ability_006, 7: spell_ability_007, 8: spell_ability_008, 9: spell_ability_009,
@@ -524,6 +551,6 @@ spell_ability_dict = {1: spell_ability_001, 2: spell_ability_002, 3: spell_abili
                       40: spell_ability_040, 41: spell_ability_041, 42: spell_ability_042, 43: spell_ability_043,
                       44: spell_ability_044, 45: spell_ability_045, 46: spell_ability_046, 47: spell_ability_047,
                       48: spell_ability_048, 49: spell_ability_049, 50: spell_ability_050, 51: spell_ability_051,
-                      52: spell_ability_052, 53: spell_ability_053,
+                      52: spell_ability_052, 53: spell_ability_053, 54: spell_ability_054,
                       -1: token_spell_ability_001, -2: token_spell_ability_002, -3: token_spell_ability_003,
-                      -4: token_spell_ability_004}
+                      -4: token_spell_ability_004, -5: token_spell_ability_005 ,-6: token_spell_ability_006}

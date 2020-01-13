@@ -258,26 +258,25 @@ class Player:
                 assert False, "infinite loop!\nhistory:{}".format(action_histroy)
             re_check = False
             sim_hand = None
-            if self.policy.policy_type == 3 and self.policy.current_node is not None:
-                sim_field = self.policy.current_node.field
-                real_hand = self.hand
-                sim_hand = sim_field.players[self.player_num].hand
-                if len(real_hand) != len(sim_hand):
-                    msg = "diff hand len error({}!={})".format(len(real_hand),len(sim_hand))
-                    re_check = True
-                else:
+            if self.policy.policy_type == 3:
+                if self.policy.current_node is not None:
+                    sim_field = self.policy.current_node.field
+                    sim_hand = sim_field.players[self.player_num].hand
                     if not self.compare_hand(sim_hand):
                         msg = "diff hand card error"
                         re_check = True
-                    if re_check is False and not field.eq(sim_field):
+                    elif not field.eq(sim_field):
                         msg = "diff field error"
+                        #if not field.secret:
+                        #    field.show_field()
+                        #    sim_field.show_field()
                         re_check = True
 
-                if re_check:
-                    if not virtual:
-                        mylogger.info("{}".format(msg))
-                    self.policy.current_node = None
-                    continue
+                    if re_check:
+                        if not virtual:
+                            mylogger.info("{}".format(msg))
+                        self.policy.current_node = None
+                        continue
             (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
             action_histroy.appendleft((action_num,card_id,target_id))
             if action_num == Action_Code.ERROR.value:

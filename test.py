@@ -208,13 +208,13 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
                       -3: "Rune_Basic",
                       -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
                       100: "Test",
-                      -9: "Spell-Rune", -10: "Test-Haven",-11:"PtP-Forest"}
+                      -9: "Spell-Rune", -10: "Test-Haven",-11:"PtP-Forest",-12:"Mid-Shadow"}
 
     key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
                       3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
                       6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
                       9: ["SpellBoost-Rune.tsv", "RUNE"],10: ["Dimension_Shift_Rune.tsv", "RUNE"],
-                      -11: ["PtP_Forest.tsv", "FOREST"]}
+                      -11: ["PtP_Forest.tsv", "FOREST"],-12: ["Mid_Shadow.tsv", "SHADOW"]}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
@@ -817,13 +817,21 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
 
     deck_id_2_name = {}
     if not basic:
-        deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth(Aggro)", 2: "Mid-Sword", 3: "Mid-Shadow",
-                          4: "Dragon_PDK(Mid)", 5: "Elana-Haven(Control)",
-                          6: "Control-Blood", 7: "Ramp-Dragon", 8: "Combo-Forest", 9: "Spllboost-Rune(Combo)"}
-        key_2_tsv_name = {0:["Sword_Aggro.tsv","SWORD"],1:["Rune_Earth.tsv","RUNE"],2:["Sword.tsv","SWORD"],
-                          3:["New-Shadow.tsv","SHADOW"],4:["Dragon_PDK.tsv","DRAGON"],5:["Test-Haven.tsv","HAVEN"],
-                          6:["Blood.tsv","BLOOD"],7:["Dragon.tsv","DRAGON"],8:["Forest.tsv","FOREST"],
-                          9:["SpellBoost-Rune.tsv","RUNE"]}
+        # -1: "Forest_Basic",
+        #                  -2: "Sword_Basic",
+        #                  -3: "Rune_Basic",
+        #                  -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic",
+        #                  -8: "Portal_Basic",-9: "Spell-Rune",100: "Test",
+        deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
+                          6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune", 10: "DS_Rune",
+
+                           11: "PtP-Forest", 12: "Mid-Shadow"}
+        key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
+                          3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"],
+                          5: ["Test-Haven.tsv", "HAVEN"],
+                          6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
+                          9: ["SpellBoost-Rune.tsv", "RUNE"], 10: ["Dimension_Shift_Rune.tsv", "RUNE"],
+                          11: ["PtP_Forest.tsv", "FOREST"], 12: ["Mid_Shadow.tsv", "SHADOW"]}
 
         if deck_lists is None:
             deck_lists = list(deck_id_2_name.keys())
@@ -832,10 +840,11 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
         mylogger.info("deck_lists:{}".format(deck_lists))
         D = [Deck() for i in range(len(deck_lists))]
         deck_index = 0
-        for i in list(deck_id_2_name.keys()):
+        sorted_keys = sorted(list(deck_id_2_name.keys()))
+        for i in sorted_keys:
             if i not in deck_lists:
                 continue
-            mylogger.info("i:{}".format(key_2_tsv_name[i]))
+            mylogger.info("{}(deck_id:{}):{}".format(deck_index,i,key_2_tsv_name[i]))
             D[deck_index] = tsv_to_deck(key_2_tsv_name[i][0])
             D[deck_index].set_leader_class(key_2_tsv_name[i][1])
             deck_index += 1
@@ -930,6 +939,7 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
         if same_flg:
             l = j
         for k in range(l, len(D)):
+            mylogger.info("{} vs {}".format(deck_id_2_name[deck_lists[j]],deck_id_2_name[deck_lists[k]]))
             Turn_Players = [Player1, Player2]
             assert Player1 != Player2
             win_lose = [win, lose]
@@ -941,7 +951,7 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
                 Turn_Players[(i + 1) % 2].player_num = 1
                 assert Turn_Players[0].player_num != Turn_Players[1].player_num, "same error {} name:{} {}" \
                     .format(Turn_Players[0].player_num, Turn_Players[0].name, Turn_Players[1].name)
-                (win_lose[i % 2], win_lose[(i + 1) % 2], lib_num, end_turn, first, _) = game_play(Turn_Players[i % 2],
+                (win_lose[i % 2], win_lose[(i + 1) % 2], lib_num, end_turn, first, _) = demo_game_play(Turn_Players[i % 2],
                                                                                                   Turn_Players[
                                                                                                       (i + 1) % 2],
                                                                                                   D[j],
@@ -952,6 +962,8 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
                                                                                                   virtual_flg=True)
                 first_num += first
             Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
+            mylogger.info("win_rate:{:%} first_win_rate:{:%}".format(Results[(j,k)][0],Results[(j,k)][1]))
+
         mylogger.info("complete:{}/{}".format(j + 1, len(D)))
     # for key in list(Results.keys()):
     #    mylogger.info("({}):rate:{} first:{}".format(key,Results[key][0],Results[key][1]))
@@ -966,7 +978,7 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
         writer.writerow(row)
         if same_flg:
             for i in range(len(D)):
-                row = [deck_id_2_name[i]]
+                row = [deck_id_2_name[deck_lists[i]]]
                 for j in range(0, i + 1):
                     if (j, i) not in Results:
                         mylogger.info("(i,j):{}".format((j, i)))
@@ -977,7 +989,7 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
                 writer.writerow(row)
         else:
             for i in range(len(D)):
-                row = [deck_id_2_name[i]]
+                row = [deck_id_2_name[deck_lists[i]]]
                 for j in range(len(D)):
                     row.append(Results[(i, j)][0])
                 writer.writerow(row)
@@ -1039,9 +1051,18 @@ def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_re
 
 
 def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, result_name="Policy_table_result.tsv"):
-    deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Test-Haven",
-                      6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune", -1: "Forest_basic", -2: "Sword_basic",
-                      -3: "Rune_basic"}
+    deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
+                      6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune", 10: "DS_Rune", -1: "Forest_Basic", -2: "Sword_Basic",
+                      -3: "Rune_Basic",
+                      -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
+                      100: "Test",
+                      -9: "Spell-Rune", -10: "Test-Haven",-11:"PtP-Forest",-12:"Mid-Shadow"}
+    key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
+                      3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
+                      6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
+                      9: ["SpellBoost-Rune.tsv", "RUNE"], 10: ["Dimension_Shift_Rune.tsv", "RUNE"],
+                      -11: ["PtP_Forest.tsv", "FOREST"], -12: ["Mid_Shadow.tsv", "SHADOW"]}
+
     mylogger.info("{} vs {}".format(deck_id_2_name[deck_type[0]], deck_id_2_name[deck_type[1]]))
     policy_id_2_name = {}
     for i, target_player in enumerate(initial_players):
@@ -1051,10 +1072,15 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
     win = 0
     lose = 0
     lib_num = 0
-    assert initial_players != None, "Non-players!"
-    assert deck_type != None, "Non-Deck_type!"
+    assert initial_players is not None, "Non-players!"
+    assert deck_type is not None, "Non-Deck_type!"
     players = copy.deepcopy(initial_players)
     D = [Deck() for i in range(2)]
+    for i, d in enumerate(D):
+        if deck_type[i] in key_2_tsv_name:
+            D[i] = tsv_to_deck(key_2_tsv_name[deck_type[i]][0])
+            D[i].set_leader_class(key_2_tsv_name[deck_type[i]][1])
+    """
     for i, d in enumerate(D):
         if deck_type[i] == 0:
             D[i] = tsv_to_deck("Sword_Aggro.tsv")
@@ -1099,7 +1125,8 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
             D[i] = tsv_to_deck("Rune.tsv")
             D[i].set_leader_class("RUNE")
             # Combo
-        elif deck_type[i] == -1:
+        
+        if deck_type[i] == -1:
             D[i] = tsv_to_deck("Forest_Basic.tsv")
             D[i].set_leader_class("FOREST")
         elif deck_type[i] == -2:
@@ -1108,14 +1135,17 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
         elif deck_type[i] == -3:
             D[i] = tsv_to_deck("Rune_Basic.tsv")
             D[i].set_leader_class("RUNE")
+    """
 
     Results = {}
     for policy1_id, player1 in enumerate(players):
         P1 = copy.deepcopy(player1)
+        P1.name = "Alice"
         last_id = len(players)
         for policy2_id in range(0, last_id):
             player2 = players[policy2_id]
             P2 = copy.deepcopy(player2)
+            P2.name = "Bob"
             Turn_Players = [P1, P2]
             win_lose = [win, lose]
             first_num = 0
@@ -1437,6 +1467,7 @@ Players.append(Player(9, True, policy=Flexible_Simulation_A_MCTSPolicy(sim_num=1
 Players.append(Player(9, True, policy=Flexible_Simulation_A_MCTSPolicy(sim_num=5), mulligan=Min_cost_mulligan_policy()))  # 80
 Players.append(Player(9, True, policy=Flexible_Simulation_MO_ISMCTSPolicy(sim_num=1), mulligan=Min_cost_mulligan_policy()))  # 81
 Players.append(Player(9, True, policy=Flexible_Simulation_MO_ISMCTSPolicy(sim_num=5), mulligan=Min_cost_mulligan_policy()))  # 82
+Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(iteration=100), mulligan=Min_cost_mulligan_policy()))  #83
 # assert False
 n = 100
 a = 0

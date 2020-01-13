@@ -161,10 +161,13 @@ def creature_ability_022(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_023(field, player, opponent, virtual, target, itself):
+    get_damage_to_enemy(field, opponent, virtual, target, num=5)
+    """
     if target == -1:
         get_damage_to_player(opponent, virtual, num=5)
     elif field.get_can_be_targeted(player_num=player.player_num) != []:
         get_damage_to_creature(field, opponent, virtual, target, num=5)
+    """
     field.restore_player_life(player=player, num=5, virtual=virtual)
 
 
@@ -341,18 +344,24 @@ def creature_ability_046(field, player, opponent, virtual, target, itself):
 
 def creature_ability_047(field, player, opponent, virtual, target, itself):
     if earth_rite(field, player, virtual):
+        get_damage_to_enemy(field, opponent, virtual, target, num=3)
+        """
         if target == -1:
             get_damage_to_player(opponent, virtual, num=3)
         elif target in field.get_can_be_targeted(player_num=player.player_num):
             get_damage_to_creature(field, opponent, virtual, target, num=3)
+        """
 
 
 def creature_ability_048(field, player, opponent, virtual, target, itself):
     if not earth_rite(field, player, virtual):
+        get_damage_to_enemy(field, opponent, virtual, target, num=3)
+        """
         if target == -1:
             get_damage_to_player(opponent, virtual, num=3)
         elif field.get_can_be_targeted(player_num=player.player_num) != []:
             get_damage_to_creature(field, opponent, virtual, target, num=3)
+        """
     else:
         get_damage_to_player(opponent, virtual, num=3)
         card_id = 0
@@ -460,10 +469,13 @@ def creature_ability_060(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_061(field, player, opponent, virtual, target, itself):
+    get_damage_to_enemy(field, opponent, virtual, target, num=3)
+    """
     if target == -1:
         get_damage_to_player(opponent, virtual, num=3)
     elif field.get_can_be_targeted(player_num=player.player_num != []):
         get_damage_to_creature(field, opponent, virtual, target, num=3)
+    """
 
 
 def creature_ability_062(field, player, opponent, virtual, target, itself):
@@ -984,11 +996,64 @@ def creature_ability_110(field, player, opponent, virtual, target, itself):
                 return
     get_damage_to_player(opponent,virtual,num=amount)
 
+
 def creature_ability_111(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Restore X defense to your leader. X equals the number of other cards in your hand.
     """
     restore_player_life(player,virtual,num=len(player.hand))
+
+
+def creature_ability_112(field, player, opponent, virtual, target, itself):
+    """
+    Can only attack the enemy leader and followers with Ward.
+    Last Words: Summon a Lich.
+    """
+    summon_creature(field,player,virtual,name="Lich")
+
+
+def creature_ability_113(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Deal 2 damage to a random enemy follower. Then give +2/+0 to another random allied follower.
+    """
+    get_damage_to_random_creature(field,opponent,virtual,num=2)
+    target_ids = field.get_creature_location()[player.player_num]
+    target_ids.pop(-1)
+    if target_ids == []:
+        return
+    target_id = random.choice(target_ids)
+    follower = field.card_location[player.player_num][target_id]
+    buff_creature(follower,params=[2,0])
+
+
+def creature_ability_114(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Summon a Ghost if an evolved allied follower is in play.
+    """
+    if any(follower.card_category == "Creature" and
+           follower.evolved for follower in field.card_location[player.player_num]):
+        summon_creature(field,player,virtual,name="Ghost")
+
+
+def creature_ability_115(field, player, opponent, virtual, target, itself):
+    """
+    Deal 1 damage to an enemy.
+    """
+    get_damage_to_enemy(field,opponent,virtual,target,num=1)
+    """
+    if target == -1:
+        get_damage_to_player(opponent,virtual,num=1)
+    else:
+        get_damage_to_creature(field,opponent,virtual,target,num=1)
+    """
+
+
+def creature_ability_116(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Put Coco and Mimi into your hand.
+    """
+    put_card_in_hand(field,player,virtual,name="Mimi",card_category="Spell")
+    put_card_in_hand(field, player, virtual, name="Coco", card_category="Spell")
 
 
 def token_creature_ability_001(field, player, opponent, virtual, target, itself):
@@ -1056,5 +1121,7 @@ creature_ability_dict = {
     103: creature_ability_103, 104: creature_ability_104, 105: creature_ability_105,
     106: creature_ability_106, 107: creature_ability_107, 108: creature_ability_108,
     109: creature_ability_109, 110: creature_ability_110, 111: creature_ability_111,
+    112: creature_ability_112, 113: creature_ability_113, 114: creature_ability_114,
+    115: creature_ability_115, 116: creature_ability_116,
 
     -1: token_creature_ability_001, -2: token_creature_ability_002}

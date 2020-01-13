@@ -183,7 +183,13 @@ creature_end_of_turn_ability = tsv_2_ability_dict("All_end_of_turn_list.tsv", na
 creature_start_of_turn_ability = tsv_2_ability_dict("All_start_of_turn_list.tsv", name_to_id=creature_name_to_id)
 creature_has_target = tsv_2_ability_dict("All_fanfare_target_list.tsv", name_to_id=creature_name_to_id)
 creature_evo_effect = tsv_2_ability_dict("All_evo_effect_list.tsv", name_to_id=creature_name_to_id)
-creature_has_evo_effect_target = {29: 1, 41: 1, 83: 2, 96: 1}
+creature_has_evo_effect_target = {
+    #29: 1,41: 1, 83: 2, 96: 1,
+    creature_name_to_id["Dragon Warrior"]: Target_Type.ENEMY_FOLLOWER.value,
+    creature_name_to_id["Wardrobe Raider"]: Target_Type.ENEMY_FOLLOWER.value,
+    creature_name_to_id["Wind Reader Zell"]:Target_Type.ALLIED_FOLLOWER.value,
+    creature_name_to_id["Maisy, Red Riding Hood"]:Target_Type.ENEMY_FOLLOWER.value,
+    creature_name_to_id["Lyrial, Celestial Archer"]:Target_Type.ENEMY.value}
 creature_target_regulation = {
     creature_name_to_id["Tsubaki"]: lambda x: x.power >= 5,
     creature_name_to_id["Princess Vanguard"]: lambda x: x.origin_cost == 1,
@@ -206,8 +212,10 @@ creature_in_battle_ability_list = \
      creature_name_to_id["Dark Elf Faure"]: 3,
      creature_name_to_id["Disaster Dragon"]: 4}
 creature_cost_change_ability_list = {97: 2}
-can_only_attack_check = lambda field, player: field.check_word()[1 - player.player_num] == True
-creature_can_only_attack_list = {49: can_only_attack_check}
+can_only_attack_check = lambda field, player: field.check_ward()[1 - player.player_num]
+creature_can_only_attack_list = {#49: can_only_attack_check,
+                                 creature_name_to_id["Lurching Corpse"]:can_only_attack_check,
+                                 creature_name_to_id["Attendant of Night"]:can_only_attack_check}
 creature_trigger_ability_dict = {60: 1, 63: 4, 64: 5, 79: 6,
                                  creature_name_to_id["Bladed Hedgehog"]: 7,
                                  creature_name_to_id["Ephemera, Angelic Slacker"]: 8,
@@ -277,14 +285,16 @@ spell_cost_change_ability_list = {
     # 21: 1
     spell_name_to_id["Revelation"]: 1}
 spell_earth_rite_list = []
-spell_enhance_list = {  # 33: [6],35: [10],
+spell_enhance_list = {
     spell_name_to_id["Breath of the Salamander"]: [6],
     spell_name_to_id["Lightning Blast"]: [10],
     spell_name_to_id["Seraphic Blade"]: [6],
-    spell_name_to_id["Golem Assault"]: [6]}
+    spell_name_to_id["Golem Assault"]: [6],
+    spell_name_to_id["Zombie Party"]: [7]}
 spell_enhance_target_list = {
     spell_name_to_id["Breath of the Salamander"]: 1,
-    spell_name_to_id["Seraphic Blade"]: 9}
+    spell_name_to_id["Seraphic Blade"]: 9,
+    spell_name_to_id["Zombie Party"]: 1}
 spell_enhance_target_regulation_list = {}
 
 spell_accelerate_list = {}

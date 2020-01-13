@@ -702,7 +702,7 @@ class Field:
             mylogger.info("{} evolve".format(creature.name))
         creature.evolve(self, None, player_num=self.turn_player_num, virtual=virtual, auto=True)
 
-    def check_word(self):
+    def check_ward(self):
         location = self.get_creature_location()
         ans = [False, False]
         for i, side in enumerate(location):
@@ -1227,6 +1227,7 @@ class Field:
                     win += 1
                 lib_num += 1
                 return win, lose, lib_num, turn, True
+
             self.time = time.time()
             while time.time() - self.time < 90:
                 end_flg = self.players[turn_player_num].decide(self.players[turn_player_num],
