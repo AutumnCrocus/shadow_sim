@@ -168,6 +168,8 @@ class Field:
             ability = tmp_ability_pair[0]
             argument = tmp_ability_pair[1]
             ability(argument[0], argument[1], argument[2], argument[3], argument[4], argument[5], state_log=argument[6])
+        if not self.secret:
+            mylogger.info("next_state_log:{}".format(self.state_log))
 
     def ability_resolution(self, virtual=False, player_num=0):
         chain_len = 0
@@ -183,8 +185,10 @@ class Field:
                     for ability in self.player_ability[i]:
                         mylogger.info("ability:{}".format(ability))
         """
+        self.check_death(player_num, virtual=virtual)
         while len(self.stack) > 0 or len(self.state_log) > 0:
-            self.check_death(player_num, virtual=virtual)
+            #if not self.secret:
+            #    mylogger.info("log:{}".format(self.state_log))
             self.solve_lastword_ability(virtual=virtual, player_num=player_num)
             self.check_death(player_num, virtual=virtual)
             self.solve_field_trigger_ability(virtual=virtual, player_num=player_num)
@@ -223,6 +227,7 @@ class Field:
 
     def reset_time_stamp(self):
         self.stack.clear()
+        self.state_log.clear()
         self.stack_num = 0
         for i in range(2):
             for card in self.card_location[i]:
@@ -501,6 +506,7 @@ class Field:
                 new_atk_index = [attack[0], self.card_location[attack[0]].index(attacking_follower)]
                 self.remove_card(new_atk_index, virtual)
         # self.solve_lastword_ability(virtual=virtual,player_num=attack[0])
+
         self.ability_resolution(virtual=virtual, player_num=attack[0])
 
     def attack_to_player(self, attacker, defence_player, visible=False, virtual=False):

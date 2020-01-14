@@ -942,9 +942,10 @@ def creature_ability_107(field, player, opponent, virtual, target, itself):
     if Player_Ability_setting.restore_1_defense_to_all_allies \
             not in field.player_ability[player.player_num]:
         if not virtual:
-            mylogger.info("Give Player{} the following effect - At the end of your turn,\
-                restore 1 defense to all allies. (This effect is not stackable and lasts for the rest of the match."
-                          .format(player.player_num + 1))
+            mylogger.info("Give Player{} the following effect - At the end of your turn,restore 1 defense to all allies. "
+                          .format(player.player_num + 1)+\
+                          "(This effect is not stackable and lasts for the rest of the match.)")
+
         field.player_ability[player.player_num].append(Player_Ability_setting.restore_1_defense_to_all_allies)
         if len(field.player_ability[player.player_num]) > 1:
             mylogger.info("player_ability:{}".format(field.player_ability))

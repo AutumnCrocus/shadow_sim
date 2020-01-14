@@ -208,13 +208,13 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
                       -3: "Rune_Basic",
                       -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
                       100: "Test",
-                      -9: "Spell-Rune", -10: "Test-Haven",-11:"PtP-Forest",-12:"Mid-Shadow"}
+                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow"}
 
     key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
                       3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
                       6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
                       9: ["SpellBoost-Rune.tsv", "RUNE"],10: ["Dimension_Shift_Rune.tsv", "RUNE"],
-                      -11: ["PtP_Forest.tsv", "FOREST"],-12: ["Mid_Shadow.tsv", "SHADOW"]}
+                      11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"]}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
@@ -328,14 +328,14 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     epoc_win_lose = [0, 0]
     epoc_lib_num = 0
     first_num = [0, 0]
+    epoch_first_num = [0,0]
     win_turns = [0, 0]
-    deck_name_list = {"Alice": {}, "Bob": {}}
-    deck_name_list["Alice"] = D[0].get_name_set()
-    deck_name_list["Bob"] = D[1].get_name_set()
+    deck_name_list = {"Alice": D[0].get_name_set(), "Bob": D[1].get_name_set()}
     for i in range(iteration):
         if (i + 1) % epoc_len == 1 or epoc_len == 1:
             epoc_win_lose = [int(win_lose[0]), int(win_lose[1])]
             epoc_lib_num = int(lib_num)
+            epoch_first_num = [int(first_num[0]),int(first_num[1])]
         if not virtual_flg:
             mylogger.info("Game {}".format(i + 1))
         # mylogger.info("name:{}".format(Turn_Players[i%2].name))
@@ -366,6 +366,8 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
 
                                                                                     lib_num, win_lose[0] / (i + 1)))
             mylogger.info("epoc_win_rate:{:.3%}".format((win_lose[0] - epoc_win_lose[0]) / (epoc_len)))
+            mylogger.info("first_win_rate:Player1:{:.3%},Player2:{:.3%}".format((first_num[0] - epoch_first_num[0]) / max(1,(epoc_len//2)),
+                          (first_num[1] - epoch_first_num[1]) / max(1,(epoc_len//2))))
         if (i + 1) % epoc_len == 0:
             if Player1.policy.name.split("_")[0] == "Genetic":
                 Player1.policy.set_fitness((win_lose[0] - epoc_win_lose[0]) / (epoc_len))
@@ -383,10 +385,10 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     mylogger.info("mean_win_turn:{:.3f},{:.3f}".format(win_turns[0] / win_lose[0], win_turns[1] / win_lose[1]))
 
     import itertools
-    if Player1.mulligan_policy.data_use_flg == True:
+    if Player1.mulligan_policy.data_use_flg:
         mylogger.info("mulligan_data:{}".format(set(list(itertools.compress(Player1.mulligan_policy.mulligan_data,
                                                                             Player1.mulligan_policy.win_data)))))
-    if Player2.mulligan_policy.data_use_flg == True:
+    if Player2.mulligan_policy.data_use_flg:
         mylogger.info("mulligan_data:{}".format(set(list(itertools.compress(Player2.mulligan_policy.mulligan_data,
                                                                             Player2.mulligan_policy.win_data)))))
     mylogger.info("deck_type:{}".format(deck_type))
@@ -435,16 +437,6 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
             mean_value = Player1.policy.Q_dict[key][0] / max(n, 1)
             mylogger.info("{}".format((Action_Code(key[0]).name, key[1])))
             mylogger.info("n:{:<5} mean_value:{:.3f}".format(n, mean_value))
-        """
-        for action in list(Player1.policy.previous_Q_dict.keys()):
-            mylogger.info("prev_action:{},{}".format(Action_Code(action[0]).name,action[1]))
-            for second_key in list(Player1.policy.previous_Q_dict[action].keys()):
-                n = Player1.policy.previous_Q_dict[action][second_key][1]
-                mean_value = Player1.policy.previous_Q_dict[action][second_key][0]/max(n,1)
-                mylogger.info("{}".format((Action_Code(second_key[0]).name,second_key[1])))
-                mylogger.info("n:{:<5} mean_value:{:.3f}".format(n,mean_value))
-            mylogger.info("")
-        """
     if len(value_history) > 9:
         fig = plt.figure()
         mylogger.info("value_history[0]:{}".format(value_history[0]))
@@ -1345,6 +1337,12 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
 
         mylogger.info("{}/{} complete".format((deck_id + 1), len(D)))
 
+def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None):
+    if deck_lists is None:
+        deck_lists = [0,1,4,5,6,7,9,10,11,12]
+    mylogger.info("deck_list:{}".format(deck_lists))
+    for deck_id in deck_lists:
+        execute_demo(Player_1, Player_2, iteration, virtual_flg=True, deck_type=[deck_id,deck_id], graph=False)
 
 parser = argparse.ArgumentParser(description='対戦実行コード')
 
@@ -1467,7 +1465,14 @@ Players.append(Player(9, True, policy=Flexible_Simulation_A_MCTSPolicy(sim_num=1
 Players.append(Player(9, True, policy=Flexible_Simulation_A_MCTSPolicy(sim_num=5), mulligan=Min_cost_mulligan_policy()))  # 80
 Players.append(Player(9, True, policy=Flexible_Simulation_MO_ISMCTSPolicy(sim_num=1), mulligan=Min_cost_mulligan_policy()))  # 81
 Players.append(Player(9, True, policy=Flexible_Simulation_MO_ISMCTSPolicy(sim_num=5), mulligan=Min_cost_mulligan_policy()))  # 82
-Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(iteration=100), mulligan=Min_cost_mulligan_policy()))  #83
+Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=100), mulligan=Min_cost_mulligan_policy()))  #83
+Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(iteration=100), mulligan=Min_cost_mulligan_policy()))  #84
+Players.append(Player(9, True, policy=New_Aggro_MCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  # 85
+Players.append(Player(9, True, policy=New_Aggro_MCTSPolicy(iteration=500), mulligan=Min_cost_mulligan_policy()))  # 86
+Players.append(Player(9, True, policy=Advanced_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 87
+Players.append(Player(9, True, policy=Advanced_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 88
+Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  # 89
+Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  #90
 # assert False
 n = 100
 a = 0
@@ -1607,7 +1612,23 @@ elif args.mode == 'custom_all':
                                  directory_name=file_name)
 
 
-
+elif args.mode == "mirror":
+    n = int(args.N)
+    a = int(args.playertype1) - 1
+    b = int(args.playertype2) - 1
+    if args.playertype1 == '0':
+        d1 = copy.deepcopy(human_player)
+    else:
+        d1 = copy.deepcopy(Players[a])
+    if args.playertype2 == '0':
+        d2 = copy.deepcopy(human_player)
+    else:
+        d2 = copy.deepcopy(Players[b])
+    #p1 = int(args.decktype1)
+    #p2 = int(args.decktype2)
+    #graph = args.graph is not None
+    #execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=True,graph=False)
+    make_mirror_match_table(d1,d2,n,deck_lists=deck_list)
 else:
     if args.N is not None:
         iteration = int(args.N)

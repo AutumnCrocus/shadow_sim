@@ -24,21 +24,27 @@ class trigger_ability_002:
 
 class trigger_ability_003:
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
-        if itself.is_in_field==False:return
-        if state_log!=None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
+        if not itself.is_in_field:return
+        if state_log is not None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
+            if not virtual:
+                mylogger.info("Whitefang Temple's trigger ability is actived")
             itself.down_count(num=1,virtual=virtual)
 
 class trigger_ability_004:
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
-        if itself.is_in_field==False:return
-        if state_log!=None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
+        if not itself.is_in_field:return
+        if state_log is not None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
+            if not virtual:
+                mylogger.info("Holy Bowman Kel's trigger ability is actived")
             get_damage_to_player(opponent,virtual,num=2)
 
 class trigger_ability_005:
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
-        if itself.is_in_field==False:return
-        if state_log!=None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
+        if not itself.is_in_field:return
+        if state_log is not None and state_log[0]==State_Code.RESTORE_PLAYER_LIFE.value and state_log[1]==player.player_num:
             damage=1+int(itself.evolved)
+            if not virtual:
+                mylogger.info("Kel, Holy Marksman's trigger ability is actived")
             get_damage_to_all_enemy_follower(field, opponent, virtual, num=damage)
             #for creature_id in field.get_creature_location()[opponent.player_num]:
             #    get_damage_to_creature(field,opponent,virtual,creature_id,num=damage)
@@ -46,8 +52,8 @@ class trigger_ability_005:
 
 class trigger_ability_006:
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
-        if itself.is_in_field==False:return
-        if state_log!=None and state_log[0]==State_Code.SET.value and state_log[1][0]==player.player_num:
+        if not itself.is_in_field:return
+        if state_log is not None and state_log[0]==State_Code.SET.value and state_log[1][0]==player.player_num:
 
             if state_log[1][1]=="Creature":
                 if card_setting.creature_list[state_log[1][2]][4][-1]==1:
@@ -62,9 +68,10 @@ class trigger_ability_007:
         Whenever an enemy follower is destroyed, gain +1/+0.
         """
         if not itself.is_in_field:return
-        if state_log!=None and state_log[0]==State_Code.DESTROYED.value and state_log[1][0]==opponent.player_num:
+        if state_log is None: return
+        if state_log[0]==State_Code.DESTROYED.value and state_log[1][0]==opponent.player_num:
             if not virtual:
-                mylogger.info("{} get +1/0".format(itself.name))
+                mylogger.info("{} get +1/0({})".format(itself.name,State_Code(state_log[0]).name))
             buff_creature(itself,params=[1,0])
         #if not virtual:
         #    mylogger.info("state_log:{}".format(state_log))
@@ -120,9 +127,9 @@ class trigger_ability_011:
         """
         Whenever another allied follower is destroyed, gain +1/+1.
         """
-        if itself.is_in_field==False:return
-        if state_log!=None and state_log[0]==State_Code.DESTROYED.value and state_log[1][0]==player.player_num:
-            if virtual==False:
+        if not itself.is_in_field:return
+        if state_log is not None and state_log[0]==State_Code.DESTROYED.value and state_log[1][0]==player.player_num:
+            if not virtual:
                 mylogger.info("{} get +1/+1".format(itself.name))
             buff_creature(itself,params=[1,1])
 
@@ -154,9 +161,7 @@ class trigger_ability_013:
         """
         if not itself.evolved:
             return
-        if state_log!=None and state_log[0]==State_Code.SET.value and state_log[1][0] == player.player_num:
-            #self.state_log.append([State_Code.SET.value, (player_num, card.card_category, card.card_id, id(card)),
-            #                       self.stack_num])
+        if state_log is not None and state_log[0]==State_Code.SET.value and state_log[1][0] == player.player_num:
             for card in field.card_location[player.player_num]:
                 if id(card) == state_log[1][3] and card.name == "Puppet":
                     buff_creature(card,params=[1,0])
