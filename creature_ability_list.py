@@ -327,7 +327,7 @@ def creature_ability_043(field, player, opponent, virtual, target, itself):
 
 
 def creature_ability_044(field, player, opponent, virtual, target, itself):
-    condition = lambda card: card.is_earth_rite == True
+    condition = lambda card: card.is_earth_rite is True
     search_cards(player, condition, virtual, num=1)
 
 

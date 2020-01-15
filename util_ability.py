@@ -179,7 +179,9 @@ def search_cards(player, condition, virtual, num=1):
     if len(search_cards_id) > 0:
         cards = []
         for card_id in search_cards_id:
-            cards.append(player.deck.deck.pop(card_id))
+            #cards.append(player.deck.deck.pop(card_id))
+            cards.append(player.deck.deck[card_id])
+            player.deck.deck.remove(player.deck.deck[card_id])
         if not virtual:
             for card in cards:
                 mylogger.info("Player{} append {} to hand from deck".format(player.player_num + 1, card.name))
@@ -329,7 +331,9 @@ def put_card_from_deck_in_play(field, player, virtual, condition=None):
             pop_id_list.append(i)
     if len(pop_id_list) == 0: return
     pop_id = random.choice(pop_id_list)
-    card_in_play = player.deck.deck.pop(pop_id)
+    #card_in_play = player.deck.deck.pop(pop_id)
+    card_in_play = player.deck.deck[pop_id]
+    player.deck.deck.remove(player.deck.deck[pop_id])
     if not virtual:
         mylogger.info("recruit {} from deck".format(card_in_play.name))
     field.set_card(card_in_play, player.player_num, virtual=virtual)

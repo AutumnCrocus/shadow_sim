@@ -12,6 +12,7 @@ from cost_change_ability_list import cost_change_ability_dict
 from battle_ability_list import battle_ability_dict
 from trigger_ability_list import trigger_ability_dict
 from numba import jit
+from collections import deque
 from my_moduler import get_module_logger
 
 mylogger = get_module_logger(__name__)
@@ -957,7 +958,7 @@ class Amulet(Card):
 
 class Deck:
     def __init__(self):
-        self.deck = []
+        self.deck = deque()
         self.remain_num = 0
         self.mean_cost = 0
         self.deck_type = None

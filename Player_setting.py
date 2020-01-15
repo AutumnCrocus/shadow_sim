@@ -30,8 +30,8 @@ class Player:
         self.class_num = None
         self.effect = []
 
-    def set_field(self, field):
-        self.field = field
+    #def set_field(self, field):
+    #    self.field = field
 
     def get_copy(self, field):
         player = Player(self.max_hand_num, first=self.is_first, policy=self.policy, mulligan=self.mulligan_policy)
@@ -40,12 +40,15 @@ class Player:
         player.life = self.life
         player.deck = Deck()
         player.deck.set_leader_class(self.deck.leader_class.name)
-        for card in self.deck.deck:
+        for i,card in enumerate(self.deck.deck):
             player.deck.append(card)
-        if len(player.deck.deck) == 0 and len(self.deck.deck) > 0:
-            raise Exception()
+            #if i >=5:
+            #    break
+        #if len(player.deck.deck) == 0 and len(self.deck.deck) > 0:
+        #    raise Exception()
 
-        player.set_field(field)
+        #player.set_field(field)
+        player.field = field
         player.name = self.name
         player.class_num = self.class_num
         if len(self.effect) > 0:

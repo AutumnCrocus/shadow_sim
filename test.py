@@ -1169,12 +1169,11 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
         row = row + [policy_id_2_name[i] for i in range(len(policy_id_2_name))]
         mylogger.info("row:{}".format(row))
         writer.writerow(row)
-        if True:
-            for i in range(len(policy_id_2_name)):
-                row = [policy_id_2_name[i]]
-                for j in range(len(policy_id_2_name)):
-                    row.append(Results[(i, j)][0])
-                writer.writerow(row)
+        for i in range(len(policy_id_2_name)):
+            row = [policy_id_2_name[i]]
+            for j in range(len(policy_id_2_name)):
+                row.append(Results[(i, j)][0])
+            writer.writerow(row)
 
 
 def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, player1_deck_num=None,
@@ -1337,6 +1336,7 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
 
         mylogger.info("{}/{} complete".format((deck_id + 1), len(D)))
 
+
 def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None):
     if deck_lists is None:
         deck_lists = [0,1,4,5,6,7,9,10,11,12]
@@ -1473,6 +1473,8 @@ Players.append(Player(9, True, policy=Advanced_value_function_A_MCTSPolicy(), mu
 Players.append(Player(9, True, policy=Advanced_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 88
 Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  # 89
 Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  #90
+Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 91
+Players.append(Player(9, True, policy=Second_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 92
 # assert False
 n = 100
 a = 0

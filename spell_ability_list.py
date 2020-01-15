@@ -472,10 +472,13 @@ def spell_ability_054(field, player, opponent, virtual, target, itself):
 
 
 def token_spell_ability_001(field, player, opponent, virtual, target, itself):
+    get_damage_to_enemy(field, opponent, virtual, target, num=3)
+    """
     if target == -1:
-        get_damage_to_player(player, virtual, num=3)
+        get_damage_to_player(opponent, virtual, num=3)
     else:
         get_damage_to_creature(field, opponent, virtual, target, num=3)
+    """
     if field.check_game_end():
         return
     if earth_rite(field, player, virtual):

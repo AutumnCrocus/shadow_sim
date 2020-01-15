@@ -15,6 +15,7 @@ from util_ability import *
 from my_enum import *
 import time
 import os
+check_follower = lambda card:card.card_category=="Creature"
 
 
 class Field:
@@ -281,11 +282,12 @@ class Field:
                 if not card.is_in_field or card.is_in_graveyard:
                     self.remove_card([(player_num + j) % 2, i], virtual=virtual)
                 elif card.card_category == "Creature":
-                    assert card.get_current_toughness() > 0, "minus-toughness_error:{}".format(
-                        card.get_current_toughness())
+                    #assert card.get_current_toughness() > 0, "minus-toughness_error:{}".format(
+                    #    card.get_current_toughness())
                     i += 1
                 else:
                     i += 1
+
     def append_played_turn(self,card_name=None):
         assert card_name is not None
         if card_name not in self.play_cards.played_turn_dict[self.turn_player_num]:
@@ -721,11 +723,22 @@ class Field:
         return ans
 
     def get_creature_location(self):
+        #ans[0] = filter(check_follower,self.card_location[0])
+        #ans[0] = [thing.card_category=="Creature" for thing in self.card_location[0]]
         ans = [[], []]
+
+        for j, thing in enumerate(self.card_location[0]):
+            if thing.card_category == "Creature":
+                ans[0].append(j)
+        for j, thing in enumerate(self.card_location[1]):
+            if thing.card_category == "Creature":
+                ans[1].append(j)
+        """
         for i in range(2):
             for j, thing in enumerate(self.card_location[i]):
                 if thing.card_category == "Creature":
                     ans[i].append(j)
+        """
         return ans
 
     def update_hand_cost(self, player_num=0):
