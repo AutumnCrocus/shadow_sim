@@ -12,7 +12,7 @@ from my_moduler import get_module_logger, get_state_logger
 from mulligan_setting import *
 import logging
 import matplotlib.pyplot as plt
-
+import os
 mylogger = get_module_logger(__name__)
 from my_enum import *
 import argparse
@@ -186,6 +186,75 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
 
     return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
 
+
+def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False,pairwise_dict=None):
+    assert Player1.player_num != Player2.player_num, "same error"
+    f = Field(5)
+    f.players[0] = Player1
+    f.players[0].field = f
+    f.players[1] = Player2
+    f.players[1].field = f
+    f.players[0].deck = Deck()
+    f.players[0].deck.set_leader_class(D1.leader_class.name)
+    for card in D1.deck:
+        f.players[0].deck.deck.append(card.get_copy())
+    f.players[1].deck = Deck()
+    f.players[1].deck.set_leader_class(D2.leader_class.name)
+    for card in D2.deck:
+        f.players[1].deck.deck.append(card.get_copy())
+
+    f.players[0].deck.shuffle()
+    f.players[1].deck.shuffle()
+    f.players[0].draw(f.players[0].deck, 3)
+    f.players[1].draw(f.players[1].deck, 3)
+    # f.evo_point = [1,2]
+    G = Game()
+    (w, l, lib, turn) = G.start(f, virtual_flg=virtual_flg)
+    win += w
+    lose += l
+    first = w
+    lib_num += lib
+    if not virtual_flg:
+        mylogger.info("Game end")
+        mylogger.info("Player1 life:{} Player2 life:{}".format(f.players[0].life, f.players[1].life))
+        f.show_field()
+    player1_win_turn = False
+    player2_win_turn = False
+    if w == 1:
+        player1_win_turn = turn
+    else:
+        player2_win_turn = turn
+
+    f.players[0].life = 20
+    f.players[0].hand.clear()
+    f.players[0].deck = None
+    f.players[0].lib_out_flg = False
+    f.players[0].effect.clear()
+    f.players[1].life = 20
+    f.players[1].hand.clear()
+    f.players[1].deck = None
+    f.players[1].lib_out_flg = False
+    f.players[1].effect.clear()
+    f.play_cards.plain_play_cards_set()
+    win_flg = [w, l]
+    for i in range(2):
+        sorted_name_list = sorted(list(f.play_cards.plain_name_list[i].keys()))
+        for first_id,first_card_name in enumerate(sorted_name_list):
+            for second_id,second_card_name in enumerate(sorted_name_list,start=first_id+1):
+                if (first_card_name,second_card_name) in pairwise_dict[f.players[i].name]:
+                    target_pair_wise = pairwise_dict[f.players[i].name][(first_card_name,second_card_name)]
+                    target_pair_wise["both_played_num"] += 1
+                    target_pair_wise["win_rate_when_both_played"] += win_flg[i]
+                """
+                deck_name_list[f.players[i].name][name_key]["used_num"] += 1
+                turn_list = f.play_cards.played_turn_dict[i][name_key]
+                deck_name_list[f.players[i].name][name_key]["sum_of_turn_when_used"] \
+                    += sum(turn_list) / len(turn_list)
+                deck_name_list[f.players[i].name][name_key]["win_num"] += win_flg[i]
+                """
+
+
+    return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
 
 def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=None,graph=False):
     Player1 = copy.deepcopy(Player_1)
@@ -515,6 +584,207 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
                                                                  Player2.policy.name, deck_id_2_name[deck_type[1]],
                                                                  iteration))
         plt.show()
+
+
+def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False, deck_type=None,output=False,directory_name=None):
+    Player1 = copy.deepcopy(Player_1)
+    Player2 = copy.deepcopy(Player_2)
+    Player1 = Player_1
+    Player2 = Player_2
+    Player1.name = "Alice"
+    Player2.name = "Bob"
+    assert Player1 != Player2
+    win = 0
+    lose = 0
+    lib_num = 0
+    D = [Deck(), Deck()]
+    if deck_type is None:
+        deck_type = [5, 5]
+    else:
+        mylogger.info("deck_type:{}".format(deck_type))
+    deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
+                      6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune", 10: "DS_Rune", -1: "Forest_Basic", -2: "Sword_Basic",
+                      -3: "Rune_Basic",
+                      -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
+                      100: "Test",
+                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow"}
+
+    key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
+                      3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
+                      6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
+                      9: ["SpellBoost-Rune.tsv", "RUNE"],10: ["Dimension_Shift_Rune.tsv", "RUNE"],
+                      11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"]}
+    mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
+                                           deck_id_2_name[deck_type[1]]))
+    class_pool = [0, 0]
+    for i, d in enumerate(D):
+        if deck_type[i] in key_2_tsv_name:
+            D[i] = tsv_to_deck(key_2_tsv_name[deck_type[i]][0])
+            D[i].set_leader_class(key_2_tsv_name[deck_type[i]][1])
+
+    Player1.class_num = class_pool[0]
+    Player2.class_num = class_pool[1]
+    mylogger.info("Alice's deck mean cost:{:<4}".format(D[0].get_mean_cost()))
+    mylogger.info("Bob's deck mean cost:{:<4}".format(D[1].get_mean_cost()))
+    D[0].mean_cost = D[0].get_mean_cost()
+    D[1].mean_cost = D[1].get_mean_cost()
+    assert len(D[0].deck) == 40 and len(D[1].deck) == 40, "deck_len:{},{}" \
+        .format(len(D[0].deck), len(D[1].deck))
+    mylogger.info("deck detail")
+    D[0].show_remain_card_set()
+    D[1].show_remain_card_set()
+    mylogger.info("")
+    sum_of_turn = 0
+    span = max(iteration // 10, 1)
+    Turn_Players = [Player1, Player2]
+    win_lose = [win, lose]
+    epoc_len = span
+    epoc_win_lose = [0, 0]
+    epoc_lib_num = 0
+    first_num = [0, 0]
+    epoch_first_num = [0,0]
+    win_turns = [0, 0]
+    #deck_name_list = {"Alice": D[0].get_name_set(), "Bob": D[1].get_name_set()}
+    pairwise_dict = {}
+    for i,player_name in enumerate(["Alice","Bob"]):
+        pairwise_dict[player_name] = {}
+        deck_name_list = D[i].get_name_set()
+        card_name_keys=sorted(list(deck_name_list.keys()))
+        #mylogger.info("deck_name_list:{}".format(card_name_keys))
+        for first_id,first_key in enumerate(card_name_keys):
+            for second_id,second_key in enumerate(card_name_keys[first_id+1:],start=first_id+1):
+                #mylogger.info("({},{})".format(first_key, second_key))
+                #mylogger.info("({},{})".format(first_id,second_id))
+                pairwise_dict[player_name][(first_key,second_key)] = {"both_played_num":0,"win_rate_when_both_played":0}
+
+    for i in range(iteration):
+        if (i + 1) % epoc_len == 1 or epoc_len == 1:
+            epoc_win_lose = [int(win_lose[0]), int(win_lose[1])]
+            epoc_lib_num = int(lib_num)
+            epoch_first_num = [int(first_num[0]),int(first_num[1])]
+        if not virtual_flg:
+            mylogger.info("Game {}".format(i + 1))
+        # mylogger.info("name:{}".format(Turn_Players[i%2].name))
+        Turn_Players[i % 2].is_first = True
+        Turn_Players[i % 2].player_num = 0
+        Turn_Players[(i + 1) % 2].is_first = False
+        Turn_Players[(i + 1) % 2].player_num = 1
+        assert Turn_Players[0].player_num != Turn_Players[1].player_num, "same error {}".format(
+            Turn_Players[0].player_num)
+        (win_lose[i % 2], win_lose[(i + 1) % 2], lib_num, end_turn, first, (player1_win_turn, player2_win_turn)) \
+            = demo_game_play_with_pairwise(Turn_Players[i % 2],
+                             Turn_Players[(i + 1) % 2],
+                             D[i % 2], D[(i + 1) % 2],
+                             win_lose[i % 2],
+                             win_lose[(i + 1) % 2], lib_num,
+                             virtual_flg=virtual_flg, pairwise_dict=pairwise_dict)
+        first_num[i % 2] += first
+        sum_of_turn += end_turn
+        if player1_win_turn is not False:
+            win_turns[i % 2] += player1_win_turn
+        elif player2_win_turn is not False:
+            win_turns[(i + 1) % 2] += player2_win_turn
+
+        # mylogger.info("{}\n{}".format(deck_name_list[i % 2], deck_name_list[(i + 1) % 2]))
+        if (i + 1) % span == 0:
+            mylogger.info(
+                "Halfway {}:win={}, lose={}, libout_num={}, win_rate:{:.3f}".format(i + 1, win_lose[0], win_lose[1],
+
+                                                                                    lib_num, win_lose[0] / (i + 1)))
+            mylogger.info("epoc_win_rate:{:.3%}".format((win_lose[0] - epoc_win_lose[0]) / (epoc_len)))
+            mylogger.info("first_win_rate:Player1:{:.3%},Player2:{:.3%}".format((first_num[0] - epoch_first_num[0]) / max(1,(epoc_len//2)),
+                          (first_num[1] - epoch_first_num[1]) / max(1,(epoc_len//2))))
+
+    mylogger.info("Result:win={}, lose={}, libout_num={}, win_rate:{:<3}".format(win_lose[0], win_lose[1], lib_num,
+                                                                                 win_lose[0] / iteration))
+    mylogger.info("deck size:{} mean_end_turn {:<3}".format(len(D[0].deck), sum_of_turn / iteration))
+    if iteration>1:
+        mylogger.info("first_win_rate:Player1:{:<3},Player2:{:<3}".format(first_num[0] / (iteration // 2),
+                                                                      first_num[1] / (iteration // 2)))
+    if win_lose[0] == 0:
+        win_lose[0] = 1
+    if win_lose[1] == 0:
+        win_lose[1] = 1
+    mylogger.info("mean_win_turn:{:.3f},{:.3f}".format(win_turns[0] / win_lose[0], win_turns[1] / win_lose[1]))
+
+    import itertools
+    mylogger.info("deck_type:{}".format(deck_type))
+    mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
+                                           deck_id_2_name[deck_type[1]]))
+    contribution_list = {"Alice": [], "Bob": []}
+    footcut_contribution_list = {"Alice": [], "Bob": []}
+    #drawn_win_rate_list = {"Alice": [], "Bob": []}
+    for i, player_key in enumerate(list(pairwise_dict.keys())):
+        mylogger.info("Player{}".format(i + 1))
+        for key in list(pairwise_dict[player_key].keys()):
+            target_cell = pairwise_dict[player_key][key]
+            if target_cell["both_played_num"] > 0:
+                both_played_num = target_cell["both_played_num"]
+                win_rate = target_cell["win_rate_when_both_played"] / target_cell["both_played_num"]
+                #mylogger.info("{}'s pairwise WRP(both_played_num:{}):{:.3f}".format(key, both_played_num,win_rate))
+                contribution_list[player_key].append((key, win_rate,both_played_num))
+                if both_played_num > (iteration//10):
+                    footcut_contribution_list[player_key].append((key, win_rate, both_played_num))
+    rank_range = 10
+    contribution_list["Alice"].sort(key=lambda element: -element[1])
+    contribution_list["Bob"].sort(key=lambda element: -element[1])
+    contribution_list["Alice"] = contribution_list["Alice"][:rank_range]
+    contribution_list["Bob"] = contribution_list["Bob"][:rank_range]
+    footcut_contribution_list["Alice"].sort(key=lambda element: -element[1])
+    footcut_contribution_list["Bob"].sort(key=lambda element: -element[1])
+    if len(footcut_contribution_list["Alice"])<rank_range:
+        rank_range = len(footcut_contribution_list["Alice"])
+    footcut_contribution_list["Alice"] = footcut_contribution_list["Alice"][:10]
+    rank_range = 10
+    if len(footcut_contribution_list["Bob"])<rank_range:
+        rank_range = len(footcut_contribution_list["Bob"])
+    footcut_contribution_list["Bob"] = footcut_contribution_list["Bob"][:10]
+    #drawn_win_rate_list["Alice"].sort(key=lambda element: -element[1])
+    #drawn_win_rate_list["Bob"].sort(key=lambda element: -element[1])
+    mylogger.info("pairwise-WRP_rank")
+    for i, player_key in enumerate(list(contribution_list.keys())):
+        mylogger.info("Player{}".format(i + 1))
+        for j, cell in enumerate(contribution_list[player_key]):
+            txt = "No.{} ({},{})(both_played_num:{})".format(j + 1, cell[0][0],cell[0][1],cell[2])
+            txt = "{:<80}:{:.3%}".format(txt, cell[1])
+            mylogger.info(txt)
+        print("")
+
+    mylogger.info("pairwise-WRP_rank(footcut by threthold:{})".format(iteration//10))
+    for i, player_key in enumerate(list(footcut_contribution_list.keys())):
+        mylogger.info("Player{}".format(i + 1))
+        for j, cell in enumerate(footcut_contribution_list[player_key]):
+            txt = "No.{} ({},{})(both_played_num:{})".format(j + 1, cell[0][0],cell[0][1],cell[2])
+            txt = "{:<80}:{:.3%}".format(txt, cell[1])
+            mylogger.info(txt)
+        print("")
+
+    title = "{}({})vs {}({})({} iteration)".format(Player_1.policy.name, deck_id_2_name[deck_type[0]],
+                                                   Player_2.policy.name,
+                                                   deck_id_2_name[deck_type[1]], iteration)
+    result_txt = "Result:win={}, lose={}, libout_num={}, win_rate:{:<3}".format(win_lose[0], win_lose[1], lib_num,
+                                                                                win_lose[0] / iteration)
+    first_win_rate_txt = "first_win_rate[Player1:{:.3f},Player2:{:.3f}" \
+        .format(first_num[0] / (iteration // 2), first_num[1] / (iteration // 2))
+    if output:
+        file_name = title+"_pairwise_WRP.txt"
+        path =  file_name
+        if directory_name is not None:
+            path = directory_name + "/" +path
+        with open(path, mode="w") as f:
+            f.write(title+"\n")
+            f.write(result_txt+"\n")
+            f.write(first_win_rate_txt + "\n")
+            f.write("pairwise_WRP\n")
+            for i, player_key in enumerate(list(contribution_list.keys())):
+                f.write("Player{}\n".format(i + 1))
+                for j, cell in enumerate(contribution_list[player_key]):
+                    pairwise = "No.{} ({},{})(both_played_num:{})".format(j + 1, cell[0][0],cell[0][1],cell[2])
+                    txt = "{:<80}:{:.3%}\n".format(pairwise,cell[1])
+                    f.write(txt)
+                f.write("\n")
+            f.write("\n")
+
 
 
 def get_contributions(Player_1, Player_2, iteration, virtual_flg=False, player1_deck_num=None, directory_name=None):
@@ -1337,12 +1607,21 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
         mylogger.info("{}/{} complete".format((deck_id + 1), len(D)))
 
 
-def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None):
+def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None,pairwise=False,out_put=False):
     if deck_lists is None:
         deck_lists = [0,1,4,5,6,7,9,10,11,12]
+    directory_name = None
+    if out_put:
+        directory_name = "{}_vs_{}_pairwise_WRP(deck_lists={},iteration={})".format(Player_1.policy.name,Player_2.policy.name,
+                                                                       deck_lists,iteration)
+        os.makedirs(directory_name, exist_ok=True)
     mylogger.info("deck_list:{}".format(deck_lists))
     for deck_id in deck_lists:
-        execute_demo(Player_1, Player_2, iteration, virtual_flg=True, deck_type=[deck_id,deck_id], graph=False)
+        if pairwise:
+            execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=True, deck_type=[deck_id, deck_id],
+                                       output=out_put,directory_name=directory_name)
+        else:
+            execute_demo(Player_1, Player_2, iteration, virtual_flg=True, deck_type=[deck_id,deck_id], graph=False)
 
 parser = argparse.ArgumentParser(description='対戦実行コード')
 
@@ -1357,6 +1636,8 @@ parser.add_argument('--decklist', help='対戦デッキリスト')
 parser.add_argument('--time_bound', help='計算時間上限')
 parser.add_argument('--basic', help='ベーシック')
 parser.add_argument('--graph', help='グラフ')
+parser.add_argument('--pairwise', help='ペアワイズ')
+parser.add_argument('--output', help='出力')
 parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
 args = parser.parse_args()
 mylogger.info("args:{}".format(args))
@@ -1533,8 +1814,11 @@ if args.mode == 'demo' or args.mode == 'background_demo':
     p2 = int(args.decktype2)
     virtual_flg = args.mode == "background_demo"
     graph = args.graph is not None
-    #cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="tottime")
-    execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=virtual_flg,graph=graph)
+    if args.pairwise is not None:
+        execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)
+    else:
+        #cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="tottime")
+        execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=virtual_flg,graph=graph)
 # elif sys.argv[-1]=="-shadow":
 elif args.mode == 'shadow':
     test_3(d1, d2, n)
@@ -1591,7 +1875,6 @@ elif args.mode == 'custom_all':
     deck_id_2_name = {0: "Aggro-Sword", 1: "Rune_Earth(Aggro)", 2: "Mid-Sword", 3: "Mid-Shadow", 4: "Dragon_PDK(Mid)",
                       5: "Elana-Haven(Control)",
                       6: "Control-Blood", 7: "Ramp-Dragon(Combo)", 8: "Combo-Forest", 9: "Spell-Rune(Combo)"}
-    import os
 
     iteration = int(args.N)
     a = int(args.playertype1) - 1
@@ -1626,11 +1909,9 @@ elif args.mode == "mirror":
         d2 = copy.deepcopy(human_player)
     else:
         d2 = copy.deepcopy(Players[b])
-    #p1 = int(args.decktype1)
-    #p2 = int(args.decktype2)
-    #graph = args.graph is not None
-    #execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=True,graph=False)
-    make_mirror_match_table(d1,d2,n,deck_lists=deck_list)
+
+    make_mirror_match_table(d1,d2,n,deck_lists=deck_list,pairwise=args.pairwise is not None,
+                            out_put=args.output is not None)
 else:
     if args.N is not None:
         iteration = int(args.N)

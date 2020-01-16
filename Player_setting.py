@@ -129,7 +129,7 @@ class Player:
 
     def draw(self, deck, num):
         for i in range(num):
-            if deck.deck == []:
+            if len(deck.deck)==0:
                 self.lib_out_flg = True
                 return
             card = deck.draw()

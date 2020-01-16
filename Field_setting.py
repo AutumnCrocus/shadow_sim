@@ -1418,6 +1418,7 @@ class Play_Cards:
     def __init__(self):
         self.play_cards = [[], []]
         self.name_list = None
+        self.plain_name_list = None
         self.played_turn_dict = [{},{}]
 
     def append(self, card_category, card_id, player_num):
@@ -1461,6 +1462,29 @@ class Play_Cards:
                     name_list[i][card_list[ele[1]][0]][ele[0]] = {}
                 name_list[i][card_list[ele[1]][0]][ele[0]][card_list[ele[1]][-1]] = items[i][ele]
         self.name_list = name_list
+
+    def plain_play_cards_set(self):
+
+        set_of_play_cards = [None, None]
+        name_list = [{}, {}]
+        set_of_play_cards[0] = list(set(self.play_cards[0]))
+        set_of_play_cards[1] = list(set(self.play_cards[1]))
+        counter = [collections.Counter(self.play_cards[0]), collections.Counter(self.play_cards[1])]
+        items = [dict(list(counter[0].items())), dict(list(counter[1].items()))]
+        for i in range(2):
+            for ele in set_of_play_cards[i]:
+                #ele:[card_category,card_id]
+                card_list = None
+                if ele[0] == "Creature":
+                    card_list = creature_list
+                elif ele[0] == "Spell":
+                    card_list = spell_list
+                elif ele[0] == "Amulet":
+                    card_list = amulet_list
+                else:
+                    assert False
+                name_list[i][card_list[ele[1]][-1]] = items[i][ele]
+        self.plain_name_list = name_list
 
     def show_play_list(self):
         self.play_cards_set()

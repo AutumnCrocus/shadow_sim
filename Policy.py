@@ -143,7 +143,7 @@ class AggroPolicy(Policy):
             card_id = able_to_evo[max_index]
             target_id = None
             card = field.card_location[player.player_num][card_id]
-            if card.evo_target != None:
+            if card.evo_target is not None:
                 choices = field.get_regal_targets(card, player_num=player.player_num)
                 if choices != []:
                     target_id = random.choice(choices)
@@ -4555,7 +4555,7 @@ class Cheating_MO_MCTSPolicy(Opponent_Modeling_MCTSPolicy):
         super().__init__()
         self.name = "Cheating_MO_MCTS(iteration={})Policy".format(iteration)
         self.iteration = iteration
-
+    """
     def default_policy(self, node, player_num=0):
         sum_of_value = 0
         if node.finite_state_flg:
@@ -4612,7 +4612,7 @@ class Cheating_MO_MCTSPolicy(Opponent_Modeling_MCTSPolicy):
         current_field.end_of_turn(player_num, virtual=True)
         if current_field.check_game_end():
             return
-
+    """
     def expand(self, node, player_num=0):
         field = node.field
 
