@@ -187,7 +187,7 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
     return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
 
 
-def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False,pairwise_dict=None):
+def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False,deck_name_list=None,pairwise_dict=None):
     assert Player1.player_num != Player2.player_num, "same error"
     f = Field(5)
     f.players[0] = Player1
@@ -237,6 +237,13 @@ def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, v
     f.players[1].effect.clear()
     f.play_cards.plain_play_cards_set()
     win_flg = [w, l]
+    #for i in range(2):
+    #    sorted_name_list = sorted(list(f.play_cards.plain_name_list[i].keys()))
+    #    for key in list(sorted_name_list.keys()):
+    #        if key in deck_name_list[f.players[i].name]:
+    #            deck_name_list[key]["used_num"] += 1
+    #            deck_name_list[key]["win_num"] += win_flg[i]
+
     for i in range(2):
         sorted_name_list = sorted(list(f.play_cards.plain_name_list[i].keys()))
         for first_id,first_card_name in enumerate(sorted_name_list):
@@ -244,14 +251,13 @@ def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, v
                 if (first_card_name,second_card_name) in pairwise_dict[f.players[i].name]:
                     target_pair_wise = pairwise_dict[f.players[i].name][(first_card_name,second_card_name)]
                     target_pair_wise["both_played_num"] += 1
-                    target_pair_wise["win_rate_when_both_played"] += win_flg[i]
-                """
-                deck_name_list[f.players[i].name][name_key]["used_num"] += 1
-                turn_list = f.play_cards.played_turn_dict[i][name_key]
-                deck_name_list[f.players[i].name][name_key]["sum_of_turn_when_used"] \
-                    += sum(turn_list) / len(turn_list)
-                deck_name_list[f.players[i].name][name_key]["win_num"] += win_flg[i]
-                """
+                    target_pair_wise["win_num_when_both_played"] += win_flg[i]
+        if deck_name_list is not None:
+            for key in sorted_name_list:
+                if key in deck_name_list[f.players[i].name]:
+                    deck_name_list[f.players[i].name][key]["used_num"] += 1
+                    deck_name_list[f.players[i].name][key]["win_num"] += win_flg[i]
+
 
 
     return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
@@ -644,18 +650,17 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
     first_num = [0, 0]
     epoch_first_num = [0,0]
     win_turns = [0, 0]
-    #deck_name_list = {"Alice": D[0].get_name_set(), "Bob": D[1].get_name_set()}
+    deck_contents = {"Alice": D[0].get_name_set(), "Bob": D[1].get_name_set()}
+    #mylogger.info("deck_contents")
+    #mylogger.info(deck_contents)
     pairwise_dict = {}
     for i,player_name in enumerate(["Alice","Bob"]):
         pairwise_dict[player_name] = {}
         deck_name_list = D[i].get_name_set()
         card_name_keys=sorted(list(deck_name_list.keys()))
-        #mylogger.info("deck_name_list:{}".format(card_name_keys))
         for first_id,first_key in enumerate(card_name_keys):
             for second_id,second_key in enumerate(card_name_keys[first_id+1:],start=first_id+1):
-                #mylogger.info("({},{})".format(first_key, second_key))
-                #mylogger.info("({},{})".format(first_id,second_id))
-                pairwise_dict[player_name][(first_key,second_key)] = {"both_played_num":0,"win_rate_when_both_played":0}
+                pairwise_dict[player_name][(first_key,second_key)] = {"both_played_num":0,"win_num_when_both_played":0}
 
     for i in range(iteration):
         if (i + 1) % epoc_len == 1 or epoc_len == 1:
@@ -677,7 +682,7 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                              D[i % 2], D[(i + 1) % 2],
                              win_lose[i % 2],
                              win_lose[(i + 1) % 2], lib_num,
-                             virtual_flg=virtual_flg, pairwise_dict=pairwise_dict)
+                             virtual_flg=virtual_flg, pairwise_dict=pairwise_dict,deck_name_list=deck_contents)
         first_num[i % 2] += first
         sum_of_turn += end_turn
         if player1_win_turn is not False:
@@ -713,18 +718,45 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                                            deck_id_2_name[deck_type[1]]))
     contribution_list = {"Alice": [], "Bob": []}
     footcut_contribution_list = {"Alice": [], "Bob": []}
+    single_contribution_list = {"Alice": [], "Bob": []}
+    covariance_list = {"Alice": [], "Bob": []}
     #drawn_win_rate_list = {"Alice": [], "Bob": []}
+    for i, player_key in enumerate(list(deck_contents.keys())):
+        for key in list(deck_contents[player_key].keys()):
+            target_cell = deck_contents[player_key][key]
+            if target_cell["used_num"] > 0:
+                played_num = target_cell["used_num"]
+                win_rate = target_cell["win_num"]/played_num
+                single_contribution_list[player_key].append((key,win_rate,played_num))
     for i, player_key in enumerate(list(pairwise_dict.keys())):
         mylogger.info("Player{}".format(i + 1))
         for key in list(pairwise_dict[player_key].keys()):
             target_cell = pairwise_dict[player_key][key]
             if target_cell["both_played_num"] > 0:
                 both_played_num = target_cell["both_played_num"]
-                win_rate = target_cell["win_rate_when_both_played"] / target_cell["both_played_num"]
+                win_rate = target_cell["win_num_when_both_played"] / target_cell["both_played_num"]
                 #mylogger.info("{}'s pairwise WRP(both_played_num:{}):{:.3f}".format(key, both_played_num,win_rate))
                 contribution_list[player_key].append((key, win_rate,both_played_num))
                 if both_played_num > (iteration//10):
                     footcut_contribution_list[player_key].append((key, win_rate, both_played_num))
+                    first_cell = list(filter(lambda x: x[0] == key[0], single_contribution_list[player_key]))[0]
+                    second_cell = list(filter(lambda x: x[0] == key[1], single_contribution_list[player_key]))[0]
+                    first_single_win_rate = first_cell[1]
+                    second_single_win_rate = second_cell[1]
+                    covariance = win_rate - np.sqrt(first_single_win_rate * second_single_win_rate)
+                    #covariance  /= (win_lose[i] / iteration)
+                    #covariance /= np.exp(np.abs(0.5-win_rate))
+
+                    #covariance = win_rate - first_single_win_rate * second_single_win_rate
+                    #first_variance = first_single_win_rate*(1 - first_single_win_rate)
+                    #second_variance = second_single_win_rate*(1- second_single_win_rate)
+                    #covariance = covariance/np.sqrt(first_variance*second_variance)
+                    #mylogger.info("{}:{:.3%} {}:{:.3%}\nconvariance:{}".format(key[0], first_single_win_rate,
+                    #                                                           key[1], second_single_win_rate,
+                    #                                                           covariance - 1))
+                    covariance_list[player_key].append((key, covariance))
+
+
     rank_range = 10
     contribution_list["Alice"].sort(key=lambda element: -element[1])
     contribution_list["Bob"].sort(key=lambda element: -element[1])
@@ -732,6 +764,10 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
     contribution_list["Bob"] = contribution_list["Bob"][:rank_range]
     footcut_contribution_list["Alice"].sort(key=lambda element: -element[1])
     footcut_contribution_list["Bob"].sort(key=lambda element: -element[1])
+    single_contribution_list["Alice"].sort(key=lambda element: -element[1])
+    single_contribution_list["Bob"].sort(key=lambda element: -element[1])
+    covariance_list["Alice"].sort(key=lambda element: -element[1])
+    covariance_list["Bob"].sort(key=lambda element: -element[1])
     if len(footcut_contribution_list["Alice"])<rank_range:
         rank_range = len(footcut_contribution_list["Alice"])
     footcut_contribution_list["Alice"] = footcut_contribution_list["Alice"][:10]
@@ -757,17 +793,35 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
             txt = "No.{} ({},{})(both_played_num:{})".format(j + 1, cell[0][0],cell[0][1],cell[2])
             txt = "{:<80}:{:.3%}".format(txt, cell[1])
             mylogger.info(txt)
+            covariance_cell = list(filter(lambda x:x[0] == cell[0],covariance_list[player_key]))[0]
+            mylogger.info("covariance:{:.3%}".format(covariance_cell[1]))
+
+            mylogger.info("")
         print("")
+    mylogger.info("Single WRP")
+    for i, player_key in enumerate(list(single_contribution_list.keys())):
+        mylogger.info("Player{}".format(i + 1))
+        for j, cell in enumerate(single_contribution_list[player_key]):
+            txt = "No.{} {}(played_num:{})".format(j + 1, cell[0],cell[2])
+            txt = "{:<80}:{:.3%}".format(txt,cell[1])
+            mylogger.info(txt)
+        print("")
+
+    for i,player_key in enumerate(list(covariance_list.keys())):
+        mylogger.info("Player{}".format(i+1))
+        for j,cell in enumerate(covariance_list[player_key]):
+            txt = "({},{})".format(cell[0][0],cell[0][1])
+            mylogger.info("{:<80}:{:.3f}".format(txt,cell[1]))
 
     title = "{}({})vs {}({})({} iteration)".format(Player_1.policy.name, deck_id_2_name[deck_type[0]],
                                                    Player_2.policy.name,
                                                    deck_id_2_name[deck_type[1]], iteration)
     result_txt = "Result:win={}, lose={}, libout_num={}, win_rate:{:<3}".format(win_lose[0], win_lose[1], lib_num,
                                                                                 win_lose[0] / iteration)
-    first_win_rate_txt = "first_win_rate[Player1:{:.3f},Player2:{:.3f}" \
+    first_win_rate_txt = "first_win_rate Player1:{:.3f},Player2:{:.3f}" \
         .format(first_num[0] / (iteration // 2), first_num[1] / (iteration // 2))
     if output:
-        file_name = title+"_pairwise_WRP.txt"
+        file_name = title+"_pairwise_WRP_and_single_WRP.txt"
         path =  file_name
         if directory_name is not None:
             path = directory_name + "/" +path
@@ -784,10 +838,27 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                     f.write(txt)
                 f.write("\n")
             f.write("\n")
+            f.write("pairwise-WRP_rank(footcut by threthold:{})\n".format(iteration//10))
+            for i, player_key in enumerate(list(footcut_contribution_list.keys())):
+                f.write("Player{}\n".format(i + 1))
+                for j, cell in enumerate(footcut_contribution_list[player_key]):
+                    pairwise = "No.{} ({},{})(both_played_num:{})".format(j + 1, cell[0][0],cell[0][1],cell[2])
+                    txt = "{:<80}:{:.3%}\n".format(pairwise,cell[1])
+                    f.write(txt)
+                f.write("\n")
+            f.write("\n")
+
+            for i, player_key in enumerate(list(single_contribution_list.keys())):
+                f.write("Player{}\n".format(i + 1))
+                for j, cell in enumerate(single_contribution_list[player_key]):
+
+                    txt = "No.{} {:<80}:{:.3%}(played_num:{})".format(j + 1, cell[0],cell[1],cell[2])
+                    f.write(txt)
+                f.write("\n")
+            f.write("\n")
 
 
-
-def get_contributions(Player_1, Player_2, iteration, virtual_flg=False, player1_deck_num=None, directory_name=None):
+def get_contributions(Player_1, Player_2, iteration, player1_deck_num=None, directory_name=None):
     assert player1_deck_num is not None
     assert directory_name is not None
     Player1 = copy.deepcopy(Player_1)
@@ -1342,62 +1413,6 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
         if deck_type[i] in key_2_tsv_name:
             D[i] = tsv_to_deck(key_2_tsv_name[deck_type[i]][0])
             D[i].set_leader_class(key_2_tsv_name[deck_type[i]][1])
-    """
-    for i, d in enumerate(D):
-        if deck_type[i] == 0:
-            D[i] = tsv_to_deck("Sword_Aggro.tsv")
-            D[i].set_leader_class("SWORD")
-            # Aggro
-        elif deck_type[i] == 1:
-            D[i] = tsv_to_deck("Rune_Earth.tsv")
-            D[i].set_leader_class("RUNE")
-            # Aggro
-        elif deck_type[i] == 2:
-            D[i] = tsv_to_deck("Sword.tsv")
-            D[i].set_leader_class("SWORD")
-            # Mid
-        elif deck_type[i] == 3:
-            # D[i]=tsv_to_deck("Shadow.tsv")
-            D[i] = tsv_to_deck("New-Shadow.tsv")
-            D[i].set_leader_class("SHADOW")
-            # Mid
-        elif deck_type[i] == 4:
-            D[i] = tsv_to_deck("Dragon_PDK.tsv")
-            D[i].set_leader_class("DRAGON")
-            # Mid
-        elif deck_type[i] == 5:
-            D[i] = tsv_to_deck("Test-Haven.tsv")
-            D[i].set_leader_class("HAVEN")
-            # D[i] = tsv_to_deck("Haven.tsv")
-            # D[i].set_leader_class("HAVEN")
-            # Control
-        elif deck_type[i] == 6:
-            D[i] = tsv_to_deck("Blood.tsv")
-            D[i].set_leader_class("BLOOD")
-            # Control
-        elif deck_type[i] == 7:
-            D[i] = tsv_to_deck("Dragon.tsv")
-            D[i].set_leader_class("DRAGON")
-            # Control
-        elif deck_type[i] == 8:
-            D[i] = tsv_to_deck("Forest.tsv")
-            D[i].set_leader_class("FOREST")
-            # Combo
-        elif deck_type[i] == 9:
-            D[i] = tsv_to_deck("Rune.tsv")
-            D[i].set_leader_class("RUNE")
-            # Combo
-        
-        if deck_type[i] == -1:
-            D[i] = tsv_to_deck("Forest_Basic.tsv")
-            D[i].set_leader_class("FOREST")
-        elif deck_type[i] == -2:
-            D[i] = tsv_to_deck("Sword_Basic.tsv")
-            D[i].set_leader_class("SWORD")
-        elif deck_type[i] == -3:
-            D[i] = tsv_to_deck("Rune_Basic.tsv")
-            D[i].set_leader_class("RUNE")
-    """
 
     Results = {}
     for policy1_id, player1 in enumerate(players):
@@ -1638,124 +1653,48 @@ parser.add_argument('--basic', help='ベーシック')
 parser.add_argument('--graph', help='グラフ')
 parser.add_argument('--pairwise', help='ペアワイズ')
 parser.add_argument('--output', help='出力')
+parser.add_argument('--step_num',help='MCTSの繰り返し上限')
 parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
 args = parser.parse_args()
 mylogger.info("args:{}".format(args))
-
-Players = []
-Players.append(Player(9, True))  # 1
-Players.append(Player(9, True, policy=AggroPolicy()))  # 2
-Players.append(Player(9, True, policy=GreedyPolicy()))  # 3
-Players.append(Player(9, True, policy=FastGreedyPolicy()))  # 4
-Players.append(Player(9, True, policy=GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 5
-Players.append(Player(9, True, policy=FastGreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 6
-Players.append(Player(9, True, policy=GreedyPolicy(), mulligan=Min_cost_mulligan_policy()))  # 7
-Players.append(Player(9, True, policy=FastGreedyPolicy(), mulligan=Min_cost_mulligan_policy()))  # 8
-Players.append(Player(9, True, policy=MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 9
-Players.append(Player(9, True, policy=Shallow_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 10
-Players.append(Player(9, True, policy=Test_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 11
-Players.append(Player(9, True, policy=Test_2_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 12
-Players.append(Player(9, True, policy=Test_3_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 13
-Players.append(Player(9, True, policy=Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 14
-Players.append(Player(9, True, policy=EXP3_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 15
-Players.append(Player(9, True, policy=New_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 16
-Players.append(Player(9, True, policy=New_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 17
-Players.append(Player(9, True, policy=Aggro_EXP3_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 18
-Players.append(Player(9, True, policy=Alpha_Beta_MCTSPolicy(th=10), mulligan=Min_cost_mulligan_policy()))  # 19
-Players.append(Player(9, True, policy=Alpha_Beta_MCTSPolicy(th=20), mulligan=Min_cost_mulligan_policy()))  # 20
-Players.append(Player(9, True, policy=Alpha_Beta_MCTSPolicy(th=25), mulligan=Min_cost_mulligan_policy()))  # 21
-Players.append(Player(9, True, policy=Shallow_MCTSPolicy(th=10), mulligan=Min_cost_mulligan_policy()))  # 22
-Players.append(Player(9, True, policy=Shallow_MCTSPolicy(th=20), mulligan=Min_cost_mulligan_policy()))  # 23
-Players.append(Player(9, True, policy=Shallow_MCTSPolicy(th=25), mulligan=Min_cost_mulligan_policy()))  # 24
-Players.append(Player(9, True, policy=Shallow_MCTSPolicy(th=33), mulligan=Min_cost_mulligan_policy()))  # 25
-Players.append(Player(9, True, policy=Shallow_MCTSPolicy(th=5), mulligan=Min_cost_mulligan_policy()))  # 26
-Players.append(Player(9, True, policy=Shallow_MCTSPolicy(th=3), mulligan=Min_cost_mulligan_policy()))  # 27
-Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.1), mulligan=Min_cost_mulligan_policy()))  # 28
-Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.25), mulligan=Min_cost_mulligan_policy()))  # 29
-Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.5), mulligan=Min_cost_mulligan_policy()))  # 30
-Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=1.0), mulligan=Min_cost_mulligan_policy()))  # 31
-Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.1, playout=AggroPolicy()),
-                      mulligan=Min_cost_mulligan_policy()))  # 32
-Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.25, playout=AggroPolicy()),
-                      mulligan=Min_cost_mulligan_policy()))  # 33
-Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=0.5, playout=AggroPolicy()),
-                      mulligan=Min_cost_mulligan_policy()))  # 34
-Players.append(Player(9, True, policy=Aggro_Shallow_MCTSPolicy(th=3), mulligan=Min_cost_mulligan_policy()))  # 35
-Players.append(Player(9, True, policy=Expanded_Aggro_MCTS_Policy(), mulligan=Min_cost_mulligan_policy()))  # 36
-Players.append(Player(9, True, policy=Genetic_GreedyPolicy(N=10), mulligan=Min_cost_mulligan_policy()))  # 37
-Players.append(Player(9, True, policy=Genetic_GreedyPolicy(N=20), mulligan=Min_cost_mulligan_policy()))  # 38
-Players.append(Player(9, True, policy=Genetic_New_GreedyPolicy(N=10), mulligan=Min_cost_mulligan_policy()))  # 39
-Players.append(Player(9, True, policy=Genetic_New_GreedyPolicy(N=20), mulligan=Min_cost_mulligan_policy()))  # 40
-Players.append(Player(9, True, policy=Genetic_Aggro_MCTSPolicy(N=10), mulligan=Min_cost_mulligan_policy()))  # 41
-Players.append(Player(9, True, policy=Information_Set_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 42
-Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=100), mulligan=Min_cost_mulligan_policy()))  # 43
-Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=250), mulligan=Min_cost_mulligan_policy()))  # 44
-Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=500), mulligan=Min_cost_mulligan_policy()))  # 45
-Players.append(
-    Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=100), mulligan=Min_cost_mulligan_policy()))  # 46
-Players.append(
-    Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=250), mulligan=Min_cost_mulligan_policy()))  # 47
-Players.append(
-    Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=500), mulligan=Min_cost_mulligan_policy()))  # 48
-Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=100),
-                      mulligan=Min_cost_mulligan_policy()))  # 49
-Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=250),
-                      mulligan=Min_cost_mulligan_policy()))  # 50
-Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=500),
-                      mulligan=Min_cost_mulligan_policy()))  # 51
+step_num = 100
+if args.step_num is not None:
+    step_num = int(args.step_num)
 time_bound = 1.0
 if args.time_bound is not None:
     time_bound = float(args.time_bound)
-Players.append(Player(9, True, policy=Time_bounded_MCTSPolicy(limit=time_bound, playout=AggroPolicy()),
-                      mulligan=Min_cost_mulligan_policy()))  # 52
-Players.append(Player(9, True, policy=Time_bounded_Information_Set_MCTSPolicy(limit=time_bound),
-                      mulligan=Min_cost_mulligan_policy()))  # 53
-Players.append(Player(9, True, policy=Test_4_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 54
-Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 55
-Players.append(Player(9, True, policy=Improved_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 56
-Players.append(Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 57
-Players.append(
-    Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  # 58
-Players.append(
-    Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(iteration=500), mulligan=Min_cost_mulligan_policy()))  # 59
-Players.append(
-    Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(iteration=50), mulligan=Min_cost_mulligan_policy()))  # 60
-Players.append(
-    Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=50), mulligan=Min_cost_mulligan_policy()))  # 61
-Players.append(
-    Player(9, True, policy=Alter_Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 62
-Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.1), mulligan=Min_cost_mulligan_policy()))  # 63
-Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.2), mulligan=Min_cost_mulligan_policy()))  # 64
-Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.25), mulligan=Min_cost_mulligan_policy()))  # 65
-Players.append(Player(9, True, policy=Neo_MCTSPolicy(probability=0.50), mulligan=Min_cost_mulligan_policy()))  # 66
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.1), mulligan=Min_cost_mulligan_policy()))  # 67
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.2), mulligan=Min_cost_mulligan_policy()))  # 68
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.25), mulligan=Min_cost_mulligan_policy()))  # 69
-Players.append(Player(9, True, policy=Neo_OM_ISMCTSPolicy(probability=0.50), mulligan=Min_cost_mulligan_policy()))  # 70
-Players.append(Player(9, True, policy=Damped_Sampling_MCTS(), mulligan=Min_cost_mulligan_policy()))  # 71
-Players.append(Player(9, True, policy=Damped_Sampling_ISMCTS(), mulligan=Min_cost_mulligan_policy()))  # 72
-Players.append(Player(9, True, policy=Sampling_ISMCTS(), mulligan=Min_cost_mulligan_policy()))  # 73
+Players = []
+Players.append(Player(9, True))  # 1
+Players.append(Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy()))  # 2
+Players.append(Player(9, True, policy=GreedyPolicy(), mulligan=Min_cost_mulligan_policy()))  # 3
+Players.append(Player(9, True, policy=FastGreedyPolicy(), mulligan=Min_cost_mulligan_policy()))  # 4
+Players.append(Player(9, True, policy=MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 5
+Players.append(Player(9, True, policy=Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 6
+Players.append(Player(9, True, policy=New_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 7
+Players.append(Player(9, True, policy=Information_Set_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 8
+Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=step_num), mulligan=Min_cost_mulligan_policy()))  # 9
+Players.append(Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=step_num), mulligan=Min_cost_mulligan_policy()))  # 10
+Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=step_num),mulligan=Min_cost_mulligan_policy()))  # 11
+Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 12
+Players.append(Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 13
+"""
 Players.append(Player(9, True, policy=Simple_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 74
-Players.append(
-    Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 75
+Players.append(Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 75
 Players.append(Player(9, True, policy=Simple_value_function_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 76
 Players.append(Player(9, True, policy=Second_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 77
-Players.append(
-    Player(9, True, policy=Second_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 78
-Players.append(Player(9, True, policy=Flexible_Simulation_A_MCTSPolicy(sim_num=1), mulligan=Min_cost_mulligan_policy()))  # 79
-Players.append(Player(9, True, policy=Flexible_Simulation_A_MCTSPolicy(sim_num=5), mulligan=Min_cost_mulligan_policy()))  # 80
-Players.append(Player(9, True, policy=Flexible_Simulation_MO_ISMCTSPolicy(sim_num=1), mulligan=Min_cost_mulligan_policy()))  # 81
-Players.append(Player(9, True, policy=Flexible_Simulation_MO_ISMCTSPolicy(sim_num=5), mulligan=Min_cost_mulligan_policy()))  # 82
-Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=100), mulligan=Min_cost_mulligan_policy()))  #83
-Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(iteration=100), mulligan=Min_cost_mulligan_policy()))  #84
-Players.append(Player(9, True, policy=New_Aggro_MCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  # 85
-Players.append(Player(9, True, policy=New_Aggro_MCTSPolicy(iteration=500), mulligan=Min_cost_mulligan_policy()))  # 86
-Players.append(Player(9, True, policy=Advanced_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 87
-Players.append(Player(9, True, policy=Advanced_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 88
-Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  # 89
-Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=250), mulligan=Min_cost_mulligan_policy()))  #90
+Players.append( Player(9, True, policy=Second_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 78
 Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 91
 Players.append(Player(9, True, policy=Second_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 92
+Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  #83
+Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  #84
+"""
+Players.append(Player(9, True, policy=Default_GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 14
+Players.append(Player(9, True, policy=Default_Aggro_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 15
+Players.append(Player(9, True, policy=Non_Rollout_A_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 16
+Players.append(Player(9, True, policy=Non_Rollout_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 17
+Players.append(Player(9, True, policy=Non_Rollout_OM_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 18
+Players.append(Player(9, True, policy=Non_Rollout_OM_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 19
+
 # assert False
 n = 100
 a = 0
@@ -1922,7 +1861,8 @@ else:
         basic_flg = False
         if args.basic is not None:
             basic_flg = True
-        if a == b:
+        #if a == b:
+        if False:
             make_deck_table(d1, d2, iteration, same_flg=True, result_name=file_name, basic=basic_flg,deck_lists=deck_list)
         else:
             make_deck_table(d1, d2, iteration, result_name=file_name, basic=basic_flg,deck_lists=deck_list)

@@ -202,8 +202,6 @@ class AggroPolicy(Policy):
 
 
 class GreedyPolicy(Policy):
-    def __str__(self):
-        return 'GreedyPolicy'
 
     def __init__(self):
         self.policy_type = 2
@@ -226,12 +224,6 @@ class GreedyPolicy(Policy):
         board_diff /= 10
         value = board_diff * 0.45 + life_diff * 0.45 + hand_diff * 0.1
         return 1 / (1 + np.exp(-(value * 10)))
-
-    # def state_value(self, field, player_num):
-    #    if field.players[1 - player_num].life <= 0:
-    #        return 100000
-    #    return (field.players[1 - player_num].max_life - field.players[1 - player_num].life) * 100 + \
-    #           (len(field.get_creature_location()[player_num]) - len(field.get_creature_location()[1 - player_num])) * 5
 
     def decide(self, player, opponent, field):
         (ward_list, can_be_targeted, can_be_attacked, regal_targets) = field.get_situation(player, opponent)
@@ -257,7 +249,7 @@ class GreedyPolicy(Policy):
             target_creatures_toughness = [field.card_location[opponent.player_num][i].get_current_toughness() \
                                           for i in can_be_targeted]
 
-        if can_evo == True and len(able_to_evo) > 0 and able_to_play == []:
+        if can_evo and len(able_to_evo) > 0 and able_to_play == []:
 
             leader_flg = False
             can_evolve_power = [field.card_location[player.player_num][i].power for i in able_to_evo]
@@ -275,7 +267,7 @@ class GreedyPolicy(Policy):
             assert evo_id in able_to_evo
             target_id = None
             creature = field.card_location[first][evo_id]
-            if creature.evo_target != None:
+            if creature.evo_target is not None:
                 choices = field.get_regal_targets(creature, player_num=player.player_num)
                 if choices != []:
                     target_id = random.choice(choices)
@@ -405,60 +397,21 @@ class FastGreedyPolicy(GreedyPolicy):
     def __init__(self):
         self.policy_type = 2
 
-
-class New_GreedyPolicy(GreedyPolicy):
+class Advanced_GreedyPolicy(GreedyPolicy):
     def __init__(self):
         super().__init__()
-        self.name = "New_GreedyPolicy"
-        self.probability_check_func = lambda x: x >= 0 and x <= 1
+        self.name = "Advanced_GreedyPolicy"
 
     def state_value(self, field, player_num):
+        return advanced_state_value(field,player_num)
 
-        if field.check_game_end():
-            if field.players[1 - player_num].life <= 0 or len(field.players[1 - player_num].deck.deck) == 0:
-                return 1.0
-            return 0.0
+class Default_GreedyPolicy(GreedyPolicy):
+    def __init__(self):
+        super().__init__()
+        self.name = "Default_GreedyPolicy"
 
-        player = field.players[player_num]
-        opponent = field.players[1 - player_num]
-
-        before_evo_turn = int(field.current_turn[player_num] < field.able_to_evo_turn[player_num])
-        accumulated_damage_ratio = (opponent.max_life - opponent.life) / opponent.max_life
-        assert self.probability_check_func(accumulated_damage_ratio), "{}".format(accumulated_damage_ratio)
-        life_advantage = ((player.life - opponent.life) + 20) / 40
-        assert self.probability_check_func(life_advantage), "{}".format(life_advantage)
-        player_hand_len = len(player.hand)
-        opponent_hand_len = len(opponent.hand)
-        hand_advantage = (player_hand_len - opponent_hand_len + max(player_hand_len, opponent_hand_len)) / (
-                2 * max(1, max(player_hand_len, opponent_hand_len)))
-        assert self.probability_check_func(hand_advantage), "{}".format(hand_advantage)
-        player_board_len = len(field.get_creature_location()[player_num])
-        opponent_board_len = len(field.get_creature_location()[1 - player_num])
-        board_advantage = (player_board_len - opponent_board_len + max(player_board_len, opponent_board_len)) / (
-                2 * max(1, max(player_board_len, opponent_board_len)))
-        assert self.probability_check_func(board_advantage), "{}".format(board_advantage)
-        tempo_advantage = (field.cost[player_num] - field.remain_cost[player_num]) / field.cost[player_num]
-        assert self.probability_check_func(tempo_advantage), "{}".format(tempo_advantage)
-        value = \
-            life_advantage * self.hyper_parameter[0] + \
-            hand_advantage * self.hyper_parameter[1] + \
-            (1 - before_evo_turn) * board_advantage * self.hyper_parameter[2] + before_evo_turn * board_advantage * \
-            self.hyper_parameter[3] + \
-            accumulated_damage_ratio * self.hyper_parameter[4] + \
-            tempo_advantage * self.hyper_parameter[5]
-
-        max_value = sum(self.hyper_parameter) - (
-                (1 - before_evo_turn) * self.hyper_parameter[3] + before_evo_turn * self.hyper_parameter[2])
-        min_value = 0
-
-        value = max(value, 0.001)
-        assert (max_value - min_value) * self.eta > 1, "{} {}".format(max_value, min_value)
-        probability = np.log(max(1 + EPSILON, (value - min_value) * self.eta)) / np.log(
-            max(1 + EPSILON, (max_value - min_value) * self.eta))
-
-        assert self.probability_check_func(probability), "probability:{}".format(probability)
-        probability = max(0, probability)
-        return probability
+    def state_value(self, field, player_num):
+        return default_state_value(field,player_num)
 
 
 class Node:
@@ -1362,6 +1315,17 @@ class New_Aggro_MCTSPolicy(New_MCTSPolicy):
         self.name = "New_Aggro_MCTS(iteartion={})Policy".format(iteration)
         self.play_out_policy = AggroPolicy()
         self.iteration = iteration
+
+
+class Default_Aggro_MCTSPolicy(New_MCTSPolicy):
+    def __init__(self,iteration=100):
+        super().__init__()
+        self.name = "Default_Aggro_MCTS(iteartion={})Policy".format(iteration)
+        self.play_out_policy = AggroPolicy()
+        self.iteration = iteration
+
+    def state_value(self, field, player_num):
+        return default_state_value(field,player_num)
 
 
 class EXP3_MCTSPolicy(Policy):
@@ -2368,29 +2332,14 @@ class Information_Set_MCTSPolicy():
 
     def state_value(self, field, player_num):
         return default_state_value(field,player_num)
-        """
-        if field.players[1 - player_num].life <= 0:
-            return WIN_BONUS
-        power_sum = 0
-        # if field.players[player_num].life <= 10:
-        #    power_sum += 3
-        for card_id in field.get_creature_location()[1 - player_num]:
-            power_sum += field.card_location[1 - player_num][card_id].power
-        if power_sum >= field.players[player_num].life:
-            return -WIN_BONUS
-
-        return (field.players[1 - player_num].max_life - field.players[1 - player_num].life) * 50 + \
-               (len(field.get_creature_location()[player_num]) - len(
-                   field.get_creature_location()[1 - player_num])) * 50 + len(field.players[player_num].hand)
-        """
 
     def decide(self, player, opponent, field):
         if self.current_node is None:
             if not field.secret:
                 mylogger.info("generate new tree")
             action = self.uct_search(player, opponent, field)
-
-            # self.current_node.print_tree()
+            if not field.secret:
+                self.current_node.print_tree(single=True)
             tmp_move = action
             if len(self.current_node.child_nodes) > 0:
                 next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
@@ -2744,7 +2693,10 @@ class Information_Set_MCTSPolicy():
                 action_uct_values[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
-            action_uct_values[action].append(self.uct(children[i], node, player_num=player_num))
+            uct = self.uct(children[i], node, player_num=player_num)
+            if action == (0,0,0):
+                uct = 0
+            action_uct_values[action].append(uct)
             action_2_node[action].append(children[i])
         max_value = None
         max_value_action = None
@@ -2779,16 +2731,31 @@ class Information_Set_MCTSPolicy():
             action_2_node[action].append(children[i])
         max_value = None
         max_value_action = None
+        max_ave_value = 0
         assert len(action_uct_values) > 0, "non-action-error"
         for key in list(action_uct_values.keys()):
             values = action_uct_values[key]
             weights = [cell.visit_num for cell in action_2_node[key]]
+            ave_values_list = [cell.value/cell.visit_num for cell in action_2_node[key]]
+
             visit_num_sum = sum(weights)
             # mean_value = sum(values)/len(values)
             mean_value = sum([values[node_id] * (weights[node_id] / visit_num_sum) for node_id in range(len(values))])
+            ave_value = sum([values[node_id] * (ave_values_list[node_id] / visit_num_sum) for node_id in range(len(values))])
+            #mylogger.info("action:{}".format(key))
+            #mylogger.info("weighted_visit_num:{} ave_value:{}".format(mean_value,ave_value))
+            #mylogger.info("")
             if max_value is None or mean_value > max_value:
                 max_value = mean_value
                 max_value_action = key
+                max_ave_value = max_ave_value
+            elif mean_value == max_value:
+                if ave_value > max_ave_value:
+                    max_value_action = key
+                    max_ave_value = max_ave_value
+
+
+
 
         weights = [cell.visit_num for cell in action_2_node[max_value_action]]
         max_value_node = random.choices(action_2_node[max_value_action], weights=weights)[0]
@@ -2950,7 +2917,7 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
             action = self.uct_search(player, opponent, field)
             if not field.secret:
                 mylogger.info("root tree")
-                self.current_node.print_tree()
+                #self.current_node.print_tree()
             tmp_move = action
             if self.current_node.child_nodes == []:
                 self.current_node = None
@@ -2988,7 +2955,7 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
                     next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
                     if not field.secret:
                         mylogger.info("action_values:")
-                        self.current_node.print_tree(single=True)
+                        #self.current_node.print_tree(single=True)
                     self.current_node = next_node
                 if tmp_move == (0, 0, 0):
                     self.current_node = None
@@ -3002,7 +2969,7 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
             if not field.secret:
                 mylogger.info("action_values:")
-                self.current_node.print_tree(single=True)
+                #self.current_node.print_tree(single=True)
             self.current_node = next_node
             if tmp_move == (0, 0, 0):
                 if not field.secret:
@@ -3401,7 +3368,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
             action = self.uct_search(player, opponent, field)
             if not field.secret:
                 mylogger.info("generate new tree")
-                self.current_node.print_tree()
+                self.current_node.print_tree(single=True)
             tmp_move = action
             if len(self.current_node.child_nodes) > 0:
                 next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
@@ -4826,4 +4793,54 @@ class Advanced_value_function_OM_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
     def state_value(self, field, player_num):
         value = advanced_state_value(field, player_num)
         #mylogger.info("state_value:{}".format(value))
+        return value
+
+
+class Non_Rollout_MCTSPolicy(Flexible_Iteration_MCTSPolicy):
+    def __init__(self,iteration=100):
+        super().__init__(N=iteration)
+        self.name = "Non-Rollout_MCTS(iteration={})policy".format(iteration)
+
+    def default_policy(self, node, player_num=0):
+        return self.state_value(node.field,player_num)
+
+
+class Non_Rollout_A_MCTSPolicy(New_Aggro_MCTSPolicy):
+    def __init__(self, iteration=100):
+        super().__init__()
+        self.name = "Non-Rollout_New_A_MCTS(iteration={})policy".format(iteration)
+        self.iteration = iteration
+
+    def default_policy(self, node, player_num=0):
+        return self.state_value(node.field, player_num)
+
+
+class Non_Rollout_ISMCTSPolicy(Flexible_Iteration_Information_Set_MCTSPolicy):
+    def __init__(self,iteration=100):
+        super().__init__(N=iteration)
+        self.name = "Non-Rollout_ISMCTS(iteration={})policy".format(iteration)
+
+    def default_policy(self, node, player_num=0):
+        return self.state_value(node.field,player_num)
+
+
+class Non_Rollout_OM_MCTSPolicy(Opponent_Modeling_MCTSPolicy):
+    def __init__(self, iteration=100):
+        super().__init__(iteration=iteration)
+        self.name = "Non-Rollout_MO_MCTS(iteration={})policy".format(iteration)
+
+    def default_policy(self, node, player_num=0):
+        return self.state_value(node.field, self.main_player_num)
+
+
+class Non_Rollout_OM_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
+    def __init__(self, iteration=100):
+        super().__init__(iteration=iteration)
+        self.name = "Non-Rollout_MO_ISMCTS(iteration={})policy".format(iteration)
+
+    def default_policy(self, node, player_num=0):
+        value = self.state_value(node.field, self.main_player_num)
+        if node.parent_node.node_id_2_edge_action[id(node)][0] == Action_Code.TURN_END.value:
+            if len(node.parent_node.edge_action_2_node_id) > 1:
+                value /= 10
         return value
