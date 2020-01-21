@@ -2415,8 +2415,8 @@ class Information_Set_MCTSPolicy():
             node = self.tree_policy(starting_node, player_num=player_num)
             value = self.default_policy(node, player_num=player_num)
             self.back_up(node, value, player_num=player_num)
-            if starting_node.max_child_visit_num[0] is not None and starting_node.max_child_visit_num[
-                1] is not None:
+            if starting_node.max_child_visit_num[0] is not None \
+                    and starting_node.max_child_visit_num[1] is not None:
                 if starting_node.max_child_visit_num[1].visit_num - \
                         starting_node.max_child_visit_num[0].visit_num > self.iteration - i:
                     break
@@ -3577,7 +3577,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                     else:
                         if len(node.children_moves) == len(list(node.edge_action_2_node_id.keys())):
                             return True
-        #return False
+        return False
         remain_actions = list(set(node.children_moves) - set(node.child_actions))
         if remain_actions != []:
             remain_num = len(remain_actions)
@@ -3652,9 +3652,18 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
         old_choices = node.children_moves[:]
         new_choices = node.children_moves[:]
         if (0,0,0) in node.edge_action_2_node_id:
-            old_choices.remove((0,0,0))
-            new_choices.remove((0, 0, 0))
-        assert len(new_choices) > 0, "non-choice-error"
+            exist_flg = False
+            for node_id in node.edge_action_2_node_id[(0,0,0)]:
+                for child in node.child_nodes:
+                    if id(child) == node_id and child.visit_num >= 5:
+                        old_choices.remove((0,0,0))
+                        new_choices.remove((0, 0, 0))
+                        exist_flg = True
+                        break
+                if exist_flg:break
+        #assert len(new_choices) > 0, "non-choice-error"
+        if len(new_choices) == 0:
+            return node
         next_node, move, exist_flg = self.execute_single_action(node, new_choices, child_node_fields,
                                                                 player_num=player_num)
         if exist_flg:
@@ -3676,7 +3685,6 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
             # node.edge_action_2_node_id[move] = [id(next_node)]
         if move not in node.child_actions:
             node.child_actions.append(move)
-            assert move in node.children_moves, "ill-move!"
         return next_node
 
     def execute_single_action(self, node, new_choices, child_node_fields, player_num=0):
