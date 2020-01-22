@@ -81,7 +81,6 @@ class Field:
                             self.play_cards.name_list[i][cost_key][category_key][name_key]:
                             return False
 
-
         return True
 
     def set_data(self, field):
@@ -188,8 +187,6 @@ class Field:
         """
         self.check_death(player_num, virtual=virtual)
         while len(self.stack) > 0 or len(self.state_log) > 0:
-            #if not self.secret:
-            #    mylogger.info("log:{}".format(self.state_log))
             self.solve_lastword_ability(virtual=virtual, player_num=player_num)
             self.check_death(player_num, virtual=virtual)
             self.solve_field_trigger_ability(virtual=virtual, player_num=player_num)
@@ -200,8 +197,8 @@ class Field:
     def check_active_ability(self):
         for i in range(2):
             for card in self.card_location[i]:
-                if card.have_active_ability == True:
-                    if card.active_ability_check_func(self.players[i]) == True:
+                if card.have_active_ability:
+                    if card.active_ability_check_func(self.players[i]):
                         card.get_active_ability()
                     else:
                         card.lose_active_ability()
@@ -281,10 +278,6 @@ class Field:
                 card = self.card_location[(player_num + j) % 2][i]
                 if not card.is_in_field or card.is_in_graveyard:
                     self.remove_card([(player_num + j) % 2, i], virtual=virtual)
-                elif card.card_category == "Creature":
-                    #assert card.get_current_toughness() > 0, "minus-toughness_error:{}".format(
-                    #    card.get_current_toughness())
-                    i += 1
                 else:
                     i += 1
 
@@ -306,7 +299,7 @@ class Field:
             tmp.is_in_field = True
             tmp.is_tapped = True
             self.set_card(tmp, player_num, virtual=virtual)
-            if tmp.fanfare_ability != None:
+            if tmp.fanfare_ability is not None:
                 tmp.fanfare_ability(self, player, opponent, virtual, target, tmp)
             self.play_cards.append(tmp.card_category, tmp.card_id, player_num)
             self.append_played_turn(card_name=tmp.name)
@@ -338,7 +331,7 @@ class Field:
 
             tmp.is_in_field = True
             self.set_card(tmp, player_num, virtual=virtual)
-            if tmp.fanfare_ability != None:
+            if tmp.fanfare_ability is not None:
                 tmp.fanfare_ability(self, player, opponent, virtual, target, tmp)
             self.play_cards.append(tmp.card_category, tmp.card_id, player_num)
             self.append_played_turn(card_name=tmp.name)
@@ -352,7 +345,7 @@ class Field:
     def spell_boost(self, player_num):
         hand = self.players[player_num].hand
         for card in hand:
-            if card.card_class.name == "RUNE" and card.spell_boost != None:
+            if card.card_class.name == "RUNE" and card.spell_boost is not None:
                 card.spell_boost += 1
                 # if card.cost_down==True:
                 #    card.cost=max(0,card.origin_cost-card.spell_boost)
@@ -683,7 +676,7 @@ class Field:
 
     def evolve(self, creature, virtual=False, target=None):
         # if virtual==False:mylogger.info("evo_check")
-        if creature.evolved == True or self.evo_flg == True:
+        if creature.evolved  or self.evo_flg :
             first = creature in self.card_location[0]
 
             mylogger.info("first:{} policy:{}".format(first, self.players[1 - int(first)].policy.name))
@@ -723,8 +716,6 @@ class Field:
         return ans
 
     def get_creature_location(self):
-        #ans[0] = filter(check_follower,self.card_location[0])
-        #ans[0] = [thing.card_category=="Creature" for thing in self.card_location[0]]
         ans = [[], []]
 
         for j, thing in enumerate(self.card_location[0]):
@@ -733,12 +724,6 @@ class Field:
         for j, thing in enumerate(self.card_location[1]):
             if thing.card_category == "Creature":
                 ans[1].append(j)
-        """
-        for i in range(2):
-            for j, thing in enumerate(self.card_location[i]):
-                if thing.card_category == "Creature":
-                    ans[i].append(j)
-        """
         return ans
 
     def update_hand_cost(self, player_num=0):
@@ -1323,24 +1308,6 @@ class Field:
                 return 0
             elif partial_observable_data["opponent"]["life"] <= 0 or self.players[1-player_num].lib_out_flg:
                 return 1
-        """
-        if partial_observable_data["opponent"]["life"] <= 0:
-            return 1  # WIN_BONUS
-        able_attack_power_sum = 0
-        if len(self.get_ward_list(player_num))>0:
-            for card in self.card_location[player_num]:
-                if card.card_category == "Creatrue" and card.can_attack_to_player():
-                    able_attack_power_sum += card.power
-            if able_attack_power_sum >= partial_observable_data["opponent"]["life"]:
-                return 1  # WIN_BONUS
-        opponent_power_sum = 0
-        if partial_observable_data["player"]["life"] <= 10:
-            opponent_power_sum += 3
-        for card_id in self.get_creature_location()[1 - player_num]:
-            opponent_power_sum += self.card_location[1 - player_num][card_id].power
-        if opponent_power_sum >= partial_observable_data["player"]["life"]:
-            return 0  # -WIN_BONUS
-        """
         card_location = self.card_location
         life_diff = partial_observable_data["player"]["life"] - partial_observable_data["opponent"]["life"]
         life_diff /= 40

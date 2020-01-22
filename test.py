@@ -706,11 +706,12 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
     if iteration>1:
         mylogger.info("first_win_rate:Player1:{:<3},Player2:{:<3}".format(first_num[0] / (iteration // 2),
                                                                       first_num[1] / (iteration // 2)))
-    if win_lose[0] == 0:
-        win_lose[0] = 1
-    if win_lose[1] == 0:
-        win_lose[1] = 1
-    mylogger.info("mean_win_turn:{:.3f},{:.3f}".format(win_turns[0] / win_lose[0], win_turns[1] / win_lose[1]))
+    #if win_lose[0] == 0:
+    #    win_lose[0] = 1
+    #if win_lose[1] == 0:
+    #    win_lose[1] = 1
+    if win_lose[0]>0 and win_lose[1]>0:
+        mylogger.info("mean_win_turn:{:.3f},{:.3f}".format(win_turns[0] / win_lose[0], win_turns[1] / win_lose[1]))
 
     import itertools
     mylogger.info("deck_type:{}".format(deck_type))
@@ -719,7 +720,8 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
     contribution_list = {"Alice": [], "Bob": []}
     footcut_contribution_list = {"Alice": [], "Bob": []}
     single_contribution_list = {"Alice": [], "Bob": []}
-    covariance_list = {"Alice": [], "Bob": []}
+    pairwise_contribution_list = {"Alice": [], "Bob": []}
+    resulting_win_rate = [win_lose[0]/iteration,win_lose[1]/iteration]
     #drawn_win_rate_list = {"Alice": [], "Bob": []}
     for i, player_key in enumerate(list(deck_contents.keys())):
         for key in list(deck_contents[player_key].keys()):
@@ -739,11 +741,14 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                 contribution_list[player_key].append((key, win_rate,both_played_num))
                 if both_played_num > (iteration//10):
                     footcut_contribution_list[player_key].append((key, win_rate, both_played_num))
-                    first_cell = list(filter(lambda x: x[0] == key[0], single_contribution_list[player_key]))[0]
-                    second_cell = list(filter(lambda x: x[0] == key[1], single_contribution_list[player_key]))[0]
-                    first_single_win_rate = first_cell[1]
-                    second_single_win_rate = second_cell[1]
-                    covariance = win_rate - np.sqrt(first_single_win_rate * second_single_win_rate)
+
+                    #first_cell = list(filter(lambda x: x[0] == key[0], single_contribution_list[player_key]))[0]
+                    #second_cell = list(filter(lambda x: x[0] == key[1], single_contribution_list[player_key]))[0]
+                    #first_single_win_rate = first_cell[1]
+                    #second_single_win_rate = second_cell[1]
+                    #covariance = win_rate - np.sqrt(first_single_win_rate * second_single_win_rate)
+
+                    pairwise_contribution = win_rate - resulting_win_rate[i]
                     #covariance  /= (win_lose[i] / iteration)
                     #covariance /= np.exp(np.abs(0.5-win_rate))
 
@@ -754,7 +759,7 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                     #mylogger.info("{}:{:.3%} {}:{:.3%}\nconvariance:{}".format(key[0], first_single_win_rate,
                     #                                                           key[1], second_single_win_rate,
                     #                                                           covariance - 1))
-                    covariance_list[player_key].append((key, covariance))
+                    pairwise_contribution_list[player_key].append((key, pairwise_contribution))
 
 
     rank_range = 10
@@ -766,8 +771,8 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
     footcut_contribution_list["Bob"].sort(key=lambda element: -element[1])
     single_contribution_list["Alice"].sort(key=lambda element: -element[1])
     single_contribution_list["Bob"].sort(key=lambda element: -element[1])
-    covariance_list["Alice"].sort(key=lambda element: -element[1])
-    covariance_list["Bob"].sort(key=lambda element: -element[1])
+    pairwise_contribution_list["Alice"].sort(key=lambda element: -element[1])
+    pairwise_contribution_list["Bob"].sort(key=lambda element: -element[1])
     if len(footcut_contribution_list["Alice"])<rank_range:
         rank_range = len(footcut_contribution_list["Alice"])
     footcut_contribution_list["Alice"] = footcut_contribution_list["Alice"][:10]
@@ -793,8 +798,8 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
             txt = "No.{} ({},{})(both_played_num:{})".format(j + 1, cell[0][0],cell[0][1],cell[2])
             txt = "{:<80}:{:.3%}".format(txt, cell[1])
             mylogger.info(txt)
-            covariance_cell = list(filter(lambda x:x[0] == cell[0],covariance_list[player_key]))[0]
-            mylogger.info("covariance:{:.3%}".format(covariance_cell[1]))
+            #covariance_cell = list(filter(lambda x:x[0] == cell[0],pairwise_contribution_list[player_key]))[0]
+            #mylogger.info("covariance:{:.3%}".format(covariance_cell[1]))
 
             mylogger.info("")
         print("")
@@ -806,10 +811,10 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
             txt = "{:<80}:{:.3%}".format(txt,cell[1])
             mylogger.info(txt)
         print("")
-
-    for i,player_key in enumerate(list(covariance_list.keys())):
+    mylogger.info("pairwise_contribution")
+    for i,player_key in enumerate(list(pairwise_contribution_list.keys())):
         mylogger.info("Player{}".format(i+1))
-        for j,cell in enumerate(covariance_list[player_key]):
+        for j,cell in enumerate(pairwise_contribution_list[player_key]):
             txt = "({},{})".format(cell[0][0],cell[0][1])
             mylogger.info("{:<80}:{:.3f}".format(txt,cell[1]))
 
@@ -821,7 +826,7 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
     first_win_rate_txt = "first_win_rate Player1:{:.3f},Player2:{:.3f}" \
         .format(first_num[0] / (iteration // 2), first_num[1] / (iteration // 2))
     if output:
-        file_name = title+"_pairwise_WRP_and_single_WRP.txt"
+        file_name = title+"_pairwise_WRP_and_interaction.txt"
         path =  file_name
         if directory_name is not None:
             path = directory_name + "/" +path
@@ -847,15 +852,25 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                     f.write(txt)
                 f.write("\n")
             f.write("\n")
+        path = "{}.tsv".format(deck_id_2_name[deck_type[0]])
+        path = directory_name + "/" + path
+        with open(path,mode = "w") as w:
+            writer = csv.writer(w, delimiter='\t', lineterminator='\n')
 
-            for i, player_key in enumerate(list(single_contribution_list.keys())):
-                f.write("Player{}\n".format(i + 1))
-                for j, cell in enumerate(single_contribution_list[player_key]):
-
-                    txt = "No.{} {:<80}:{:.3%}(played_num:{})".format(j + 1, cell[0],cell[1],cell[2])
-                    f.write(txt)
-                f.write("\n")
-            f.write("\n")
+            writer.writerow(["pairwise_contribution"])
+            for i, player_key in enumerate(list(pairwise_contribution_list.keys())):
+                writer.writerow(["Player{}".format(i + 1)])
+                for j, cell in enumerate(pairwise_contribution_list[player_key]):
+                    row = []
+                    row.append("No.{}".format(j+1))
+                    #txt = "({},{})".format(cell[0][0], cell[0][1])
+                    #row.append(txt)
+                    #row.extend([cell[0][0],cell[0][1]])
+                    row.append(cell[0][0])
+                    row.append(cell[0][1])
+                    row.append("{:.3%}".format(cell[1]))
+                    writer.writerow(row)
+                writer.writerow([])
 
 
 def get_contributions(Player_1, Player_2, iteration, player1_deck_num=None, directory_name=None):
@@ -1627,7 +1642,7 @@ def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None,pairwi
         deck_lists = [0,1,4,5,6,7,9,10,11,12]
     directory_name = None
     if out_put:
-        directory_name = "{}_vs_{}_pairwise_WRP(deck_lists={},iteration={})".format(Player_1.policy.name,Player_2.policy.name,
+        directory_name = "{}_vs_{}_pairwise_WRP_and_Interaction(deck_lists={},iteration={})".format(Player_1.policy.name,Player_2.policy.name,
                                                                        deck_lists,iteration)
         os.makedirs(directory_name, exist_ok=True)
     mylogger.info("deck_list:{}".format(deck_lists))
@@ -1694,6 +1709,10 @@ Players.append(Player(9, True, policy=Non_Rollout_A_MCTSPolicy(iteration=step_nu
 Players.append(Player(9, True, policy=Non_Rollout_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 17
 Players.append(Player(9, True, policy=Non_Rollout_OM_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 18
 Players.append(Player(9, True, policy=Non_Rollout_OM_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 19
+Players.append(Player(9, True, policy=Simple_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 20
+Players.append(Player(9, True, policy=Simple_value_function_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 21
+Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 22
+Players.append(Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 23
 
 # assert False
 n = 100

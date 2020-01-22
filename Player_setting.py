@@ -491,11 +491,7 @@ class HumanPlayer(Player):
                 choices.append(3)
 
         print("if you want to call turn end, input 0")
-        """
-            if len(choices)==1:
-                print("Turn end")
-                can_play,can_attack=False,False
-            """
+
         tmp = input("you can input {} :".format(choices))
         action_num = 0
         if tmp == "":

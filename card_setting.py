@@ -154,7 +154,7 @@ def tsv_to_dataframe(tsv_name):
                 data.extend([card_class, card_trait, spell_boost_type])
             else:
                 data.extend([card_class, card_trait, "None"])
-            if has_count != None:
+            if has_count is not None:
                 data.append(has_count)
             new_df = pd.DataFrame([data], columns=my_columns)
             df = pd.concat([df, new_df])
@@ -562,18 +562,17 @@ class Creature(Card):
         self.current_attack_num = 0
 
     def evolve(self, field, target, player_num=0, virtual=False, auto=False):
-        # if virtual==False:mylogger.info("evo_check")
         self.evolved = True
         self.power += self.evo_stat[0]
         self.toughness += self.evo_stat[1]
         if auto: return
-        if self.evo_effect != None:
+        if self.evo_effect is not None:
             self.evo_effect(field, field.players[player_num], field.players[1 - player_num], virtual, target, self)
 
     def get_damage(self, amount):
         if KeywordAbility.REDUCE_DAMAGE_TO_ZERO.value not in self.ability:
             self.damage += amount
-            if (self.toughness - self.damage <= 0):
+            if self.toughness - self.damage <= 0:
                 self.is_in_field = False
                 self.is_in_graveyard = True
             return amount
@@ -590,9 +589,7 @@ class Creature(Card):
 
     def can_attack_to_follower(self):
         if self.current_attack_num >= self.can_attack_num:
-            # raise Exception("{} {}".format(self.current_attack_num,self.can_attack_num))
             return False
-        # if self.attacked_flg==True: return False
         if self.evolved: return True
         if any((i in self.ability) for i in [KeywordAbility.STORM.value, KeywordAbility.RUSH.value]): return True
         if not self.is_tapped: return True
@@ -600,17 +597,13 @@ class Creature(Card):
 
     def can_attack_to_player(self):
         if self.current_attack_num >= self.can_attack_num:
-            # raise Exception("{} {}".format(self.current_attack_num,self.can_attack_num))
             return False
         if KeywordAbility.CANT_ATTACK_TO_PLAYER.value in self.ability: return False
-        # mylogger.info("{}:type={}".format(KeywordAbility.STORM,type(KeywordAbility.STORM)))
-        # if self.attacked_flg==True: return False
         if KeywordAbility.STORM.value in self.ability: return True
         if not self.is_tapped: return True
         return False
 
     def can_be_targeted(self):
-        # return not any(i in self.ability for i in [KeywordAbility.CANT_BE_TARGETED.value,KeywordAbility.AMBUSH.value])
         if KeywordAbility.CANT_BE_TARGETED.value in self.ability: return False
         if KeywordAbility.AMBUSH.value in self.ability: return False
         return True
@@ -619,7 +612,6 @@ class Creature(Card):
         if KeywordAbility.CANT_BE_ATTACKED.value in self.ability: return False
         if KeywordAbility.AMBUSH.value in self.ability: return False
         return True
-        # return not any(i in self.ability for i in [KeywordAbility.CANT_BE_ATTACKED.value, KeywordAbility.AMBUSH.value])
 
     def get_active_ability(self):
         assert self.have_active_ability == True, "invalid acitve ability error"
@@ -684,7 +676,7 @@ class Creature(Card):
                 text += " enhance:{}".format(self.active_enhance_code[1])
             elif self.have_accelerate == True and self.active_accelerate_code[0] == True:
                 text += " accelerate:{}".format(self.active_accelerate_code[1])
-        if self.card_class.name == "RUNE" and self.spell_boost != None and self.is_in_field == False:
+        if self.card_class.name == "RUNE" and self.spell_boost is not None and self.is_in_field == False:
             text += " spell_boost:{:<2}".format(self.spell_boost)
         if self.ability != [] and self.is_in_field == True:
             text += " ability={}".format([KeywordAbility(i).name for i in self.ability])
@@ -785,9 +777,9 @@ class Spell(Card):
 
     def __str__(self):
         text = "name:" + '{:<25}'.format(self.name) + " cost: " + '{:<2}'.format(str(self.cost))
-        if self.card_class.name == "RUNE" and self.spell_boost != None:
+        if self.card_class.name == "RUNE" and self.spell_boost is not None:
             text += " spell_boost:{:<2}".format(self.spell_boost)
-        if self.have_enhance == True and self.active_enhance_code[0] == True:
+        if self.have_enhance  and self.active_enhance_code[0]:
             text += " enhance:{}".format(self.active_enhance_code[1])
         return text
 
@@ -1027,7 +1019,7 @@ class Deck:
         for key in sorted(list(remain_card_set.keys())):
             print("{}:{}".format(key, remain_card_set[key]))
         print("")
-
+    """
     def get_cost_histgram(self):
         histgram_dict = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0}
         for card in self.deck:
@@ -1050,3 +1042,4 @@ class Deck:
             print(height_histgram[len(height_histgram) - 1 - i])
 
         print("~1   2   3   4   5   6   7   8+")
+    """
