@@ -3348,7 +3348,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
     # デッキ公開制のときのみ
     def __init__(self, iteration=100):
         super().__init__()
-        self.name = "Opponent_modeling(n={})_ISMCTSPolicy(normal)".format(iteration)
+        self.name = "Opponent_modeling(n={})_ISMCTSPolicy".format(iteration)
         self.play_out_policy = AggroPolicy()
         self.main_player_num = 0
         self.iteration = iteration
