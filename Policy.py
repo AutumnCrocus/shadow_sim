@@ -200,7 +200,6 @@ class AggroPolicy(Policy):
 
         return Action_Code.TURN_END.value, 0, 0
 
-
 class GreedyPolicy(Policy):
 
     def __init__(self):
@@ -231,6 +230,7 @@ class GreedyPolicy(Policy):
             = field.get_flag_and_choices(player, opponent, regal_targets)
         first = player.player_num
         dicision = [0, 0, 0]
+        history = []
         max_state_value = -10000
         length = len(able_to_play + able_to_creature_attack) + 1
         end_field_id_list = []
@@ -282,6 +282,7 @@ class GreedyPolicy(Policy):
             if max_state_value < tmp_state_value:
                 max_state_value = tmp_state_value
                 dicision = [Action_Code.EVOLVE.value, evo_id, target_id]
+                history.append((Action_Code.EVOLVE.value, evo_id, target_id))
 
         if can_play:
             for i in range(1, len(able_to_play) + 1):
@@ -307,6 +308,7 @@ class GreedyPolicy(Policy):
                 if max_state_value < state_value_list[i] and tmp_field_list[i].players[first].life > 0:
                     max_state_value = state_value_list[i]
                     dicision = [Action_Code.PLAY_CARD.value, card_id, target_id]
+                    history.append((Action_Code.PLAY_CARD.value, card_id, target_id))
 
         opponent_creatures_toughness = []
         if len(can_be_attacked) > 0:
@@ -337,6 +339,7 @@ class GreedyPolicy(Policy):
                         if max_state_value < state_value_list[i] and target_id is not None:
                             max_state_value = state_value_list[i]
                             dicision = [Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id]
+                            history.append((Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id))
             else:
                 for i in range(len(able_to_play) + 1, length):
                     assert i not in end_field_id_list, "{} {}".format(i, end_field_id_list)
@@ -376,13 +379,17 @@ class GreedyPolicy(Policy):
                         state_value_list[i] = 10000
 
                     if max_state_value < state_value_list[i]:
-                        if direct_flg == True and attacking_creature.can_attack_to_player():
+                        if direct_flg  and attacking_creature.can_attack_to_player():
                             if attacker_id in able_to_attack:
                                 max_state_value = state_value_list[i]
                                 dicision = [Action_Code.ATTACK_TO_PLAYER.value, attacker_id, 0]
-                        if direct_flg == False and opponent_creatures_toughness != [] and target_id != None:
+                                history.append((Action_Code.ATTACK_TO_PLAYER.value, attacker_id, 0))
+                        if not direct_flg and opponent_creatures_toughness != [] and target_id is not None:
                             max_state_value = state_value_list[i]
                             dicision = [Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id]
+                            history.append((Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id))
+
+
         return dicision[0], dicision[1], dicision[2]
 
 
@@ -394,8 +401,7 @@ class FastGreedyPolicy(GreedyPolicy):
     def __str__(self):
         return 'FastGreedyPolicy(now freezed)'
 
-    def __init__(self):
-        self.policy_type = 2
+
 
 class Advanced_GreedyPolicy(GreedyPolicy):
     def __init__(self):
@@ -2901,7 +2907,7 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
     # デッキ公開制のときのみ
     def __init__(self,iteration=100):
         super().__init__()
-        self.name = "Opponent_modeling_New_MCTS(iteration={})Policy".format(iteration)
+        self.name = "OM_D_MCTS(iteration={})Policy".format(iteration)
         self.main_player_num = 0
         self.play_out_policy = AggroPolicy()
         self.iteration = iteration
@@ -3816,7 +3822,8 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
         assert max_value_action is not None, "action is None!"
         # weights = [cell.visit_num for cell in action_2_node[max_value_action]]
         # max_value_node = random.choices(action_2_node[max_value_action], weights=weights)[0]
-        max_value_node = random.choices(action_2_node[max_value_action])[0]
+        #max_value_node = random.choices(action_2_node[max_value_action])[0]
+        max_value_node = random.choice(action_2_node[max_value_action])
         return max_value_node, max_value_action
 
     def uct(self, child_node, node, player_num=0):
@@ -4747,11 +4754,6 @@ def advanced_state_value(field, player_num):
         for follower in side:
             if follower.card_category == "Creature":
                 stats_sum[i] += follower.power*2 + follower.get_current_toughness()
-                #if not ward_flg[1-player_num] and i == 0:
-                #    if follower.can_attack_to_player():
-                #        can_attack_to_player_power[i] += follower.power
-                #elif not ward_flg[player_num]:
-                #   can_attack_to_player_power[i] += follower.power
 
             else:
                 if amulet_counter[i] < 3:
@@ -4761,13 +4763,8 @@ def advanced_state_value(field, player_num):
                 amulet_counter[i] += 1
             stats_sum[i] += (len(side)-amulet_counter[i])*5
 
-    #if can_attack_to_player_power[0] >= opponent.life:
-    #    return 0.95
-    #elif can_attack_to_player_power[1] >= player.life:
-    #    return 0.05
     value = 0
     a = 0.0004
-    c = 0
     if player.life >= 15:
         if opponent.life <= 10:
             value = (25 - player.life)*(stats_sum[0]-stats_sum[1]) + (20-opponent.life)*10
@@ -4779,7 +4776,7 @@ def advanced_state_value(field, player_num):
         else:
             value = (40 - player.life) * (stats_sum[0] - stats_sum[1]) + (20 - opponent.life)*10
 
-    return 1/(1+np.exp(-value*a+c))
+    return 1/(1+np.exp(-value*a))
 
 
 class Advanced_value_function_A_MCTSPolicy(New_Aggro_MCTSPolicy):
@@ -4852,3 +4849,36 @@ class Non_Rollout_OM_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
             if len(node.parent_node.edge_action_2_node_id) > 1:
                 value /= 10
         return value
+
+
+class New_GreedyPolicy(Default_GreedyPolicy):
+
+    def __init__(self):
+        self.name = "New_GreedyPolicy"
+        self.policy_type = 2
+
+    def decide(self, player, opponent, field):
+        player_num = player.player_num
+        starting_field = Field_setting.Field(5)
+        starting_field.set_data(field)
+        starting_field.get_regal_target_dict(starting_field.players[player.player_num],
+                                             starting_field.players[opponent.player_num])
+        starting_node = Node(field=starting_field, player_num=player.player_num)
+        able_actions = starting_node.children_moves
+        max_value_action = None
+        max_state_value = -np.inf
+        sim_field = Field_setting.Field(5)
+        for action in able_actions:
+            sim_field.set_data(field)
+            sim_player = sim_field.players[player_num]
+            sim_opponent = sim_field.players[1-player_num]
+            sim_player.execute_action(sim_field, sim_opponent, action_code=action, virtual=True)
+            value = self.state_value(sim_field,player_num)
+
+            if value > max_state_value:
+                max_value_action = action
+                max_state_value = value
+                if value == 1:
+                    break
+
+        return max_value_action

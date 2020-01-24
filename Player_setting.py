@@ -258,7 +258,15 @@ class Player:
                     print("{}".format(key))
                     for sub_key in list(observable_data[key].keys()):
                         print("{}:{}".format(sub_key, observable_data[key][sub_key]))
-                assert False, "infinite loop!\nhistory:{}".format(action_histroy)
+                mylogger.info("real")
+                self.show_hand()
+                field.show_field()
+                mylogger.info("in current node")
+                sim_field = self.policy.current_node.field
+                sim_field.players[self.player_num].show_hand()
+                sim_field.show_field()
+
+                assert False, "infinite loop! policy_name:{}".format(self.policy.name)
             re_check = False
             sim_hand = None
             if self.policy.policy_type == 3:

@@ -853,6 +853,15 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                     f.write(txt)
                 f.write("\n")
             f.write("\n")
+            f.write("WRP_rank\n")
+            for i, player_key in enumerate(list(single_contribution_list.keys())):
+                f.write("Player{}\n".format(i + 1))
+                for j, cell in enumerate(single_contribution_list[player_key]):
+                    pairwise = "No.{} {}(played_num:{})".format(j + 1, cell[0],cell[2])
+                    txt = "{:<40}:{:.3%}\n".format(pairwise,cell[1])
+                    f.write(txt)
+                f.write("\n")
+            f.write("\n")
         path = "{}.tsv".format(deck_id_2_name[deck_type[0]])
         path = directory_name + "/" + path
         with open(path,mode = "w") as w:
@@ -1199,87 +1208,6 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
             D[deck_index].set_leader_class(key_2_tsv_name[i][1])
             deck_index += 1
 
-        """
-        for i in list(deck_id_2_name.keys()):
-            if i not in deck_lists:
-                continue
-            if i == 0:
-                D[i] = tsv_to_deck("Sword_Aggro.tsv")
-                #D[i] = tsv_to_deck("Sword_Aggro.tsv")
-                #D[i].set_leader_class("SWORD")
-                # Aggro
-            elif i == 1:
-                D[i] = tsv_to_deck("Rune_Earth.tsv")
-                D[i].set_leader_class("RUNE")
-                # Aggro
-            elif i == 2:
-                D[i] = tsv_to_deck("Sword.tsv")
-                D[i].set_leader_class("SWORD")
-                # Mid
-            elif i == 3:
-                D[i] = tsv_to_deck("New-Shadow.tsv")
-                D[i].set_leader_class("SHADOW")
-                # Mid
-            elif i == 4:
-                D[i] = tsv_to_deck("Dragon_PDK.tsv")
-                D[i].set_leader_class("DRAGON")
-                # Mid
-            elif i == 5:
-                D[i] = tsv_to_deck("Test-Haven.tsv")
-                D[i].set_leader_class("HAVEN")
-                # D[i] = tsv_to_deck("Haven.tsv")
-                # D[i].set_leader_class("HAVEN")
-                # Control
-            elif i == 6:
-                D[i] = tsv_to_deck("Blood.tsv")
-                D[i].set_leader_class("BLOOD")
-                # Control
-            elif i == 7:
-                D[i] = tsv_to_deck("Dragon.tsv")
-                D[i].set_leader_class("DRAGON")
-                # Control
-            elif i == 8:
-                D[i] = tsv_to_deck("Forest.tsv")
-                D[i].set_leader_class("FOREST")
-                # Combo
-            elif i == 9:
-                D[i] = tsv_to_deck("Rune.tsv")
-                D[i].set_leader_class("RUNE")
-                # Combo
-    """
-    """
-    else:
-        deck_id_2_name = {0: "Forest", 1: "Sword", 2: "Rune", 3: "Dragon", 4: "Shadow", 5: "Blood",
-                          6: "Haven", 7: "Portal"}
-        D = [Deck() for i in range(len(deck_id_2_name))]
-        for i in range(len(D)):
-            if i == 0:
-                D[i] = tsv_to_deck("Forest_Basic.tsv")
-                D[i].set_leader_class("FOREST")
-            elif i == 1:
-                D[i] = tsv_to_deck("Sword_Basic.tsv")
-                D[i].set_leader_class("SWORD")
-            elif i == 2:
-                D[i] = tsv_to_deck("Rune_Basic.tsv")
-                D[i].set_leader_class("RUNE")
-            elif i == 3:
-                D[i] = tsv_to_deck("Dragon_Basic.tsv")
-                D[i].set_leader_class("DRAGON")
-            elif i == 4:
-                D[i] = tsv_to_deck("Shadow_Basic.tsv")
-                D[i].set_leader_class("SHADOW")
-            elif i == 5:
-                D[i] = tsv_to_deck("Blood_Basic.tsv")
-                D[i].set_leader_class("BLOOD")
-            elif i == 6:
-                D[i] = tsv_to_deck("Haven_Basic.tsv")
-                D[i].set_leader_class("HAVEN")
-            elif i == 7:
-                D[i] = tsv_to_deck("Portal_Basic.tsv")
-                D[i].set_leader_class("PORTAL")
-    """
-    # D[0].mean_cost=D[0].get_mean_cost()
-    # D[1].mean_cost=D[1].get_mean_cost()
     assert all(len(D[i].deck) == 40 for i in range(len(D)))
     # Turn_Players=[Player1,Player2]
     Results = {}
@@ -1715,6 +1643,7 @@ Players.append(Player(9, True, policy=Simple_value_function_A_MCTSPolicy(), mull
 Players.append(Player(9, True, policy=Simple_value_function_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 21
 Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 22
 Players.append(Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 23
+Players.append(Player(9, True, policy=New_GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 24
 
 # assert False
 n = 100
