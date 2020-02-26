@@ -283,13 +283,14 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
                       -3: "Rune_Basic",
                       -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
                       100: "Test",
-                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow"}
+                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow",13:"Neutral-Blood"}
 
     key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
                       3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
                       6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
                       9: ["SpellBoost-Rune.tsv", "RUNE"],10: ["Dimension_Shift_Rune.tsv", "RUNE"],
-                      11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"]}
+                      11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"],
+                      13: ["Neutral_Blood.tsv", "BLOOD"]}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
@@ -613,13 +614,14 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                       -3: "Rune_Basic",
                       -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
                       100: "Test",
-                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow"}
+                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow",13:"Neutral-Blood"}
 
     key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
                       3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
                       6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
                       9: ["SpellBoost-Rune.tsv", "RUNE"],10: ["Dimension_Shift_Rune.tsv", "RUNE"],
-                      11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"]}
+                      11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"],
+                      13: ["Neutral_Blood.tsv", "BLOOD"]}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
@@ -1181,33 +1183,37 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
 
     deck_id_2_name = {}
     if not basic:
-        # -1: "Forest_Basic",
-        #                  -2: "Sword_Basic",
-        #                  -3: "Rune_Basic",
-        #                  -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic",
-        #                  -8: "Portal_Basic",-9: "Spell-Rune",100: "Test",
         deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
-                          6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune", 10: "DS_Rune",
+                          6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune", 10: "DS_Rune", -1: "Forest_Basic",
+                          -2: "Sword_Basic",
+                          -3: "Rune_Basic",
+                          -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic",
+                          -8: "Portal_Basic",
+                          100: "Test",
+                          -9: "Spell-Rune", 11: "PtP-Forest", 12: "Mid-Shadow", 13: "Neutral-Blood"}
 
-                           11: "PtP-Forest", 12: "Mid-Shadow"}
         key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
                           3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"],
                           5: ["Test-Haven.tsv", "HAVEN"],
                           6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
                           9: ["SpellBoost-Rune.tsv", "RUNE"], 10: ["Dimension_Shift_Rune.tsv", "RUNE"],
-                          11: ["PtP_Forest.tsv", "FOREST"], 12: ["Mid_Shadow.tsv", "SHADOW"]}
+                          11: ["PtP_Forest.tsv", "FOREST"], 12: ["Mid_Shadow.tsv", "SHADOW"],
+                          13: ["Neutral_Blood.tsv", "BLOOD"]}
 
         if deck_lists is None:
             deck_lists = list(deck_id_2_name.keys())
         else:
             assert all(key in deck_id_2_name for key in deck_lists)
+        if deck_lists == [0,1,4,5,10,12]:
+            deck_lists = [0,1,4,12,5,10]
         mylogger.info("deck_lists:{}".format(deck_lists))
         D = [Deck() for i in range(len(deck_lists))]
         deck_index = 0
-        sorted_keys = sorted(list(deck_id_2_name.keys()))
-        for i in sorted_keys:
-            if i not in deck_lists:
-                continue
+        #sorted_keys = sorted(list(deck_id_2_name.keys()))
+        #for i in sorted_keys:
+        #    if i not in deck_lists:
+        #        continue
+        for i in deck_lists:
             mylogger.info("{}(deck_id:{}):{}".format(deck_index,i,key_2_tsv_name[i]))
             D[deck_index] = tsv_to_deck(key_2_tsv_name[i][0])
             D[deck_index].set_leader_class(key_2_tsv_name[i][1])
@@ -1339,13 +1345,14 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
                       -3: "Rune_Basic",
                       -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
                       100: "Test",
-                      -9: "Spell-Rune", -10: "Test-Haven",-11:"PtP-Forest",-12:"Mid-Shadow"}
+                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow",13:"Neutral-Blood"}
+
     key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
                       3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
                       6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
-                      9: ["SpellBoost-Rune.tsv", "RUNE"], 10: ["Dimension_Shift_Rune.tsv", "RUNE"],
-                      -11: ["PtP_Forest.tsv", "FOREST"], -12: ["Mid_Shadow.tsv", "SHADOW"]}
-
+                      9: ["SpellBoost-Rune.tsv", "RUNE"],10: ["Dimension_Shift_Rune.tsv", "RUNE"],
+                      11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"],
+                      13: ["Neutral_Blood.tsv", "BLOOD"]}
     mylogger.info("{} vs {}".format(deck_id_2_name[deck_type[0]], deck_id_2_name[deck_type[1]]))
     policy_id_2_name = {}
     for i, target_player in enumerate(initial_players):
@@ -1592,240 +1599,257 @@ def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None,pairwi
         else:
             execute_demo(Player_1, Player_2, iteration, virtual_flg=True, deck_type=[deck_id,deck_id], graph=False)
 
-parser = argparse.ArgumentParser(description='対戦実行コード')
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='対戦実行コード')
 
-parser.add_argument('--N', help='試行回数')
-parser.add_argument('--playertype1', help='プレイヤー1のAIタイプ')
-parser.add_argument('--playertype2', help='プレイヤー2のAIタイプ')
-parser.add_argument('--decktype1', help='プレイヤー1のデッキタイプ')
-parser.add_argument('--decktype2', help='プレイヤー2のデッキタイプ')
-parser.add_argument('--filename', help='ファイル名')
-parser.add_argument('--playerlist', help='対戦AIタイプリスト')
-parser.add_argument('--decklist', help='対戦デッキリスト')
-parser.add_argument('--time_bound', help='計算時間上限')
-parser.add_argument('--basic', help='ベーシック')
-parser.add_argument('--graph', help='グラフ')
-parser.add_argument('--pairwise', help='ペアワイズ')
-parser.add_argument('--output', help='出力')
-parser.add_argument('--step_num',help='MCTSの繰り返し上限')
-parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
-args = parser.parse_args()
-mylogger.info("args:{}".format(args))
-step_num = 100
-if args.step_num is not None:
-    step_num = int(args.step_num)
-time_bound = 1.0
-if args.time_bound is not None:
-    time_bound = float(args.time_bound)
-Players = []
-Players.append(Player(9, True))  # 1
-Players.append(Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy()))  # 2
-Players.append(Player(9, True, policy=GreedyPolicy(), mulligan=Min_cost_mulligan_policy()))  # 3
-Players.append(Player(9, True, policy=FastGreedyPolicy(), mulligan=Min_cost_mulligan_policy()))  # 4
-Players.append(Player(9, True, policy=MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 5
-Players.append(Player(9, True, policy=Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 6
-Players.append(Player(9, True, policy=New_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 7
-Players.append(Player(9, True, policy=Information_Set_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 8
-Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=step_num), mulligan=Min_cost_mulligan_policy()))  # 9
-Players.append(Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=step_num), mulligan=Min_cost_mulligan_policy()))  # 10
-Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=step_num),mulligan=Min_cost_mulligan_policy()))  # 11
-Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 12
-Players.append(Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 13
-"""
-Players.append(Player(9, True, policy=Simple_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 74
-Players.append(Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 75
-Players.append(Player(9, True, policy=Simple_value_function_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 76
-Players.append(Player(9, True, policy=Second_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 77
-Players.append( Player(9, True, policy=Second_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 78
-Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 91
-Players.append(Player(9, True, policy=Second_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 92
-Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  #83
-Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  #84
-"""
-Players.append(Player(9, True, policy=Default_GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 14
-Players.append(Player(9, True, policy=Default_Aggro_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 15
-Players.append(Player(9, True, policy=Non_Rollout_A_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 16
-Players.append(Player(9, True, policy=Non_Rollout_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 17
-Players.append(Player(9, True, policy=Non_Rollout_OM_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 18
-Players.append(Player(9, True, policy=Non_Rollout_OM_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 19
-Players.append(Player(9, True, policy=Simple_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 20
-Players.append(Player(9, True, policy=Simple_value_function_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 21
-Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 22
-Players.append(Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 23
-Players.append(Player(9, True, policy=New_GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 24
+    parser.add_argument('--N', help='試行回数')
+    parser.add_argument('--playertype1', help='プレイヤー1のAIタイプ')
+    parser.add_argument('--playertype2', help='プレイヤー2のAIタイプ')
+    parser.add_argument('--decktype1', help='プレイヤー1のデッキタイプ')
+    parser.add_argument('--decktype2', help='プレイヤー2のデッキタイプ')
+    parser.add_argument('--filename', help='ファイル名')
+    parser.add_argument('--playerlist', help='対戦AIタイプリスト')
+    parser.add_argument('--decklist', help='対戦デッキリスト')
+    parser.add_argument('--time_bound', help='計算時間上限')
+    parser.add_argument('--basic', help='ベーシック')
+    parser.add_argument('--graph', help='グラフ')
+    parser.add_argument('--pairwise', help='ペアワイズ')
+    parser.add_argument('--output', help='出力')
+    parser.add_argument('--step_num',help='MCTSの繰り返し上限')
+    parser.add_argument('--model_name', help='ニューラルネットワークモデルの名前')
+    parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
+    args = parser.parse_args()
+    mylogger.info("args:{}".format(args))
+    step_num = 100
+    if args.step_num is not None:
+        step_num = int(args.step_num)
+    time_bound = 1.0
+    if args.time_bound is not None:
+        time_bound = float(args.time_bound)
+    Players = []
+    Players.append(Player(9, True))  # 1
+    Players.append(Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy()))  # 2
+    Players.append(Player(9, True, policy=GreedyPolicy(), mulligan=Min_cost_mulligan_policy()))  # 3
+    Players.append(Player(9, True, policy=FastGreedyPolicy(), mulligan=Min_cost_mulligan_policy()))  # 4
+    Players.append(Player(9, True, policy=MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 5
+    Players.append(Player(9, True, policy=Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 6
+    Players.append(Player(9, True, policy=New_Aggro_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 7
+    Players.append(Player(9, True, policy=Information_Set_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 8
+    Players.append(Player(9, True, policy=Flexible_Iteration_MCTSPolicy(N=step_num), mulligan=Min_cost_mulligan_policy()))  # 9
+    Players.append(Player(9, True, policy=Flexible_Iteration_Aggro_MCTSPolicy(N=step_num), mulligan=Min_cost_mulligan_policy()))  # 10
+    Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=step_num),mulligan=Min_cost_mulligan_policy()))  # 11
+    Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 12
+    Players.append(Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 13
+    """
+    Players.append(Player(9, True, policy=Simple_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 74
+    Players.append(Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 75
+    Players.append(Player(9, True, policy=Simple_value_function_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 76
+    Players.append(Player(9, True, policy=Second_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 77
+    Players.append( Player(9, True, policy=Second_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 78
+    Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 91
+    Players.append(Player(9, True, policy=Second_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 92
+    Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  #83
+    Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  #84
+    """
+    Players.append(Player(9, True, policy=Default_GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 14
+    Players.append(Player(9, True, policy=Default_Aggro_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 15
+    Players.append(Player(9, True, policy=Non_Rollout_A_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 16
+    Players.append(Player(9, True, policy=Non_Rollout_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 17
+    Players.append(Player(9, True, policy=Non_Rollout_OM_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 18
+    Players.append(Player(9, True, policy=Non_Rollout_OM_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 19
+    Players.append(Player(9, True, policy=Simple_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 20
+    Players.append(Player(9, True, policy=Simple_value_function_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 21
+    Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 22
+    Players.append(Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 23
+    Players.append(Player(9, True, policy=New_GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 24
+    Players.append(Player(9, True, policy=until_game_end_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 25
+    Players.append(Player(9, True, policy=until_game_end_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 26
+    Players.append(Player(9, True, policy=until_game_end_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 27
+    model_name = None
+    if args.model_name is not None:
+        model_name = args.model_name
+        Players.append(
+            Player(9, True, policy=NN_GreedyPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 28
+        Players.append(
+            Player(9, True, policy=NN_A_MCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 29
+        Players.append(
+            Player(9, True, policy=NN_Non_Rollout_MCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 30
 
-# assert False
-n = 100
-a = 0
-b = 0
-v = False
-deck_flg = False
-p1, p2 = 0, 0
-human_player = HumanPlayer(9, first=True)
-file_name = None
-if args.filename is not None:
-    file_name = args.filename
+    # assert False
+    n = 100
+    a = 0
+    b = 0
+    v = False
+    deck_flg = False
+    p1, p2 = 0, 0
+    human_player = HumanPlayer(9, first=True)
+    file_name = None
+    if args.filename is not None:
+        file_name = args.filename
 
-import cProfile
-import re
-import datetime
+    import cProfile
+    import re
+    import datetime
 
-iteration = n
-d1 = None
-d2 = None
+    iteration = n
+    d1 = None
+    d2 = None
 
-input_players = [Players[0], Players[1], Players[4], Players[8], Players[9], Players[11], Players[13], Players[14]]
-deck_list = None
-if args.playerlist is not None:
-    input_players = []
-    tmp = list(args.playerlist.split(","))
-    player_id_list = [int(ele) for ele in tmp]
-    player_id_list = sorted(list(set(player_id_list)))
-    for player_id in player_id_list:
-        assert player_id >= 0 and player_id <= len(Players)
-        input_players.append(Players[player_id - 1])
+    input_players = [Players[0], Players[1], Players[4], Players[8], Players[9], Players[11], Players[13], Players[14]]
+    deck_list = None
+    if args.playerlist is not None:
+        input_players = []
+        tmp = list(args.playerlist.split(","))
+        player_id_list = [int(ele) for ele in tmp]
+        player_id_list = sorted(list(set(player_id_list)))
+        for player_id in player_id_list:
+            assert player_id >= 0 and player_id <= len(Players)
+            input_players.append(Players[player_id - 1])
 
-if args.decklist is not None:
-    deck_list = []
-    tmp = list(args.decklist.split(","))
-    deck_id_list = [int(ele) for ele in tmp]
-    deck_id_list = sorted(list(set(deck_id_list)))
-    for deck_id in deck_id_list:
-        deck_list.append(deck_id)
-t1 = datetime.datetime.now()
-mylogger.info("{}".format(t1))
-mylogger.info("mode:{}".format(args.mode))
-if args.mode == 'demo' or args.mode == 'background_demo':
-    # cProfile.run('execute_demo(d1,d2,n,deck_type=[p1,p2])')
-    n = int(args.N)
-    a = int(args.playertype1) - 1
-    b = int(args.playertype2) - 1
-    if args.playertype1 == '0':
-        d1 = copy.deepcopy(human_player)
-    else:
+    if args.decklist is not None:
+        deck_list = []
+        tmp = list(args.decklist.split(","))
+        deck_id_list = [int(ele) for ele in tmp]
+        deck_id_list = sorted(list(set(deck_id_list)))
+        for deck_id in deck_id_list:
+            deck_list.append(deck_id)
+    t1 = datetime.datetime.now()
+    mylogger.info("{}".format(t1))
+    mylogger.info("mode:{}".format(args.mode))
+    if args.mode == 'demo' or args.mode == 'background_demo':
+        # cProfile.run('execute_demo(d1,d2,n,deck_type=[p1,p2])')
+        n = int(args.N)
+        a = int(args.playertype1) - 1
+        b = int(args.playertype2) - 1
+        if args.playertype1 == '0':
+            d1 = copy.deepcopy(human_player)
+        else:
+            d1 = copy.deepcopy(Players[a])
+        if args.playertype2 == '0':
+            d2 = copy.deepcopy(human_player)
+        else:
+            d2 = copy.deepcopy(Players[b])
+        p1 = int(args.decktype1)
+        p2 = int(args.decktype2)
+        virtual_flg = args.mode == "background_demo"
+        graph = args.graph is not None
+        if args.pairwise is not None:
+            execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)
+        else:
+            #cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="tottime")
+            execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=virtual_flg,graph=graph)
+    # elif sys.argv[-1]=="-shadow":
+    elif args.mode == 'shadow':
+        test_3(d1, d2, n)
+    # elif sys.argv[-1]=="-policy":
+    elif args.mode == 'policy':
+        # file_name=sys.argv[-2]
+        n = int(args.N)
+        assert args.decktype1 is not None and args.decktype2 is not None, "deck1:{},deck2:{}".format(args.decktype1, args.decktype2)
+        a = int(args.decktype1)
+        b = int(args.decktype2)
+        if file_name is not None:
+            make_policy_table(n, initial_players=input_players, deck_type=[a, b], same_flg=a == b,
+                              result_name=file_name)
+        else:
+            make_policy_table(n, initial_players=input_players, deck_type=[a, b], same_flg=a == b)
+        # make_policy_table(n,initial_players=input_players,deck_type=[a+1,b+1],same_flg=a==b,result_name=file_name)
+    elif args.mode == 'contribution':
+        iteration = int(args.N)
+        a = int(args.playertype1) - 1
+        b = int(args.playertype2) - 1
+        player1_deck_id = int(args.decktype1)
         d1 = copy.deepcopy(Players[a])
-    if args.playertype2 == '0':
-        d2 = copy.deepcopy(human_player)
-    else:
         d2 = copy.deepcopy(Players[b])
-    p1 = int(args.decktype1)
-    p2 = int(args.decktype2)
-    virtual_flg = args.mode == "background_demo"
-    graph = args.graph is not None
-    if args.pairwise is not None:
-        execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)
-    else:
-        #cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="tottime")
-        execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=virtual_flg,graph=graph)
-# elif sys.argv[-1]=="-shadow":
-elif args.mode == 'shadow':
-    test_3(d1, d2, n)
-# elif sys.argv[-1]=="-policy":
-elif args.mode == 'policy':
-    # file_name=sys.argv[-2]
-    n = int(args.N)
-    assert args.decktype1 is not None and args.decktype2 is not None, "deck1:{},deck2:{}".format(args.decktype1, args.decktype2)
-    a = int(args.decktype1)
-    b = int(args.decktype2)
-    make_policy_table(n, initial_players=input_players, deck_type=[a, b], same_flg=a == b,
-                      result_name=file_name)
-    # make_policy_table(n,initial_players=input_players,deck_type=[a+1,b+1],same_flg=a==b,result_name=file_name)
-elif args.mode == 'contribution':
-    iteration = int(args.N)
-    a = int(args.playertype1) - 1
-    b = int(args.playertype2) - 1
-    player1_deck_id = int(args.decktype1)
-    d1 = copy.deepcopy(Players[a])
-    d2 = copy.deepcopy(Players[b])
-    get_contributions(d1, d2, iteration, virtual_flg=True, player1_deck_num=player1_deck_id, directory_name=file_name)
-elif args.mode == 'basic':
-    iteration = int(args.N)
-    a = int(args.playertype1) - 1
-    b = int(args.playertype2) - 1
-    player1_deck_id = int(args.decktype1)
-    d1 = copy.deepcopy(Players[a])
-    d2 = copy.deepcopy(Players[b])
-    get_basic_contributions(d1, d2, iteration, virtual_flg=True, player1_deck_num=player1_deck_id,
-                            directory_name=file_name)
-elif args.mode == 'basic_all':
-    import os
-
-    deck_id_2_name = {0: "Forest", 1: "Sword", 2: "Rune", 3: "Dragon", 4: "Shadow", 5: "Blood",
-                      6: "Haven", 7: "Portal"}
-
-    iteration = int(args.N)
-    a = int(args.playertype1) - 1
-    b = int(args.playertype2) - 1
-    d1 = copy.deepcopy(Players[a])
-    d2 = copy.deepcopy(Players[b])
-    short_name_1 = list(d1.policy.name.split("Policy"))[0]
-    short_name_2 = list(d2.policy.name.split("Policy"))[0]
-    path = "{}_vs_{}(basic_all)_{}times_WRP_and_WRD".format(short_name_1, short_name_2, iteration)
-    os.makedirs(path)
-    for i in range(8):
-        player1_deck_id = i
-        next_path = "/WRP_and_WRD_{}".format(deck_id_2_name[i])
-        os.makedirs(path + next_path)
-        file_name = path + next_path
+        get_contributions(d1, d2, iteration, virtual_flg=True, player1_deck_num=player1_deck_id, directory_name=file_name)
+    elif args.mode == 'basic':
+        iteration = int(args.N)
+        a = int(args.playertype1) - 1
+        b = int(args.playertype2) - 1
+        player1_deck_id = int(args.decktype1)
+        d1 = copy.deepcopy(Players[a])
+        d2 = copy.deepcopy(Players[b])
         get_basic_contributions(d1, d2, iteration, virtual_flg=True, player1_deck_num=player1_deck_id,
                                 directory_name=file_name)
-elif args.mode == 'custom_all':
-    deck_id_2_name = {0: "Aggro-Sword", 1: "Rune_Earth(Aggro)", 2: "Mid-Sword", 3: "Mid-Shadow", 4: "Dragon_PDK(Mid)",
-                      5: "Elana-Haven(Control)",
-                      6: "Control-Blood", 7: "Ramp-Dragon(Combo)", 8: "Combo-Forest", 9: "Spell-Rune(Combo)"}
+    elif args.mode == 'basic_all':
+        import os
 
-    iteration = int(args.N)
-    a = int(args.playertype1) - 1
-    b = int(args.playertype2) - 1
-    d1 = copy.deepcopy(Players[a])
-    d2 = copy.deepcopy(Players[b])
-    short_name_1 = list(d1.policy.name.split("Policy"))[0]
-    short_name_2 = list(d2.policy.name.split("Policy"))[0]
-    path = "{}_vs_{}(custom_all)_{}times_WRP_and_WRD".format(short_name_1, short_name_2, iteration)
-    os.makedirs(path,exist_ok=True)
-    for i in range(10):
-        player1_deck_id = i
-        next_path = "/WRP_and_WRD_{}".format(deck_id_2_name[i])
-        if os.path.isdir(path + next_path):
-            mylogger.info("{} already exists. skip this step.".format(next_path))
-            continue
-        os.makedirs(path + next_path)
-        file_name = path + next_path
-        get_custom_contributions(d1, d2, iteration, virtual_flg=True, player1_deck_num=player1_deck_id,
-                                 directory_name=file_name)
+        deck_id_2_name = {0: "Forest", 1: "Sword", 2: "Rune", 3: "Dragon", 4: "Shadow", 5: "Blood",
+                          6: "Haven", 7: "Portal"}
 
-
-elif args.mode == "mirror":
-    n = int(args.N)
-    a = int(args.playertype1) - 1
-    b = int(args.playertype2) - 1
-    if args.playertype1 == '0':
-        d1 = copy.deepcopy(human_player)
-    else:
-        d1 = copy.deepcopy(Players[a])
-    if args.playertype2 == '0':
-        d2 = copy.deepcopy(human_player)
-    else:
-        d2 = copy.deepcopy(Players[b])
-
-    make_mirror_match_table(d1,d2,n,deck_lists=deck_list,pairwise=args.pairwise is not None,
-                            out_put=args.output is not None)
-else:
-    if args.N is not None:
         iteration = int(args.N)
         a = int(args.playertype1) - 1
         b = int(args.playertype2) - 1
         d1 = copy.deepcopy(Players[a])
         d2 = copy.deepcopy(Players[b])
-        basic_flg = False
-        if args.basic is not None:
-            basic_flg = True
-        #if a == b:
-        if False:
-            make_deck_table(d1, d2, iteration, same_flg=True, result_name=file_name, basic=basic_flg,deck_lists=deck_list)
+        short_name_1 = list(d1.policy.name.split("Policy"))[0]
+        short_name_2 = list(d2.policy.name.split("Policy"))[0]
+        path = "{}_vs_{}(basic_all)_{}times_WRP_and_WRD".format(short_name_1, short_name_2, iteration)
+        os.makedirs(path)
+        for i in range(8):
+            player1_deck_id = i
+            next_path = "/WRP_and_WRD_{}".format(deck_id_2_name[i])
+            os.makedirs(path + next_path)
+            file_name = path + next_path
+            get_basic_contributions(d1, d2, iteration, virtual_flg=True, player1_deck_num=player1_deck_id,
+                                    directory_name=file_name)
+    elif args.mode == 'custom_all':
+        deck_id_2_name = {0: "Aggro-Sword", 1: "Rune_Earth(Aggro)", 2: "Mid-Sword", 3: "Mid-Shadow", 4: "Dragon_PDK(Mid)",
+                          5: "Elana-Haven(Control)",
+                          6: "Control-Blood", 7: "Ramp-Dragon(Combo)", 8: "Combo-Forest", 9: "Spell-Rune(Combo)"}
+
+        iteration = int(args.N)
+        a = int(args.playertype1) - 1
+        b = int(args.playertype2) - 1
+        d1 = copy.deepcopy(Players[a])
+        d2 = copy.deepcopy(Players[b])
+        short_name_1 = list(d1.policy.name.split("Policy"))[0]
+        short_name_2 = list(d2.policy.name.split("Policy"))[0]
+        path = "{}_vs_{}(custom_all)_{}times_WRP_and_WRD".format(short_name_1, short_name_2, iteration)
+        os.makedirs(path,exist_ok=True)
+        for i in range(10):
+            player1_deck_id = i
+            next_path = "/WRP_and_WRD_{}".format(deck_id_2_name[i])
+            if os.path.isdir(path + next_path):
+                mylogger.info("{} already exists. skip this step.".format(next_path))
+                continue
+            os.makedirs(path + next_path)
+            file_name = path + next_path
+            get_custom_contributions(d1, d2, iteration, virtual_flg=True, player1_deck_num=player1_deck_id,
+                                     directory_name=file_name)
+
+
+    elif args.mode == "mirror":
+        n = int(args.N)
+        a = int(args.playertype1) - 1
+        b = int(args.playertype2) - 1
+        if args.playertype1 == '0':
+            d1 = copy.deepcopy(human_player)
         else:
-            make_deck_table(d1, d2, iteration, result_name=file_name, basic=basic_flg,deck_lists=deck_list)
-mylogger.info(t1)
-t2 = datetime.datetime.now()
-mylogger.info(t2)
-mylogger.info(t2 - t1)
+            d1 = copy.deepcopy(Players[a])
+        if args.playertype2 == '0':
+            d2 = copy.deepcopy(human_player)
+        else:
+            d2 = copy.deepcopy(Players[b])
+
+        make_mirror_match_table(d1,d2,n,deck_lists=deck_list,pairwise=args.pairwise is not None,
+                                out_put=args.output is not None)
+    else:
+        if args.N is not None:
+            iteration = int(args.N)
+            a = int(args.playertype1) - 1
+            b = int(args.playertype2) - 1
+            d1 = copy.deepcopy(Players[a])
+            d2 = copy.deepcopy(Players[b])
+            basic_flg = False
+            if args.basic is not None:
+                basic_flg = True
+            #if a == b:
+            if False:
+                make_deck_table(d1, d2, iteration, same_flg=True, result_name=file_name, basic=basic_flg,deck_lists=deck_list)
+            else:
+                make_deck_table(d1, d2, iteration, result_name=file_name, basic=basic_flg,deck_lists=deck_list)
+    mylogger.info(t1)
+    t2 = datetime.datetime.now()
+    mylogger.info(t2)
+    mylogger.info(t2 - t1)

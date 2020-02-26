@@ -4,7 +4,7 @@ import card_setting
 
 mylogger = get_module_logger(__name__)
 from util_ability import *
-
+import Player_Ability_setting
 
 def amulet_ability_001(field, player, opponent, virtual, target, itself):
     if field.turn_player_num != player.player_num: return
@@ -143,30 +143,13 @@ def amulet_ability_019(field, player, opponent, virtual, target, itself):
     Last Words: At the start of your next turn, put 3 random followers from your deck into your hand.
     """
 
-    def search_three_followers(field, player, virtual, state_log=None):
-        if state_log is None: return
-        if state_log[0] != State_Code.START_OF_TURN.value:
-            #mylogger.info("state_log:{}".format(State_Code(state_log[0]).name))
-            return
-        if state_log[1] != player.player_num:
-            #mylogger.info("player_num:{}".format(state_log[0]))
-            return
-        if not virtual:
-            mylogger.info("Staircase to Paradise's ability is actived")
-        condition = lambda card: card.card_category == "Creature"
-        search_cards(player, condition, virtual, num=3)
-        while True:
-            if search_three_followers in field.player_ability[player.player_num]:
-                field.player_ability[player.player_num].remove(search_three_followers)
-            else:
-                break
 
     if not virtual:
         mylogger.info(
             "Player{} get ability:'At the start of your next turn, put 3 random followers from your deck into your "
             "hand'".format(
                 player.player_num+1))
-    field.player_ability[player.player_num].append(search_three_followers)
+    field.player_ability[player.player_num].append(Player_Ability_setting.search_three_followers())
 
 
 def amulet_ability_020(field, player, opponent, virtual, target, itself):

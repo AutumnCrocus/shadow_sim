@@ -140,6 +140,25 @@ def destroy_opponent_creature(field, opponent, virtual, target):
             field.remove_card([opponent.player_num, target_id], virtual=virtual)
 
 
+def destroy_opponent_card(field, opponent, virtual, target):
+    tmp = field.get_can_be_targeted(player_num=1 - opponent.player_num)
+    if tmp != []:
+        target_id = target
+        if target is None:  # or target > num-1:
+            mylogger.info("targeted_player_num:{}".format(opponent.player_num))
+            field.show_field()
+            mylogger.info("target is decided at random")
+            raise Exception("Debug")
+        if target_id >= len(field.card_location[opponent.player_num]):
+            field.show_field()
+            assert False,"illigal target_error,target:{},len:{} player_num:{}({})"\
+                .format(target_id,len(field.card_location[opponent.player_num]),
+                        field.turn_player_num,1-opponent.player_num)
+        if KeywordAbility.CANT_BE_DESTROYED_BY_EFFECTS.value \
+                not in field.card_location[opponent.player_num][target_id].ability:
+            field.remove_card([opponent.player_num, target_id], virtual=virtual)
+
+
 def get_damage_to_all_creature(field, virtual, num=0):
     for i, side in enumerate(field.get_creature_location()):
         for j in side:
@@ -186,6 +205,9 @@ def search_cards(player, condition, virtual, num=1):
             for card in cards:
                 mylogger.info("Player{} append {} to hand from deck".format(player.player_num + 1, card.name))
         player.append_cards_to_hand(cards)
+        return cards
+
+    return None
 
 
 def necromancy(field, player, num=1, virtual=False):

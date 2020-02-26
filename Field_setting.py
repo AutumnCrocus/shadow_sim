@@ -16,7 +16,7 @@ from my_enum import *
 import time
 import os
 check_follower = lambda card:card.card_category=="Creature"
-
+from Game_setting import get_data
 
 class Field:
     def __init__(self, max_field_num):
@@ -46,6 +46,7 @@ class Field:
         self.time = time.time()
         self.secret = True
         self.state_value_history = []
+        self.start_count = 0
 
     def eq(self, other):
         if type(self) != type(other):
@@ -175,16 +176,6 @@ class Field:
         chain_len = 0
 
         self.check_active_ability()
-        """
-        if not self.secret:
-            #if State_Code.START_OF_TURN.value in [cell[0] for cell in self.state_log]:
-            #    mylogger.info("state_logs:{}".format(self.state_log))
-            for i in range(2):
-                if len(self.player_ability[i]) > 0:
-                    mylogger.info("Player{}'s leader effect".format(i+1))
-                    for ability in self.player_ability[i]:
-                        mylogger.info("ability:{}".format(ability))
-        """
         self.check_death(player_num, virtual=virtual)
         while len(self.stack) > 0 or len(self.state_log) > 0:
             self.solve_lastword_ability(virtual=virtual, player_num=player_num)
@@ -215,7 +206,10 @@ class Field:
             observable_data_dict[key]["shadows"] = self.graveyard.shadows[player_id]
             observable_data_dict[key]["pp/max_pp"] = (self.remain_cost[player_id], self.cost[player_id])
             observable_data_dict[key]["evo_point"] = self.evo_point[player_id]
-            observable_data_dict[key]["leader_effects"] = "{}".format([Player_Ability_setting.player_ability_name_dict[id(ability)] for ability in self.player_ability[player_id]])
+            #assert all(type(ability) is object for ability in self.player_ability[player_id]),"ability_list:{}"\
+            #    .format(self.player_ability[player_id])
+            observable_data_dict[key]["leader_effects"] = "{}".format([ability.name
+                                                                       for ability in self.player_ability[player_id]])
 
         return observable_data_dict
 
@@ -274,12 +268,15 @@ class Field:
     def check_death(self, player_num=0, virtual=False):
         for j in range(2):
             i = 0
+            count = 0
             while i < len(self.card_location[(player_num + j) % 2]):
                 card = self.card_location[(player_num + j) % 2][i]
                 if not card.is_in_field or card.is_in_graveyard:
                     self.remove_card([(player_num + j) % 2, i], virtual=virtual)
                 else:
                     i += 1
+                count += 1
+                assert count < 100,"infinite loop!"
 
     def append_played_turn(self,card_name=None):
         assert card_name is not None
@@ -461,8 +458,6 @@ class Field:
 
         assert attack[1] < len(self.card_location[attack[0]]) and defence[1] < len(self.card_location[defence[0]])
         attacking_follower = self.card_location[attack[0]][attack[1]]
-        if KeywordAbility.AMBUSH.value in attacking_follower.ability:
-            attacking_follower.ability.remove(KeywordAbility.AMBUSH.value)
         defencing_follower = self.card_location[defence[0]][defence[1]]
         assert attacking_follower.can_attack_to_follower() and defencing_follower.can_be_attacked(), \
             "attack:{} defence:{}".format(attacking_follower.can_attack_to_follower(),
@@ -486,6 +481,8 @@ class Field:
         self.ability_resolution(virtual=virtual, player_num=attack[0])
         if not attacking_follower.is_in_field or not defencing_follower.is_in_field:
             return
+        if KeywordAbility.AMBUSH.value in attacking_follower.ability:
+            attacking_follower.ability.remove(KeywordAbility.AMBUSH.value)
         amount = defencing_follower.get_damage(attacking_follower.power)
         attacking_follower.get_damage(defencing_follower.power)
         if KeywordAbility.DRAIN.value in attacking_follower.ability:
@@ -506,8 +503,6 @@ class Field:
 
     def attack_to_player(self, attacker, defence_player, visible=False, virtual=False):
         attacking_follower = self.card_location[attacker[0]][attacker[1]]
-        if KeywordAbility.AMBUSH.value in attacking_follower.ability:
-            attacking_follower.ability.remove(KeywordAbility.AMBUSH.value)
         assert attacking_follower.can_attack_to_player()
         attacking_follower.current_attack_num += 1
         for ability in attacking_follower.in_battle_ability:
@@ -526,6 +521,8 @@ class Field:
         if not virtual:
             mylogger.info("Player {}'s {} attacks directly Player {}".format(attacker[0] + 1, attacking_follower.name
                                                                              , 2 - attacker[0]))
+        if KeywordAbility.AMBUSH.value in attacking_follower.ability:
+            attacking_follower.ability.remove(KeywordAbility.AMBUSH.value)
         amount = defence_player.get_damage(attacking_follower.power)
         if KeywordAbility.DRAIN.value in attacking_follower.ability:
             restore_player_life(self.players[attacker[0]], virtual, num=amount)
@@ -553,7 +550,7 @@ class Field:
                     ability(self, self.players[player_num], self.players[1 - player_num], virtual, None, \
                             thing)
                     after = len(self.card_location[player_num])
-                    i += int(before == after)
+                    i += int(before <= after)
 
                     if self.check_game_end():
                         break
@@ -615,7 +612,7 @@ class Field:
                     before = len(self.card_location[player_num])
                     ability(self, self.players[player_num], self.players[1 - player_num], virtual, None, thing)
                     after = len(self.card_location[player_num])
-                    i += int(before == after)
+                    i += int(before <= after)
 
                     if self.check_game_end():
                         break
@@ -653,10 +650,11 @@ class Field:
         lib_flg = False
         for player in self.players:
             if player.lib_out_flg:
+            #if len(player.deck.deck) == 0:
                 lib_flg = True
-                player.lib_out_flg = False
+                #player.lib_out_flg = False
                 break
-        return self.players[0].life <= 0 or self.players[1].life <= 0 or lib_flg == True
+        return self.players[0].life <= 0 or self.players[1].life <= 0 or lib_flg
 
     def untap(self, player_num):
         self.turn_end = False
@@ -1209,16 +1207,18 @@ class Field:
                 mylogger.info("Player{} turn start cost:{}".format(turn_player_num + 1, self.cost[turn_player_num]))
             self.start_of_turn(turn_player_num, virtual=virtual_flg)
             if self.check_game_end():
-                if self.players[turn_player_num].life <= 0 or self.players[turn_player_num].deck.deck == []:
+                if self.players[turn_player_num].life <= 0 or len(self.players[turn_player_num].deck.deck) == 0:
                     if turn_player_num == 0:
                         lose += 1
                     else:
                         win += 1
-                elif self.players[1 - turn_player_num].life <= 0 or self.players[1 - turn_player_num].deck.deck == []:
+                elif self.players[1 - turn_player_num].life <= 0 or len(self.players[1 - turn_player_num].deck.deck) == 0:
                     if turn_player_num == 0:
                         win += 1
                     else:
                         lose += 1
+                else:
+                    assert False
                 break
 
             if turn_player_num == 1 and self.current_turn[turn_player_num] == 1:
@@ -1258,7 +1258,7 @@ class Field:
                     else:
                         win += 1
                 elif self.players[1 - turn_player_num].life <= 0 or self.players[
-                    1 - turn_player_num].lib_out_flg == True:
+                    1 - turn_player_num].lib_out_flg:
                     if turn_player_num == 0:
                         win += 1
                     else:
@@ -1300,6 +1300,93 @@ class Field:
 
         return win, lose, lib_num, turn, self.check_game_end()
 
+    def play_turn_for_train(self, turn_player_num):
+        win, lose, lib_num, turn = 0, 0, 0, 0
+        train_datas = []
+        count = 0
+        while True:
+            self.untap(turn_player_num)
+            self.increment_cost(turn_player_num)
+            self.start_of_turn(turn_player_num, virtual=True)
+            self.start_count += 1
+            assert self.start_count < 1000,"infinite start_of_turn:{},{}\n{}{}".format(self.players[0].lib_out_flg,self.players[1].lib_out_flg,
+                                                                                       self.show_field(),self.get_observable_data(turn_player_num))
+            if self.check_game_end():
+                if self.players[turn_player_num].life <= 0 or len(self.players[turn_player_num].deck.deck) == 0:
+                    if turn_player_num == 0:
+                        lose += 1
+                    else:
+                        win += 1
+                elif self.players[1 - turn_player_num].life <= 0 or len(self.players[1 - turn_player_num].deck.deck) == 0:
+                    if turn_player_num == 0:
+                        win += 1
+                    else:
+                        lose += 1
+                else:
+                    assert False
+                break
+
+            if turn_player_num == 1 and self.current_turn[turn_player_num] == 1:
+                draw_cards(self.players[turn_player_num], True, num=1)
+            draw_cards(self.players[turn_player_num], True, num=1)
+            if self.check_game_end():
+                if turn_player_num == 0:
+                    lose += 1
+                else:
+                    win += 1
+                lib_num += 1
+                return win, lose, self.check_game_end(), train_datas
+            self.time = time.time()
+            while time.time() - self.time < 90:
+
+                end_flg = self.players[turn_player_num].decide(self.players[turn_player_num],
+                                                               self.players[1 - turn_player_num], self,
+                                                               virtual=True)
+                train_datas.append(get_data(self,player_num=turn_player_num))
+                if end_flg:
+                    break
+
+            if self.check_game_end():
+                if self.players[turn_player_num].life <= 0 or self.players[turn_player_num].lib_out_flg:
+                    if turn_player_num == 0:
+                        lose += 1
+                    else:
+                        win += 1
+                elif self.players[1 - turn_player_num].life <= 0 or self.players[
+                    1 - turn_player_num].lib_out_flg:
+                    if turn_player_num == 0:
+                        win += 1
+                    else:
+                        lose += 1
+                break
+
+            self.end_of_turn(turn_player_num, virtual=True)
+
+            if self.check_game_end():
+                if self.players[turn_player_num].life <= 0 or self.players[turn_player_num].lib_out_flg == True:
+                    if turn_player_num == 0:
+                        lose += 1
+                    else:
+                        win += 1
+                elif self.players[1 - turn_player_num].life <= 0 or self.players[
+                    1 - turn_player_num].lib_out_flg:
+                    if turn_player_num == 0:
+                        win += 1
+                    else:
+                        lose += 1
+                break
+            turn += 1
+            count += 1
+            assert count < 100,"infinite_loop!".format(self.show_field())
+            if self.ex_turn_count[turn_player_num] > 0:
+                self.ex_turn_count[turn_player_num] -= 1
+            else:
+                break
+
+
+        return win, lose, self.check_game_end(), train_datas
+    
+    
     def state_value(self, player_num):
 
         partial_observable_data = self.get_observable_data(player_num=player_num)

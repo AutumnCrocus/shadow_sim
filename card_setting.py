@@ -197,7 +197,8 @@ creature_target_regulation = {
     creature_name_to_id["Sahaquiel"]: lambda
         card: card.card_category == "Creature" and card.card_class.name == "NEUTRAL",
     creature_name_to_id["Little Soulsquasher"]: lambda card: card.evolved,
-    creature_name_to_id["White General"]: lambda card: card.trait.name == "OFFICER"}
+    creature_name_to_id["White General"]: lambda card: card.trait.name == "OFFICER",
+    creature_name_to_id["Big Knuckle Bodyguard"]: lambda x: x.get_current_toughness() <= 3}
 another_target_func = lambda creature, itself: id(creature) != id(itself)
 evo_target_regulation = {
     creature_name_to_id["Wind Reader Zell"]: another_target_func}
@@ -211,7 +212,8 @@ creature_in_battle_ability_list = \
     {creature_name_to_id["Young Ogrehunter Momo"]: 1,
      creature_name_to_id["Israfil"]: 2,
      creature_name_to_id["Dark Elf Faure"]: 3,
-     creature_name_to_id["Disaster Dragon"]: 4}
+     creature_name_to_id["Disaster Dragon"]: 4,
+     creature_name_to_id["Spawn of the Abyss"]: 5}
 creature_cost_change_ability_list = {97: 2}
 can_only_attack_check = lambda field, player: field.check_ward()[1 - player.player_num]
 creature_can_only_attack_list = {#49: can_only_attack_check,
@@ -224,7 +226,8 @@ creature_trigger_ability_dict = {60: 1, 63: 4, 64: 5, 79: 6,
                                  creature_name_to_id["Shadow Reaper"]: 11,
                                  creature_name_to_id["Okami"]: 12,
                                  creature_name_to_id["Toy Soldier"]: 13,
-                                 creature_name_to_id["Dragonrider"]: -1}
+                                 creature_name_to_id["Dragonrider"]: -1,
+                                 creature_name_to_id["Tove"]: 14}
 special_evo_stats_id = {26: 1, 27: 3, 29: 1, 41: 1, 52: 1, 66: 1, 77: 1,
                         creature_name_to_id["Puppeteer"]: 2}
 evo_stats = {1: [1, 1], 2: [0, 0], 3: [3, 1]}
@@ -232,8 +235,13 @@ creature_earth_rite_list = [67, 68, 71, 90]
 # 1:相手のフォロワー,2:自分のフォロワー,3:相手のフォロワーと相手リーダー,
 # 4:自分と相手のフォロワー,5:自分と相手の全てのカード,6:自分の場のカード,7:自分の場のカードと相手の場のフォロワー,8:自分の他の手札
 # 9:相手の場の全てのカード 10:自分のフォロワーと自分リーダー
-creature_enhance_list = {3: [6], 10: [6], 87: [10], 98: [9],
-                         creature_name_to_id["Tender Rabbit Healer"]: [7]}
+creature_enhance_list = {
+                        creature_name_to_id["Ax Fighter"]: [6],
+                        creature_name_to_id["War Dog"]: [6],
+                        creature_name_to_id["Grimnir, War Cyclone"]: [10],
+                        creature_name_to_id["Albert, Levin Saber"]: [9],
+                        creature_name_to_id["Tender Rabbit Healer"]: [7],
+                        creature_name_to_id["Baphomet"]: [5]}
 creature_enhance_target_list = {}
 creature_enhance_target_regulation_list = {}
 
@@ -338,7 +346,7 @@ amulet_lastword_ability = {
    amulet_name_to_id["Staircase to Paradise"]: 19,
    amulet_name_to_id["Summon Pegasus"]: 20,
    amulet_name_to_id["Dual Flames"]: 21,
-   amulet_name_to_id["Staircase to Paradise"]: 4
+   amulet_name_to_id["Golden Bell"]: 22
    }
 amulet_has_target = {
     amulet_name_to_id["Tribunal of Good and Evil"]: 1
@@ -588,6 +596,8 @@ class Creature(Card):
         return self.toughness - self.damage
 
     def can_attack_to_follower(self):
+        if KeywordAbility.CANT_ATTACK.value in self.ability:
+            return False
         if self.current_attack_num >= self.can_attack_num:
             return False
         if self.evolved: return True
@@ -596,6 +606,8 @@ class Creature(Card):
         return False
 
     def can_attack_to_player(self):
+        if KeywordAbility.CANT_ATTACK.value in self.ability:
+            return False
         if self.current_attack_num >= self.can_attack_num:
             return False
         if KeywordAbility.CANT_ATTACK_TO_PLAYER.value in self.ability: return False

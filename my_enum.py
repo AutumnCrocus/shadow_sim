@@ -107,3 +107,10 @@ class __Target_Type(Enum):
 
 Target_Type = __Target_Type
 
+class __Card_Category(Enum):
+    NONE = 0
+    Creature = 1
+    Spell = 2
+    Amulet = 3
+
+Card_Category = __Card_Category

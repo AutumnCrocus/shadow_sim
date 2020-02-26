@@ -1,7 +1,7 @@
 import random
 import card_setting
 from my_moduler import get_module_logger
-
+from util_ability import *
 mylogger = get_module_logger(__name__)
 from my_enum import *
 
@@ -30,17 +30,41 @@ class can_not_take_more_than_x_damage():
         else:
             return argument
 
+class restore_1_defense_to_all_allies():
+    def __init__(self):
+        self.name = "restore_1_defense_to_all_allies"
 
-def restore_1_defense_to_all_allies(field, player, virtual, state_log=None):
-    if state_log[0] != State_Code.END_OF_TURN.value:
-        return
-    if state_log[1] != player.player_num:
-        return
-    if not virtual:
-        mylogger.info("De La Fille, Gem Princess's leader effect is actived")
-    field.restore_player_life(player=player, num=1, virtual=virtual)
-    for follower in field.card_location[player.player_num]:
-        if follower.card_category == "Creature":
-            field.restore_follower_toughness(follower=follower, num=1, virtual=virtual, at_once=True)
+    def __call__(self,field, player, virtual, state_log=None):
+        if state_log[0] != State_Code.END_OF_TURN.value:
+            return
+        if state_log[1] != player.player_num:
+            return
+        if not virtual:
+            mylogger.info("De La Fille, Gem Princess's leader effect is actived")
+        field.restore_player_life(player=player, num=1, virtual=virtual)
+        for follower in field.card_location[player.player_num]:
+            if follower.card_category == "Creature":
+                field.restore_follower_toughness(follower=follower, num=1, virtual=virtual, at_once=True)
+
+class  search_three_followers():
+    def __init__(self):
+        self.name = "search_three_followers"
+    def __call__(self,field, player, virtual, state_log=None):
+        if state_log is None: return
+        if state_log[0] != State_Code.START_OF_TURN.value:
+            #mylogger.info("state_log:{}".format(State_Code(state_log[0]).name))
+            return
+        if state_log[1] != player.player_num:
+            #mylogger.info("player_num:{}".format(state_log[0]))
+            return
+        if not virtual:
+            mylogger.info("Staircase to Paradise's ability is actived")
+        condition = lambda card: card.card_category == "Creature"
+        search_cards(player, condition, virtual, num=3)
+        while True:
+            if search_three_followers in field.player_ability[player.player_num]:
+                field.player_ability[player.player_num].remove(search_three_followers)
+            else:
+                break
 
 player_ability_name_dict = {id(restore_1_defense_to_all_allies):"restore_1_defense_to_all_allies"}

@@ -6,14 +6,14 @@ import Player_Ability_setting
 mylogger = get_module_logger(__name__)
 from util_ability import *
 from my_enum import *
-
+import util_ability
 
 def creature_ability_001(field, player, opponent, virtual, target, itself):
     field.restore_player_life(player=player, num=2, virtual=virtual)
 
 
 def creature_ability_002(field, player, opponent, virtual, target, itself):
-    if itself.active_enhance_code[0] == True:
+    if itself.active_enhance_code[0]:
         get_damage_to_player(opponent, virtual, num=3)
 
 
@@ -596,6 +596,7 @@ def creature_ability_074(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Summon a Kunoichi Trainee.
     """
+
     summon_creature(field, player, virtual, name="Kunoichi Trainee", num=1)
 
 
@@ -939,16 +940,18 @@ def creature_ability_107(field, player, opponent, virtual, target, itself):
     restore 1 defense to all allies. (This effect is not stackable and lasts for the rest of the match.)
     """
 
-    if Player_Ability_setting.restore_1_defense_to_all_allies \
-            not in field.player_ability[player.player_num]:
+    #if Player_Ability_setting.restore_1_defense_to_all_allies \
+    #        not in field.player_ability[player.player_num]:
+    if all(ability.name != "restore_1_defense_to_all_allies" for ability in field.player_ability[player.player_num]):
         if not virtual:
             mylogger.info("Give Player{} the following effect - At the end of your turn,restore 1 defense to all allies. "
                           .format(player.player_num + 1)+\
                           "(This effect is not stackable and lasts for the rest of the match.)")
 
-        field.player_ability[player.player_num].append(Player_Ability_setting.restore_1_defense_to_all_allies)
+        field.player_ability[player.player_num].append(Player_Ability_setting.restore_1_defense_to_all_allies())
         if len(field.player_ability[player.player_num]) > 1:
             mylogger.info("player_ability:{}".format(field.player_ability))
+            mylogger.info("names:{}".format([ability.name for ability in field.player_ability[player.player_num]]))
             assert False
 
 
@@ -1038,7 +1041,7 @@ def creature_ability_114(field, player, opponent, virtual, target, itself):
 
 def creature_ability_115(field, player, opponent, virtual, target, itself):
     """
-    Deal 1 damage to an enemy.
+    Deal 1 damage to an enemy.(Angel of the word,etc...)
     """
     get_damage_to_enemy(field,opponent,virtual,target,num=1)
     """
@@ -1056,6 +1059,92 @@ def creature_ability_116(field, player, opponent, virtual, target, itself):
     put_card_in_hand(field,player,virtual,name="Mimi",card_category="Spell")
     put_card_in_hand(field, player, virtual, name="Coco", card_category="Spell")
 
+
+def creature_ability_117(field, player, opponent, virtual, target, itself):
+    """
+    Evolve: Give +1/+1 to all other allied Neutral followers.
+    """
+    for follower in field.card_location[player.player_num]:
+        if follower.card_category != "Creature":
+            continue
+        if follower.card_class.value == LeaderClass.NEUTRAL.value and follower is not itself:
+            buff_creature(follower,params=[1,1])
+
+
+def creature_ability_118(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Put a random Bloodcraft follower whose attack is 5 and over from your deck into your hand.
+    Enhance (5): Then subtract 3 from the cost of the card in your hand.
+    """
+    condition = lambda follower:follower.card_category == "Creature" \
+                                and follower.card_class.value == LeaderClass.BLOOD.value \
+                                    and follower.power >= 5
+    searched_card = search_cards(player,condition,virtual)
+    if searched_card is not None and itself.active_enhance_code[0]:
+        searched_card[0].cost = max(searched_card[0].cost - 3,0)
+        if not virtual:
+            mylogger.info("3 is subtracted from {}'s cost".format(searched_card[0].name))
+
+def creature_ability_119(field, player, opponent, virtual, target, itself):
+    """
+    Summon a Goblin at the end of your turn.
+    """
+    if field.turn_player_num == player.player_num:
+        summon_creature(field,player,virtual,name="Goblin")
+
+def creature_ability_120(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Give +1/+1 to all other allied Neutral followers in your hand and in play.
+    """
+    creature_ability_117(field,player,opponent,virtual,target,itself)
+    for hand_card in player.hand:
+        if hand_card.card_category != "Creature":
+            continue
+        if hand_card.card_class.value == LeaderClass.NEUTRAL.value:
+            buff_creature(hand_card, params=[1, 1])
+
+def creature_ability_121(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Destroy an enemy follower with 3 defense or less.
+    Deal 2 damage to your leader if Vengeance is not active for you.
+    """
+    if target is not None:
+        destroy_opponent_creature(field,opponent,virtual,target)
+    if not player.check_vengeance():
+        get_damage_to_player(player,virtual,num=2)
+
+
+def creature_ability_122(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Deal 2 damage to an enemy. Then restore 2 defense to your leader.
+    """
+    get_damage_to_enemy(field,opponent,virtual,target,num=2)
+    restore_player_life(player,virtual,num=2)
+
+
+def creature_ability_123(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Restore 4 defense to your leader if Vengeance is active for you.
+    """
+    if player.check_vengeance():
+        restore_player_life(player,virtual,num=4)
+
+
+def creature_ability_124(field, player, opponent, virtual, target, itself):
+    """
+    Fanfare: Destroy an enemy follower or amulet. Gain Storm if Vengeance is active for you.
+    """
+    destroy_opponent_card(field,opponent,virtual,target)
+    if player.check_vengeance():
+        add_ability_to_creature(field,player,itself,virtual,add_ability=[KeywordAbility.STORM.value])
+
+
+def creature_ability_125(field, player, opponent, virtual, target, itself):
+    """
+    Last Words: Deal 6(8) damage to the enemy leader if Ambush is active for this follower.
+    """
+    if KeywordAbility.AMBUSH.value in itself.ability:
+        get_damage_to_player(opponent,virtual,num=6+int(itself.evolved)*2)
 
 def token_creature_ability_001(field, player, opponent, virtual, target, itself):
     """
@@ -1123,6 +1212,8 @@ creature_ability_dict = {
     106: creature_ability_106, 107: creature_ability_107, 108: creature_ability_108,
     109: creature_ability_109, 110: creature_ability_110, 111: creature_ability_111,
     112: creature_ability_112, 113: creature_ability_113, 114: creature_ability_114,
-    115: creature_ability_115, 116: creature_ability_116,
-
+    115: creature_ability_115, 116: creature_ability_116, 117: creature_ability_117,
+    118: creature_ability_118, 119: creature_ability_119, 120: creature_ability_120,
+    121: creature_ability_121, 122: creature_ability_122, 123: creature_ability_123,
+    124: creature_ability_124, 125: creature_ability_125,
     -1: token_creature_ability_001, -2: token_creature_ability_002}

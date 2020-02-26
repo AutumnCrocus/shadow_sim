@@ -42,9 +42,20 @@ def creature_battle_ability_004(field, player, opponent, itself, target, situati
     """
     if 0 in situation_num:
         buff_creature_until_end_of_turn(itself, params=[2, 0])
-        if virtual == False:
+        if not virtual:
             mylogger.info("{} get +2/0 until end of this turn".format(itself.name))
 
 
+def creature_battle_ability_005(field, player, opponent, itself, target, situation_num=[], virtual=False):  # 仮仕様
+    """
+    Strike: Deal 6 damage to the enemy leader if Ambush is active for this follower.
+    """
+    if 0 in situation_num:
+        if KeywordAbility.AMBUSH.value in itself.ability:
+            if not virtual:
+                mylogger.info("Spawn of the Abyss's Strike ability")
+            get_damage_to_player(opponent, virtual, num=6 + int(itself.evolved) * 2)
+
 battle_ability_dict = {1: creature_battle_ability_001, 2: creature_battle_ability_002,
-                       3: creature_battle_ability_003, 4: creature_battle_ability_004}
+                       3: creature_battle_ability_003, 4: creature_battle_ability_004,
+                       5: creature_battle_ability_005}

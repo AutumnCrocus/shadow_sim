@@ -127,7 +127,7 @@ def spell_ability_015(field, player, opponent, virtual, target, itself):
 
 
 def spell_ability_016(field, player, opponent, virtual, target, itself):
-    if virtual == False:
+    if not virtual:
         mylogger.info("Player {} get extra turn".format(player.player_num + 1))
     field.ex_turn_count[player.player_num] += 1
 
@@ -140,14 +140,14 @@ def spell_ability_017(field, player, opponent, virtual, target, itself):
 
 def spell_ability_018(field, player, opponent, virtual, target, itself):
     get_damage_to_player(player, virtual, num=2)
-    if field.check_game_end() == True:
+    if field.check_game_end():
         return
     draw_cards(player, virtual, num=2)
 
 
 def spell_ability_019(field, player, opponent, virtual, target, itself):
     get_damage_to_player(player, virtual, num=2)
-    if field.check_game_end() == True:
+    if field.check_game_end():
         return
     if target == -1:
         get_damage_to_player(opponent, virtual, num=3)

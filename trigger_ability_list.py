@@ -3,7 +3,8 @@ import card_setting
 from my_moduler import get_module_logger
 mylogger = get_module_logger(__name__)
 from util_ability import *
-from my_enum import * 
+import util_ability
+from my_enum import *
 class trigger_ability_001:
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
         if itself.is_in_field==False:return
@@ -86,7 +87,8 @@ class trigger_ability_008:
         if state_log!=None and (state_log[0]==State_Code.ATTACK_TO_FOLLOWER.value or state_log[0]==State_Code.ATTACK_TO_PLAYER.value):
             if state_log[1]==player.player_num and state_log[2]!=itself:
                 attacking_creature=state_log[2]
-                buff_creature_until_end_of_turn(attacking_creature,params=[1,0])
+                util_ability.buff_creature_until_end_of_turn(attacking_creature,params=[1,0])
+                #buff_creature_until_end_of_turn(attacking_creature,params=[1,0])
                 if not virtual:
                     mylogger.info("{} get +1/0 until end of turn".format(attacking_creature.name))
 
@@ -148,7 +150,7 @@ class trigger_ability_012:
         if state_log[1][1] != "Creature":
             return
 
-        if virtual==False:
+        if not virtual:
             mylogger.info("{} get +1/0".format(itself.name))
         buff_creature(itself,params=[1,0])
 
@@ -170,9 +172,33 @@ class trigger_ability_013:
                     break
 
 
+class trigger_ability_014:
+    def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
+        """
+        When another allied Neutral follower comes into play, this follower loses Can't_Attack and gains Rush.
+        """
+        if self not in itself.trigger_ability :
+            return
+        #self.state_log.append([State_Code.SET.value,
+        # (player_num, card.card_category, card.card_id, id(card)),self.stack_num])
+        if state_log is not None and state_log[0]==State_Code.SET.value and state_log[1][0] == player.player_num:
+            if state_log[1][1] == "Creature" and \
+                card_setting.creature_list[state_log[1][2]][-2][0] == LeaderClass.NEUTRAL.value:
+                assert KeywordAbility.CANT_ATTACK.value in itself.ability, "{} don't have {},{}"\
+                    .format(itself.ability,KeywordAbility.CANT_ATTACK.value,itself.trigger_ability)
+                itself.ability.remove(KeywordAbility.CANT_ATTACK.value)
+                add_ability_to_creature(field,player,itself,virtual,add_ability=[KeywordAbility.RUSH.value])
+                assert self in itself.trigger_ability,"{}".format(itself.trigger_ability)
+                itself.trigger_ability.remove(self)
+                if not virtual:
+                    mylogger.info("{} loses {} and gains {}".format(itself.name,KeywordAbility.CANT_ATTACK.name,
+                                                                    KeywordAbility.RUSH.name))
+
+
 class special_trigger_ability_001:
     def __init__(self):
         self.done_flg = False
+
     def __call__(self,field,player,opponent,virtual,target,itself,state_log=None):
         """
         Gain +2/+0 if Overflow is active for you.
@@ -192,9 +218,10 @@ class special_trigger_ability_001:
 
         
 
-trigger_ability_dict={1:trigger_ability_001,2:trigger_ability_002,3:trigger_ability_003,4:trigger_ability_004,5:trigger_ability_005,\
-                    6:trigger_ability_006,7:trigger_ability_007,8:trigger_ability_008,9:trigger_ability_009,10:trigger_ability_010,\
-                    11:trigger_ability_011,12:trigger_ability_012,13:trigger_ability_013,
+trigger_ability_dict={
+    1:trigger_ability_001,2:trigger_ability_002,3:trigger_ability_003,4:trigger_ability_004,5:trigger_ability_005,
+    6:trigger_ability_006,7:trigger_ability_007,8:trigger_ability_008,9:trigger_ability_009,10:trigger_ability_010,
+    11:trigger_ability_011,12:trigger_ability_012,13:trigger_ability_013,14:trigger_ability_014,
 
 
 

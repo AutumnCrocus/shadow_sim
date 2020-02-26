@@ -18,6 +18,10 @@ import os.path
 import time
 
 from card_setting import *
+import torch
+from Network_model import Net,state_change_to_full
+import Game_setting
+PATH = 'model/value_net.pth'
 
 mylogger = get_module_logger(__name__)
 max_life_value = math.exp(-1) - math.exp(-20)
@@ -230,7 +234,7 @@ class GreedyPolicy(Policy):
             = field.get_flag_and_choices(player, opponent, regal_targets)
         first = player.player_num
         dicision = [0, 0, 0]
-        history = []
+        action_set = []
         max_state_value = -10000
         length = len(able_to_play + able_to_creature_attack) + 1
         end_field_id_list = []
@@ -279,10 +283,11 @@ class GreedyPolicy(Policy):
                                                     virtual=True)
 
             tmp_state_value = self.state_value(evo_field, first)
+            action_set.append([(Action_Code.EVOLVE.value, evo_id, target_id), tmp_state_value])
             if max_state_value < tmp_state_value:
                 max_state_value = tmp_state_value
                 dicision = [Action_Code.EVOLVE.value, evo_id, target_id]
-                history.append((Action_Code.EVOLVE.value, evo_id, target_id))
+
 
         if can_play:
             for i in range(1, len(able_to_play) + 1):
@@ -304,11 +309,12 @@ class GreedyPolicy(Policy):
                                                                 virtual=True)
 
                 state_value_list[i] = self.state_value(tmp_field_list[i], first)
+                action_set.append([(Action_Code.PLAY_CARD.value, card_id, target_id),state_value_list[i]])
                 end_field_id_list.append(i)
                 if max_state_value < state_value_list[i] and tmp_field_list[i].players[first].life > 0:
                     max_state_value = state_value_list[i]
                     dicision = [Action_Code.PLAY_CARD.value, card_id, target_id]
-                    history.append((Action_Code.PLAY_CARD.value, card_id, target_id))
+
 
         opponent_creatures_toughness = []
         if len(can_be_attacked) > 0:
@@ -336,10 +342,11 @@ class GreedyPolicy(Policy):
                                                                             attacker_id, target_id), virtual=True)
 
                         state_value_list[i] += self.state_value(tmp_field_list[i], first)
+                        action_set.append([(Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id),state_value_list[i]])
                         if max_state_value < state_value_list[i] and target_id is not None:
                             max_state_value = state_value_list[i]
                             dicision = [Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id]
-                            history.append((Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id))
+
             else:
                 for i in range(len(able_to_play) + 1, length):
                     assert i not in end_field_id_list, "{} {}".format(i, end_field_id_list)
@@ -368,6 +375,7 @@ class GreedyPolicy(Policy):
                                                                             Action_Code.ATTACK_TO_FOLLOWER.value,
                                                                             attacker_id, target_id), virtual=True)
                         state_value_list[i] += self.state_value(tmp_field_list[i], first)
+                        action_set.append([(Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id),state_value_list[i]])
                         end_field_id_list.append(i)
 
                     elif attacking_creature.can_attack_to_player():
@@ -383,13 +391,15 @@ class GreedyPolicy(Policy):
                             if attacker_id in able_to_attack:
                                 max_state_value = state_value_list[i]
                                 dicision = [Action_Code.ATTACK_TO_PLAYER.value, attacker_id, 0]
-                                history.append((Action_Code.ATTACK_TO_PLAYER.value, attacker_id, 0))
+                                action_set.append((Action_Code.ATTACK_TO_PLAYER.value, attacker_id, 0))
                         if not direct_flg and opponent_creatures_toughness != [] and target_id is not None:
                             max_state_value = state_value_list[i]
                             dicision = [Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id]
-                            history.append((Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id))
+                            action_set.append((Action_Code.ATTACK_TO_FOLLOWER.value, attacker_id, target_id))
 
-
+        if not field.secret:
+            for code in action_set:
+                mylogger.info("action:{},value:{:.3f}".format(code[0],code[1]))
         return dicision[0], dicision[1], dicision[2]
 
 
@@ -688,17 +698,17 @@ class MCTSPolicy(Policy):
             #next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
             self.current_node = next_node
-            if not field.secret and len(self.current_node.child_nodes) != len(self.current_node.children_moves):
-                mylogger.info("children_moves:{}".format(self.starting_node.children_moves))
-                self.starting_node.print_tree(single=True)
+            #if not field.secret and len(self.current_node.child_nodes) != len(self.current_node.children_moves):
+            #    mylogger.info("children_moves:{}".format(self.starting_node.children_moves))
+            #    self.starting_node.print_tree(single=True)
             self.type = "root"
             if tmp_move == (0, 0, 0):
-                if not field.secret:
-                    if self.current_node.parent_node is not None:
-                        if self.current_node.parent_node.children_moves != [(0,0,0)]:
-                            mylogger.info("turn end is prior to other moves")
-                            mylogger.info("children_moves:{}".format(self.current_node.parent_node.children_moves))
-                            self.current_node.parent_node.print_tree(single=True)
+                #if not field.secret:
+                #    if self.current_node.parent_node is not None:
+                #        if self.current_node.parent_node.children_moves != [(0,0,0)]:
+                #            mylogger.info("turn end is prior to other moves")
+                #            mylogger.info("children_moves:{}".format(self.current_node.parent_node.children_moves))
+                #            self.current_node.parent_node.print_tree(single=True)
                 self.current_node = None
             return tmp_move  # action
         else:
@@ -707,9 +717,9 @@ class MCTSPolicy(Policy):
             next_node = None
             tmp_move = None
             if not self.fully_expand(self.current_node, player_num=player.player_num):
-                if not field.secret:
-                    mylogger.info("reuse existed node as root(able_move_num:{},child_num:{})"
-                                  .format(len(self.current_node.children_moves),len(self.current_node.child_nodes)))
+                #if not field.secret:
+                #    mylogger.info("reuse existed node as root(able_move_num:{},child_num:{})"
+                #                  .format(len(self.current_node.children_moves),len(self.current_node.child_nodes)))
                 action = self.uct_search(player, opponent, field)
                 tmp_move = action
                 if len(self.current_node.child_nodes) > 0:
@@ -719,8 +729,8 @@ class MCTSPolicy(Policy):
                     self.current_node = None
                 return tmp_move
             if len(self.current_node.child_nodes) == 0:
-                if not field.secret:
-                    mylogger.info("no child error")
+                #if not field.secret:
+                #    mylogger.info("no child error")
                 return Action_Code.ERROR.value, 0, 0
             #next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
@@ -1318,7 +1328,7 @@ class New_MCTSPolicy(MCTSPolicy):
 class New_Aggro_MCTSPolicy(New_MCTSPolicy):
     def __init__(self,iteration=100):
         super().__init__()
-        self.name = "New_Aggro_MCTS(iteartion={})Policy".format(iteration)
+        self.name = "New_A_MCTS(n={})Policy".format(iteration)
         self.play_out_policy = AggroPolicy()
         self.iteration = iteration
 
@@ -1326,7 +1336,7 @@ class New_Aggro_MCTSPolicy(New_MCTSPolicy):
 class Default_Aggro_MCTSPolicy(New_MCTSPolicy):
     def __init__(self,iteration=100):
         super().__init__()
-        self.name = "Default_Aggro_MCTS(iteartion={})Policy".format(iteration)
+        self.name = "Default_A_MCTS(n={})Policy".format(iteration)
         self.play_out_policy = AggroPolicy()
         self.iteration = iteration
 
@@ -2331,7 +2341,7 @@ class Information_Set_MCTSPolicy():
         self.prev_node = None
         self.node_index = 0
         self.policy_type = 4
-        self.name = "Information_Set(n={})_MCTSPolicy".format(iteration)
+        self.name = "ISMCTS(n={})Policy".format(iteration)
         self.type = "root"
         self.iteration = iteration
         self.default_iteration = 10
@@ -2845,7 +2855,7 @@ class Flexible_Iteration_Aggro_MCTSPolicy(Aggro_MCTSPolicy):
 class Flexible_Iteration_Information_Set_MCTSPolicy(Information_Set_MCTSPolicy):
     def __init__(self, N=100):
         super().__init__()
-        self.name = self.name = "Information_Set(n={})_MCTSPolicy".format(N)
+        self.name = self.name = "IS(n={})_MCTSPolicy".format(N)
         self.iteration = N
 
 
@@ -3354,7 +3364,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
     # デッキ公開制のときのみ
     def __init__(self, iteration=100):
         super().__init__()
-        self.name = "Opponent_modeling(n={})_ISMCTSPolicy".format(iteration)
+        self.name = "OM(n={})_ISMCTSPolicy".format(iteration)
         self.play_out_policy = AggroPolicy()
         self.main_player_num = 0
         self.iteration = iteration
@@ -3883,7 +3893,7 @@ def get_draw_probability(prev_field, current_field, player_num=0):
 class Alter_Opponent_Modeling_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
     def __init__(self, iteration=100):
         super().__init__(iteration=iteration)
-        self.name = "Alter_Opponent_modeling(n={})_ISMCTSPolicy".format(iteration)
+        self.name = "Alter_OM(n={})_ISMCTSPolicy".format(iteration)
 
     def best(self, node, player_num=0):
         children = node.child_nodes
@@ -4804,7 +4814,7 @@ class Advanced_value_function_OM_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
 class Non_Rollout_MCTSPolicy(Flexible_Iteration_MCTSPolicy):
     def __init__(self,iteration=100):
         super().__init__(N=iteration)
-        self.name = "Non-Rollout_MCTS(iteration={})policy".format(iteration)
+        self.name = "NR_MCTS(n={})policy".format(iteration)
 
     def default_policy(self, node, player_num=0):
         return self.state_value(node.field,player_num)
@@ -4813,7 +4823,7 @@ class Non_Rollout_MCTSPolicy(Flexible_Iteration_MCTSPolicy):
 class Non_Rollout_A_MCTSPolicy(New_Aggro_MCTSPolicy):
     def __init__(self, iteration=100):
         super().__init__()
-        self.name = "Non-Rollout_New_A_MCTS(iteration={})policy".format(iteration)
+        self.name = "NR_New_A_MCTS(n={})policy".format(iteration)
         self.iteration = iteration
 
     def default_policy(self, node, player_num=0):
@@ -4823,7 +4833,7 @@ class Non_Rollout_A_MCTSPolicy(New_Aggro_MCTSPolicy):
 class Non_Rollout_ISMCTSPolicy(Flexible_Iteration_Information_Set_MCTSPolicy):
     def __init__(self,iteration=100):
         super().__init__(N=iteration)
-        self.name = "Non-Rollout_ISMCTS(iteration={})policy".format(iteration)
+        self.name = "NR_ISMCTS(n={})policy".format(iteration)
 
     def default_policy(self, node, player_num=0):
         return self.state_value(node.field,player_num)
@@ -4832,7 +4842,7 @@ class Non_Rollout_ISMCTSPolicy(Flexible_Iteration_Information_Set_MCTSPolicy):
 class Non_Rollout_OM_MCTSPolicy(Opponent_Modeling_MCTSPolicy):
     def __init__(self, iteration=100):
         super().__init__(iteration=iteration)
-        self.name = "Non-Rollout_MO_MCTS(iteration={})policy".format(iteration)
+        self.name = "NR_MO_MCTS(n={})policy".format(iteration)
 
     def default_policy(self, node, player_num=0):
         return self.state_value(node.field, self.main_player_num)
@@ -4841,7 +4851,7 @@ class Non_Rollout_OM_MCTSPolicy(Opponent_Modeling_MCTSPolicy):
 class Non_Rollout_OM_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
     def __init__(self, iteration=100):
         super().__init__(iteration=iteration)
-        self.name = "Non-Rollout_MO_ISMCTS(iteration={})policy".format(iteration)
+        self.name = "NR_MO_ISMCTS(n={})policy".format(iteration)
 
     def default_policy(self, node, player_num=0):
         value = self.state_value(node.field, self.main_player_num)
@@ -4854,7 +4864,7 @@ class Non_Rollout_OM_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
 class New_GreedyPolicy(Default_GreedyPolicy):
 
     def __init__(self):
-        self.name = "New_GreedyPolicy"
+        self.name = "New_GreedyPolicy(obligated)"
         self.policy_type = 2
 
     def decide(self, player, opponent, field):
@@ -4865,16 +4875,22 @@ class New_GreedyPolicy(Default_GreedyPolicy):
                                              starting_field.players[opponent.player_num])
         starting_node = Node(field=starting_field, player_num=player.player_num)
         able_actions = starting_node.children_moves
-        max_value_action = None
+        max_value_action = (0,0,0)
         max_state_value = -np.inf
-        sim_field = Field_setting.Field(5)
+
+        if not field.secret:
+            mylogger.info("able_actions:{}".format(able_actions))
         for action in able_actions:
-            sim_field.set_data(field)
+            if action == (0,0,0):
+                continue
+            sim_field = Field_setting.Field(5)
+            sim_field.set_data(starting_field)
             sim_player = sim_field.players[player_num]
             sim_opponent = sim_field.players[1-player_num]
             sim_player.execute_action(sim_field, sim_opponent, action_code=action, virtual=True)
             value = self.state_value(sim_field,player_num)
-
+            if not field.secret:
+                mylogger.info("action:{},state_value:{:.3f}".format(action,value))
             if value > max_state_value:
                 max_value_action = action
                 max_state_value = value
@@ -4882,3 +4898,291 @@ class New_GreedyPolicy(Default_GreedyPolicy):
                     break
 
         return max_value_action
+    
+
+class until_game_end_MCTSPolicy(New_Aggro_MCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.name = "UGE_MCTSPolicy"
+
+    def default_policy(self, node, player_num=0):
+        if node.finite_state_flg:
+            if not node.field.check_game_end():
+                current_field = Field_setting.Field(5)
+                current_field.set_data(node.field)
+                current_field.end_of_turn(player_num, virtual=True)
+            return self.state_value(node.field, player_num)
+        sum_of_value = 0
+        end_flg = False
+        for i in range(self.default_iteration):
+            current_field = Field_setting.Field(5)
+            current_field.set_data(node.field)
+            current_field.players[0].deck.shuffle()  # デッキの並びは不明だから
+            current_field.players[1].deck.shuffle()
+            player = current_field.players[player_num]
+            current_field.turn_player_num = player_num
+            opponent = current_field.players[1 - player_num]
+            opponent_hand = opponent.hand
+            opponent_deck = opponent.deck
+            hand_len = len(opponent.hand)
+            while len(opponent.hand) > 0:
+                opponent_deck.append(opponent_hand.pop())
+            opponent_deck.shuffle()
+            opponent.draw(opponent_deck, hand_len)
+            player.policy = self.play_out_policy
+            opponent.policy = self.play_out_policy
+            while True:
+                end_flg = player.decide(player, opponent, current_field, virtual=True)
+                if end_flg:
+                    break
+            if current_field.check_game_end():
+                sum_of_value += self.state_value(current_field,player.player_num)
+                continue
+            current_field.end_of_turn(player_num,True)
+            if current_field.check_game_end():
+                sum_of_value += self.state_value(current_field,player.player_num)
+                continue
+            while True:
+                current_field.play_turn(opponent.player_num, 0, 0, 0,0, True)
+                if current_field.check_game_end():
+                    break
+                current_field.play_turn(player.player_num, 0, 0, 0, 0, True)
+                if current_field.check_game_end():
+                    break
+            sum_of_value += self.state_value(current_field, player.player_num)
+        return sum_of_value / self.default_iteration
+
+
+class until_game_end_OM_MCTSPolicy(Opponent_Modeling_MCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.name = "UGE_OM_MCTSPolicy"
+
+    def default_policy(self, node, player_num=0):
+        if node.finite_state_flg:
+            if not node.field.check_game_end():
+                current_field = Field_setting.Field(5)
+                current_field.set_data(node.field)
+                current_field.end_of_turn(player_num, virtual=True)
+            return self.state_value(node.field, player_num)
+        sum_of_value = 0
+        end_flg = False
+        for i in range(self.default_iteration):
+            current_field = Field_setting.Field(5)
+            current_field.set_data(node.field)
+            current_field.players[0].deck.shuffle()  # デッキの並びは不明だから
+            current_field.players[1].deck.shuffle()
+            player = current_field.players[player_num]
+            current_field.turn_player_num = player_num
+            opponent = current_field.players[1 - player_num]
+            opponent_hand = opponent.hand
+            opponent_deck = opponent.deck
+            hand_len = len(opponent.hand)
+            while len(opponent.hand) > 0:
+                opponent_deck.append(opponent_hand.pop())
+            opponent_deck.shuffle()
+            opponent.draw(opponent_deck, hand_len)
+            player.policy = self.play_out_policy
+            opponent.policy = self.play_out_policy
+            while True:
+                end_flg = player.decide(player, opponent, current_field, virtual=True)
+                if end_flg:
+                    break
+            if current_field.check_game_end():
+                sum_of_value += self.state_value(current_field,player.player_num)
+                continue
+            current_field.end_of_turn(player_num,True)
+            if current_field.check_game_end():
+                sum_of_value += self.state_value(current_field,player.player_num)
+                continue
+            while True:
+                current_field.play_turn(opponent.player_num, 0, 0, 0,0, True)
+                if current_field.check_game_end():
+                    break
+                current_field.play_turn(player.player_num, 0, 0, 0, 0, True)
+                if current_field.check_game_end():
+                    break
+            sum_of_value += self.state_value(current_field, player.player_num)
+        return sum_of_value / self.default_iteration
+
+
+class until_game_end_OM_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
+    def __init__(self):
+        super().__init__()
+        self.name = "UGE_OM_ISMCTSPolicy"
+
+    def default_policy(self, node, player_num=0):
+        if node.finite_state_flg:
+            if not node.field.check_game_end():
+                current_field = Field_setting.Field(5)
+                current_field.set_data(node.field)
+                current_field.end_of_turn(player_num, virtual=True)
+            return self.state_value(node.field, player_num)
+        sum_of_value = 0
+        end_flg = False
+        for i in range(self.default_iteration):
+            current_field = Field_setting.Field(5)
+            current_field.set_data(node.field)
+            current_field.players[0].deck.shuffle()  # デッキの並びは不明だから
+            current_field.players[1].deck.shuffle()
+            player = current_field.players[player_num]
+            current_field.turn_player_num = player_num
+            opponent = current_field.players[1 - player_num]
+            opponent_hand = opponent.hand
+            opponent_deck = opponent.deck
+            hand_len = len(opponent.hand)
+            while len(opponent.hand) > 0:
+                opponent_deck.append(opponent_hand.pop())
+            opponent_deck.shuffle()
+            opponent.draw(opponent_deck, hand_len)
+            player.policy = self.play_out_policy
+            opponent.policy = self.play_out_policy
+            while True:
+                end_flg = player.decide(player, opponent, current_field, virtual=True)
+                if end_flg:
+                    break
+            if current_field.check_game_end():
+                sum_of_value += self.state_value(current_field, player.player_num)
+                continue
+            current_field.end_of_turn(player_num, True)
+            if current_field.check_game_end():
+                sum_of_value += self.state_value(current_field, player.player_num)
+                continue
+            while True:
+                current_field.play_turn(opponent.player_num, 0, 0, 0, 0, True)
+                if current_field.check_game_end():
+                    break
+                current_field.play_turn(player.player_num, 0, 0, 0, 0, True)
+                if current_field.check_game_end():
+                    break
+            sum_of_value += self.state_value(current_field, player.player_num)
+        return sum_of_value / self.default_iteration
+
+class NN_GreedyPolicy(New_GreedyPolicy):
+    def __init__(self,model_name = None):
+        short_name = model_name.split(".pth")[0]
+        self.name = "NN_GreedyPolicy(model_name={})".format(short_name)
+        self.policy_type = 2
+        #self.net = Net(10173,10,1)
+        self.net = Net(19218, 10, 1)
+        self.model_name = PATH
+        if model_name is not None:
+            self.model_name = 'model/{}'.format(model_name)
+        self.net.load_state_dict(torch.load(self.model_name))
+        from Network_model import Field_START,LIFE_START
+        self.Field_START = Field_START
+        self.LIFE_START = LIFE_START
+
+
+    def decide(self, player, opponent, field):
+        player_num = player.player_num
+        starting_field = Field_setting.Field(5)
+        starting_field.set_data(field)
+        starting_field.get_regal_target_dict(starting_field.players[player.player_num],
+                                             starting_field.players[opponent.player_num])
+        starting_node = Node(field=starting_field, player_num=player.player_num)
+        able_actions = starting_node.children_moves
+        max_value_action = (0, 0, 0)
+        max_state_value = -np.inf
+
+        if not field.secret:
+            mylogger.info("able_actions:{}".format(able_actions))
+        for action in able_actions:
+            if action == (0, 0, 0):
+                continue
+            sim_field = Field_setting.Field(5)
+            sim_field.set_data(starting_field)
+            sim_player = sim_field.players[player_num]
+            sim_opponent = sim_field.players[1 - player_num]
+            sim_player.execute_action(sim_field, sim_opponent, action_code=action, virtual=True)
+            inputs = self.get_data(sim_field,player_num=player.player_num)
+            #inputs = torch.Tensor(inputs)
+            value = float(self.net(inputs))
+            if not field.secret:
+                mylogger.info("action:{},state_value:{:.3f}".format(action, value))
+            if value > max_state_value:
+                max_value_action = action
+                max_state_value = value
+                if value == 1.0:
+                    break
+
+        return max_value_action
+
+    def get_data(self,f,player_num = 0):
+        tmp = Game_setting.get_data(f,player_num=player_num)
+        return self.single_state_change_to_full(tmp)[0]
+
+    def single_state_change_to_full(self,origin):
+        # [card_category,cost,card_id]*9*2 + [card_id,power,toughness,[ability]]*5*2+[life,life,turn]
+        # 3*9 + 4*10 + 3 = 27 + 40 +3 = 70
+        convert_states = []
+
+        cell = origin
+        assert len(cell) == 70, "cell_len:{}".format(len(cell))
+        tmp = []
+        for i in range(9):
+            tmp.extend(list(np.identity(4)[cell[3 * i]]))
+            tmp.append(cell[3 * i + 1])
+            tmp.extend(list(np.identity(1000)[3 * i + 2 + 500]))
+        # 9*(4+1+1000) = 9*1005 = 9045
+        for i in range(10):
+            j = self.Field_START + 4 * i
+            assert j % 4 == 3, "j={}".format(j)
+            assert type(cell[j]) == int and type(cell[j + 1]) == int and type(cell[j + 2]) == int \
+                   and type(cell[j + 3]) == list, "cell={}".format(cell[j:j + 4])
+            tmp.extend(list(np.identity(1000)[cell[j] + 500]))
+            tmp.extend([cell[j + 1], cell[j + 2]])
+            embed_ability = [int(ability_id in cell[j + 3]) for ability_id in range(1, 16)]
+            tmp.extend(embed_ability)
+        # 10 *(1000+2+15) = 10170
+        # 9045 + 10170 = 19215
+        assert len(cell[self.LIFE_START:]) == 3, "data:{}".format(cell[self.LIFE_START:])
+        tmp.extend(cell[self.LIFE_START:])
+        convert_states.append(torch.Tensor(tmp))
+
+        return convert_states
+
+
+class NN_A_MCTSPolicy(Flexible_Iteration_Aggro_MCTSPolicy,NN_GreedyPolicy):
+    def __init__(self,model_name = None):
+        super().__init__()
+        short_name = model_name.split(".pth")[0]
+        self.name = "NN-A-MCTS(model_name={})Policy".format(short_name)
+        self.net = Net(19218, 10, 1)
+        self.model_name = PATH
+        if model_name is not None:
+            self.model_name = 'model/{}'.format(model_name)
+        self.net.load_state_dict(torch.load(self.model_name))
+        from Network_model import Field_START,LIFE_START
+        self.Field_START = Field_START
+        self.LIFE_START = LIFE_START
+
+    def state_value(self, field, player_num):
+        inputs = self.get_data(field, player_num=player_num)
+        value = float(self.net(inputs))
+        return value
+
+    def get_data(self,field,player_num = 0):
+        return super().get_data(field,player_num = player_num)
+
+class NN_Non_Rollout_MCTSPolicy(Non_Rollout_A_MCTSPolicy,NN_GreedyPolicy):
+    def __init__(self,model_name = None):
+        super().__init__()
+        short_name = model_name.split(".pth")[0]
+        self.name = "NN_Non-Rollout_MCTS(model_name={})Policy".format(short_name)
+        self.net = Net(19218, 10, 1)
+        self.model_name = PATH
+        if model_name is not None:
+            self.model_name = 'model/{}'.format(model_name)
+        self.net.load_state_dict(torch.load(self.model_name))
+        from Network_model import Field_START,LIFE_START
+        self.Field_START = Field_START
+        self.LIFE_START = LIFE_START
+
+    def state_value(self, field, player_num):
+        inputs = self.get_data(field, player_num=player_num)
+        value = float(self.net(inputs))
+        return value
+
+    def get_data(self,field,player_num = 0):
+        return super().get_data(field,player_num = player_num)
