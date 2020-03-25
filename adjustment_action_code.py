@@ -11,9 +11,9 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
     prev_card_id = int(card_id)
     prev_target_id = copy.copy(target_id)
     opponent_num = 1 - player_num
+    error_flg = True
     if msg == Action_Code.PLAY_CARD.value:
         playing_card = sim_player.hand[card_id]
-        error_flg = True
         for i, real_card in enumerate(player.hand):
             if real_card.eq(playing_card):
                 card_id = i
@@ -23,7 +23,6 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
     elif msg == Action_Code.ATTACK_TO_FOLLOWER.value:
         attacking_card = sim_field.card_location[player.player_num][card_id]
         attacked_card = sim_field.card_location[opponent_num][target_id]
-        error_flg = True
         for i, real_card in enumerate(field.card_location[player.player_num]):
             if real_card.eq(attacking_card):
                 card_id = i
@@ -37,7 +36,6 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 break
     elif msg == Action_Code.ATTACK_TO_PLAYER.value:
         attacking_card = sim_field.card_location[player.player_num][card_id]
-        error_flg = True
         for i, real_card in enumerate(field.card_location[player.player_num]):
             if real_card.eq(attacking_card):
                 card_id = i
@@ -45,7 +43,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 break
     elif msg == Action_Code.EVOLVE.value:
         evolving_card = sim_field.card_location[player.player_num][card_id]
-        error_flg = True
+
         for i, real_card in enumerate(field.card_location[player.player_num]):
             if real_card.eq(evolving_card):
                 card_id = i
@@ -81,7 +79,6 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
         if target_type is not None:
             if target_type == Target_Type.ENEMY_FOLLOWER.value or target_type == Target_Type.ENEMY_CARD.value:
                 targeted_card = sim_field.card_location[opponent_num][prev_target_id]
-                error_flg = True
                 for i, real_card in enumerate(field.card_location[opponent_num]):
                     if real_card.eq(targeted_card):
                         target_id = i
@@ -114,6 +111,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
             elif target_type == Target_Type.ENEMY.value:
                 if prev_target_id == -1:
                     return action_num, card_id, target_id
+                assert prev_target_id < len(sim_field.card_location[player_num]),"target_id:{}".format(target_id,sim_field.show_field())
                 targeted_card = sim_field.card_location[player_num][prev_target_id]
                 for i, real_card in enumerate(field.card_location[opponent_num]):
                     if real_card.eq(targeted_card):
