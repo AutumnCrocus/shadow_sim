@@ -39,5 +39,12 @@ jobs:
         python3 test.py --N 100 --playertype1 1 --playertype2 1 --decktype1 10 --decktype2 10 --mode background_demo 
     - name: Run Test2
       run: |
-        python3 test.py --N 10 --playertype1 19 --playertype2 19 --decktype1 10 --decktype2 10 --mode background_demo 
+        python3 test.py --N 10 --playertype1 29 --playertype2 29 --decktype1 0 --decktype2 0 --mode background_demo  --model_name Multi_Dual_2020_3_24_15_51_31_75%.pth
+    
+    - name: Run Test3
+      run: |
+        python3 test.py --N 10 --playertype1 29 --playertype2 29 --decktype1 2 --decktype2 2 --mode background_demo  --model_name Multi_Dual_2020_3_24_15_51_31_75%.pth
         
+    - name: Run Test4
+      run: |
+        python3 test.py --N 10 --playertype1 29 --playertype2 29 --decktype1 10 --decktype2 10 --mode background_demo  --model_name Multi_Dual_2020_3_24_15_51_31_75%.pth
