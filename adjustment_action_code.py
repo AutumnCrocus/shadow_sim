@@ -3,6 +3,7 @@ import itertools
 import copy
 from my_moduler import get_module_logger
 mylogger = get_module_logger(__name__)
+
 def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
     player = field.players[player_num]
     sim_player = sim_field.players[player.player_num]
@@ -67,6 +68,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
             field.show_field()
             mylogger.info("sim")
             sim_field.show_field()
+        mylogger.info("{}".format(Action_Code(msg).name))
         assert False,"{}".format(Action_Code(msg).name)
 
     if target_id is not None and \
@@ -90,6 +92,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 field.show_field()
                 mylogger.info("sim")
                 sim_field.show_field()
+                mylogger.info("{}".format(Action_Code(msg).name))
                 assert False,"error:{}".format(Target_Type(target_type).name)
 
             elif target_type == Target_Type.ALLIED_FOLLOWER.value or target_type == Target_Type.ALLIED_CARD.value or\
@@ -105,6 +108,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 field.show_field()
                 mylogger.info("sim")
                 sim_field.show_field()
+                mylogger.info("{}".format(Action_Code(msg).name))
                 assert False,"error:{}".format(Target_Type(target_type).name)
 
             elif target_type == Target_Type.ENEMY.value:
@@ -121,6 +125,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 field.show_field()
                 mylogger.info("sim")
                 sim_field.show_field()
+                mylogger.info("{}".format(Action_Code(msg).name))
                 assert False,"error:{}".format(Target_Type(target_type).name)
 
             elif target_type == Target_Type.FOLLOWER.value or target_type == Target_Type.CARD.value or\
@@ -139,6 +144,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 field.show_field()
                 mylogger.info("sim")
                 sim_field.show_field()
+                mylogger.info("{}".format(Action_Code(msg).name))
                 assert False,"error:{}".format(Target_Type(target_type).name)
 
             elif target_type == Target_Type.CARD_IN_HAND.value:
@@ -161,6 +167,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 player.show_hand()
                 mylogger.info("sim")
                 sim_player.show_hand()
+                mylogger.info("{}".format(Action_Code(msg).name))
                 assert False, "error:{}".format(Target_Type(target_type).name)
 
     return action_num, card_id, target_id
