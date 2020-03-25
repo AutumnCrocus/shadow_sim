@@ -6,3 +6,4 @@ termcolor==1.1.0
 terminado==0.8.2
 testpath==0.4.2
 tqdm==4.32.2
+numba
