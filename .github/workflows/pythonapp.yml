@@ -34,7 +34,10 @@ jobs:
     - name: pip_lib
       run: |
         pip install -r requirements.txt
-    - name: Run Test
+    - name: Run Test1
       run: |
         python3 test.py --N 100 --playertype1 1 --playertype2 1 --decktype1 10 --decktype2 10 --mode background_demo 
-
+    - name: Run Test2
+      run: |
+        python3 test.py --N 10 --playertype1 19 --playertype2 19 --decktype1 10 --decktype2 10 --mode background_demo 
+        
