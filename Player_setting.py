@@ -9,7 +9,7 @@ mylogger = get_module_logger(__name__)
 # mylogger = get_module_logger('mylogger')
 import itertools
 
-statelogger = get_state_logger('state')
+#statelogger = get_state_logger('state')
 from my_enum import *
 
 
@@ -366,102 +366,11 @@ class Player:
             else:
                 sim_field = self.policy.prev_node.field
                 sim_player = sim_field.players[self.player_num]
+                assert sim_field.eq(field),"".format(field.show_field(),sim_field.show_field(),self.show_hand(),sim_player.show_hand())
+
                 action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,
                         action_code=(action_num, card_id, target_id), msg = msg)
-                """
-                #self.show_hand()
-                #field.show_field()
-                #mylogger.info("node")
-                #sim_player.show_hand()
-                #sim_field.show_field()
-                if msg == Action_Code.PLAY_CARD.value:
-                    playing_card = sim_player.hand[card_id]
-                    error_flg = True
-                    for i,real_card in enumerate(self.hand):
-                        if real_card.eq(playing_card):
-                            card_id = i
-                            error_flg = False
-                            break
-                    assert error_flg,"{} is not {}".format(self.hand[card_id].name,sim_player.hand[card_id].name)
-                elif msg == Action_Code.ATTACK_TO_FOLLOWER.value:
-                    attacking_card = sim_field.card_location[self.player_num][card_id]
-                    attacked_card = sim_field.card_location[1-self.player_num][target_id]
-                    error_flg = True
-                    for i,real_card in enumerate(field.card_location[self.player_num]):
-                        if real_card.eq(attacking_card):
-                            card_id = i
-                            error_flg = False
-                            break
-                    assert error_flg,"{} is not {}".format(field.card_location[self.player_num][card_id].name,
-                                                           sim_field.card_location[self.player_num][card_id].name)
-                    error_flg = True
-                    for i,real_card in enumerate(field.card_location[1-self.player_num]):
-                        if real_card.eq(attacked_card):
-                            card_id = i
-                            error_flg = False
-                            break
-                    assert error_flg,"{} is not {}".format(field.card_location[1-self.player_num][target_id].name,
-                                                           sim_field.card_location[1-self.player_num][target_id].name)
-                elif msg == Action_Code.ATTACK_TO_PLAYER.value:
-                    attacking_card = sim_field.card_location[self.player_num][card_id]
-                    error_flg = True
-                    for i,real_card in enumerate(field.card_location[self.player_num]):
-                        if real_card.eq(attacking_card):
-                            card_id = i
-                            error_flg = False
-                            break
-                    assert error_flg,"{} is not {}".format(field.card_location[self.player_num][card_id].name,
-                                                           sim_field.card_location[self.player_num][card_id].name)
-                    assert len(field.check_ward()[self.player_num]) == 0,"ward:{}".format(field.check_ward())
-                elif msg == Action_Code.EVOLVE.value:
-                    evolving_card = sim_field.card_location[self.player_num][card_id]
-                    error_flg = True
-                    for i,real_card in enumerate(field.card_location[self.player_num]):
-                        if real_card.eq(evolving_card):
-                            card_id = i
-                            error_flg = False
-                            break
-                    assert error_flg,"{} is not {}".format(field.card_location[self.player_num][card_id].name,
-                                                           sim_field.card_location[self.player_num][card_id].name)
-                else:
-                    assert False,"msg:{}".format(msg)
                 break
-                """
-
-
-
-                """
-                mylogger.info("msg:{}".format(msg))
-                sim_field = self.policy.prev_node.field
-                sim_player = sim_field.players[self.player_num]
-                mylogger.info("type:{}".format(self.policy.type))
-                if action_num == Action_Code.PLAY_CARD.value:
-                    mylogger.info("card_name:{},{}".format(self.hand[card_id].name,sim_player.hand[card_id].name))
-                    real_targets = field.get_regal_targets(self.hand[card_id],player_num=self.player_num,target_type=1)
-                    sim_targets = sim_field.get_regal_targets(sim_player.hand[card_id],player_num=self.player_num,target_type=1)
-                    mylogger.info("{},{}".format(real_targets,sim_targets))
-                    mylogger.info("{},{}".format(field.get_able_to_play(player),sim_field.get_able_to_play(sim_player)))
-                mylogger.info("real")
-                self.show_hand()
-                field.show_field()
-                mylogger.info("node")
-                sim_player.show_hand()
-                sim_field.show_field()
-                mylogger.info("copy now")
-                test_field = Field_setting.Field(5)
-                test_field.set_data(field)
-                test_field.players[self.player_num].show_hand()
-                test_field.show_field()
-                mylogger.info("")
-
-
-
-                #print(type(self.policy.current_node),New_Node)
-                assert type(self.policy.current_node) != New_Node,"self.policy_name:{}".format(self.policy.name)
-                self.policy.current_node = None
-                #if self.policy.policy_type == 3 or self.policy.policy_type == 4:
-                #    self.policy.current_node = None
-                """
 
 
         if not virtual:

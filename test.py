@@ -8,7 +8,7 @@ from card_setting import *
 from Field_setting import Field
 from Player_setting import *
 from Game_setting import Game
-from my_moduler import get_module_logger, get_state_logger
+from my_moduler import get_module_logger#, get_state_logger
 from mulligan_setting import *
 import logging
 import matplotlib.pyplot as plt
