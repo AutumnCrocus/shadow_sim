@@ -940,18 +940,18 @@ def creature_ability_107(field, player, opponent, virtual, target, itself):
     restore 1 defense to all allies. (This effect is not stackable and lasts for the rest of the match.)
     """
 
-    #if Player_Ability_setting.restore_1_defense_to_all_allies \
-    #        not in field.player_ability[player.player_num]:
-    if all(ability.name != "restore_1_defense_to_all_allies" for ability in field.player_ability[player.player_num]):
+    #if all(ability.name != "restore_1_defense_to_all_allies" for ability in field.player_ability[player.player_num]):
+    if all(ability_id != 2 for ability_id in field.player_ability[player.player_num]):
         if not virtual:
             mylogger.info("Give Player{} the following effect - At the end of your turn,restore 1 defense to all allies. "
                           .format(player.player_num + 1)+\
                           "(This effect is not stackable and lasts for the rest of the match.)")
 
-        field.player_ability[player.player_num].append(Player_Ability_setting.restore_1_defense_to_all_allies())
-        if len(field.player_ability[player.player_num]) > 1:
+        #field.player_ability[player.player_num].append(Player_Ability_setting.restore_1_defense_to_all_allies())
+        field.player_ability[player.player_num].append(Player_Ability_setting.restore_1_defense_to_all_allies().ability_id)
+        if field.player_ability[player.player_num].count(2) > 1:
             mylogger.info("player_ability:{}".format(field.player_ability))
-            mylogger.info("names:{}".format([ability.name for ability in field.player_ability[player.player_num]]))
+            #mylogger.info("names:{}".format([ability.name for ability in field.player_ability[player.player_num]]))
             assert False
 
 

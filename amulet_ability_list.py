@@ -149,7 +149,8 @@ def amulet_ability_019(field, player, opponent, virtual, target, itself):
             "Player{} get ability:'At the start of your next turn, put 3 random followers from your deck into your "
             "hand'".format(
                 player.player_num+1))
-    field.player_ability[player.player_num].append(Player_Ability_setting.search_three_followers())
+    #field.player_ability[player.player_num].append(Player_Ability_setting.search_three_followers())
+    field.player_ability[player.player_num].append(Player_Ability_setting.search_three_followers().ability_id)
 
 
 def amulet_ability_020(field, player, opponent, virtual, target, itself):

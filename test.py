@@ -17,7 +17,7 @@ mylogger = get_module_logger(__name__)
 from my_enum import *
 import argparse
 import csv
-
+from tqdm import tqdm
 value_history = []
 
 
@@ -80,10 +80,15 @@ def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, d
     f.players[0].hand.clear()
     f.players[0].deck = None
     f.players[0].lib_out_flg = False
+
     f.players[1].life = 20
     f.players[1].hand.clear()
     f.players[1].deck = None
     f.players[1].lib_out_flg = False
+    if f.players[0].policy.policy_type == 3:
+        f.players[0].policy.current_node = None
+    if f.players[1].policy.policy_type == 3:
+        f.players[1].policy.current_node = None
     if not virtual_flg:
         f.graveyard.show_graveyard()
         f.play_cards.show_play_list()
@@ -162,6 +167,10 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
     f.players[1].deck = None
     f.players[1].lib_out_flg = False
     f.players[1].effect.clear()
+    if f.players[0].policy.policy_type == 3:
+        f.players[0].policy.current_node = None
+    if f.players[1].policy.policy_type == 3:
+        f.players[1].policy.current_node = None
 
     if deck_name_list is not None:
         f.play_cards.play_cards_set()
@@ -236,6 +245,10 @@ def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, v
     f.players[1].lib_out_flg = False
     f.players[1].effect.clear()
     f.play_cards.plain_play_cards_set()
+    if f.players[0].policy.policy_type == 3:
+        f.players[0].policy.current_node = None
+    if f.players[1].policy.policy_type == 3:
+        f.players[1].policy.current_node = None
     win_flg = [w, l]
     #for i in range(2):
     #    sorted_name_list = sorted(list(f.play_cards.plain_name_list[i].keys()))
@@ -298,48 +311,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         if deck_type[i] in key_2_tsv_name:
             D[i] = tsv_to_deck(key_2_tsv_name[deck_type[i]][0])
             D[i].set_leader_class(key_2_tsv_name[deck_type[i]][1])
-        """
-        if deck_type[i] == 0:
-            D[i] = tsv_to_deck("Sword_Aggro.tsv")
-            D[i].set_leader_class("SWORD")
-            # Aggro
-        elif deck_type[i] == 1:
-            D[i] = tsv_to_deck("Rune_Earth.tsv")
-            D[i].set_leader_class("RUNE")
-            # Aggro
-        elif deck_type[i] == 2:
-            D[i] = tsv_to_deck("Sword.tsv")
-            D[i].set_leader_class("SWORD")
-            # Mid
-        elif deck_type[i] == 3:
-            D[i] = tsv_to_deck("New-Shadow.tsv")
-            D[i].set_leader_class("SHADOW")
-            # Mid
-        elif deck_type[i] == 4:
-            D[i] = tsv_to_deck("Dragon_PDK.tsv")
-            D[i].set_leader_class("DRAGON")
-            # Mid
-        elif deck_type[i] == 5:
-            D[i] = tsv_to_deck("Haven.tsv")
-            D[i].set_leader_class("HAVEN")
-            # Control
-        elif deck_type[i] == 6:
-            D[i] = tsv_to_deck("Blood.tsv")
-            D[i].set_leader_class("BLOOD")
-            # Control
-        elif deck_type[i] == 7:
-            D[i] = tsv_to_deck("Dragon.tsv")
-            D[i].set_leader_class("DRAGON")
-            # Control
-        elif deck_type[i] == 8:
-            D[i] = tsv_to_deck("Forest.tsv")
-            D[i].set_leader_class("FOREST")
-            # Combo
-        elif deck_type[i] == 9:
-            D[i] = tsv_to_deck("Rune.tsv")
-            D[i].set_leader_class("RUNE")
-            # Combo
-        """
+
         if deck_type[i] == -1:
             D[i] = tsv_to_deck("Forest_Basic.tsv")
             D[i].set_leader_class("FOREST")
@@ -504,93 +476,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         for j, cell in enumerate(drawn_win_rate_list[player_key]):
             mylogger.info("No.{} {}:{:.3f}".format(j + 1, cell[0], cell[1]))
         print("")
-    if Player1.policy.name.split("_")[0] == "Genetic":
-        for fit_key in sorted(list(Player1.policy.better_parameters), key=lambda ele: -ele[0]):
-            mylogger.info("{}:{}".format(fit_key[1], fit_key[0]))
-    if "MAST" in Player1.policy.name:
-        for key in list(Player1.policy.Q_dict.keys()):
-            n = Player1.policy.Q_dict[key][1]
-            mean_value = Player1.policy.Q_dict[key][0] / max(n, 1)
-            mylogger.info("{}".format((Action_Code(key[0]).name, key[1])))
-            mylogger.info("n:{:<5} mean_value:{:.3f}".format(n, mean_value))
-    if len(value_history) > 9:
-        fig = plt.figure()
-        mylogger.info("value_history[0]:{}".format(value_history[0]))
-        # p1,p2 = None,None
-        ave_p1 = {}
-        ave_p2 = {}
-        max_len = 0
-        max_turn = 40
-        end_turn_counter = []
-        for i in range(max_turn):
-            ave_p1[i] = []
-            ave_p2[i] = []
-        for i, data in enumerate(value_history):
-            if i % 2 == 0:
-                # p1=plt.plot(data[0], data[1], color="red")
-                for j in range(max_turn):
-                    if j < len(data[1]):
-                        ave_p1[j].append(data[1][j])
-                    else:
-                        ave_p1[j].append(data[1][-1])
-            else:
-                # p2=plt.plot(data[0], data[1], color="blue")
-                for j in range(max_turn):
-                    if j < len(data[1]):
-                        ave_p2[j].append(data[1][j])
-                    else:
-                        ave_p2[j].append(data[1][-1])
-            max_len = max(max_len, len(data[1]))
-            end_turn_counter.append(len(data[1]) - 1)
-        mean_p1 = []
-        std_p1 = []
-        mean_p2 = []
-        std_p2 = []
-        # for i in range(80):
-        for i in range(max_len):
-            mean_p1.append(sum(ave_p1[i]) / (iteration // 2))
-            std_p1.append(np.std(ave_p1[i], ddof=1) / (iteration // 2))
-            mean_p2.append(sum(ave_p2[i]) / (iteration // 2))
-            std_p2.append(np.std(ave_p2[i], ddof=1) / (iteration // 2))
-        max_data = np.array(list(range(max_len)))
-        # max_data = np.array(list(range(80)))
 
-        mean_p1 = np.array(mean_p1[:max_len])
-        mean_p2 = np.array(mean_p2[:max_len])
-        # mean_p1 = np.array(mean_p1)
-        # mean_p2 = np.array(mean_p2)
-        ax1 = fig.add_subplot(1, 1, 1)
-        p3 = ax1.plot(max_data, mean_p1, color="c", linewidth=3)
-        p4 = ax1.plot(max_data, mean_p2, color="m", linewidth=3)
-        # p3 = plt.plot(max_data, mean_p1, color="c",linewidth=3)
-        # p4 = plt.plot(max_data, mean_p2, color="m",linewidth=3)
-        # markersize = 10
-        ax1.errorbar(max_data, mean_p1, yerr=std_p1,
-                     capsize=5, fmt='o', ecolor='black',
-                     markeredgecolor="black",
-                     color='w')
-        ax1.errorbar(max_data, mean_p2, yerr=std_p2,
-                     capsize=5, fmt='o', ecolor='black',
-                     markeredgecolor="black",
-                     color='w')
-        ax2 = ax1.twinx()
-        # mylogger.info("end_turn_couner:{}".format(end_turn_counter))
-        edges = range(0, max_len, 1)
-        ax2.hist(end_turn_counter, bins=edges, normed=True, alpha=0.5)
-        ax2.set_title('value graph/end_turn histogram')
-        ax1.set_xlabel('turn')
-        ax1.set_ylabel('value')
-        ax2.set_ylabel('freq')
-        ax1.set_ylim([0, 1])
-        ax2.set_ylim([0, 1])
-        ax1.set_xlim([0, max_len])
-        # mylogger.info("std_p1:{},std_p2:{}".format(std_p1,std_p2))
-        # plt.legend((p1[0], p2[0],p3[0],p4[0]), ("first", "second","ave_first","ave_second"), loc=0)
-        ax1.legend((p3[0], p4[0]), ("ave_first", "ave_second"), loc=0)
-        fig.savefig("graph/{}({})_{}({})_{}iteration.png".format(Player1.policy.name, deck_id_2_name[deck_type[0]],
-                                                                 Player2.policy.name, deck_id_2_name[deck_type[1]],
-                                                                 iteration))
-        plt.show()
 
 
 def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False, deck_type=None,output=False,directory_name=None):
@@ -889,6 +775,99 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                     row.append("{:.3%}".format(cell[2][1]))
                     writer.writerow(row)
                 writer.writerow([])
+
+
+def random_match(Player_1, Player_2, iteration, virtual_flg=False):
+    Player1 = copy.deepcopy(Player_1)
+    Player2 = copy.deepcopy(Player_2)
+    Player1 = Player_1
+    Player2 = Player_2
+    Player1.name = "Alice"
+    Player2.name = "Bob"
+    assert Player1 != Player2
+    win = 0
+    lose = 0
+    lib_num = 0
+    D = [Deck(), Deck()]
+    #deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
+    #                  6: "Blood", 7: "Dragon", 8: "Forest", 9: "Rune", 10: "DS_Rune", -1: "Forest_Basic",
+    #                  -2: "Sword_Basic",
+    #                  -3: "Rune_Basic",
+    #                  -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
+    #                  100: "Test",
+    #                  -9: "Spell-Rune", 11: "PtP-Forest", 12: "Mid-Shadow", 13: "Neutral-Blood"}
+
+    key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
+                      3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
+                      6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
+                      9: ["SpellBoost-Rune.tsv", "RUNE"], 10: ["Dimension_Shift_Rune.tsv", "RUNE"],
+                      11: ["PtP_Forest.tsv", "FOREST"], 12: ["Mid_Shadow.tsv", "SHADOW"],
+                      13: ["Neutral_Blood.tsv", "BLOOD"]}
+
+
+    class_pool = [0, 0]
+
+    Player1.class_num = class_pool[0]
+    Player2.class_num = class_pool[1]
+
+    mylogger.info("")
+    sum_of_turn = 0
+    span = max(iteration // 10, 1)
+    Turn_Players = [Player1, Player2]
+    win_lose = [win, lose]
+    epoc_len = span
+    epoc_win_lose = [0, 0]
+    epoc_lib_num = 0
+    first_num = [0, 0]
+    epoch_first_num = [0, 0]
+    win_turns = [0, 0]
+    deck_keys = list(key_2_tsv_name.keys())
+    for i in tqdm(range(iteration)):
+        deck_type = [random.choice(deck_keys),random.choice(deck_keys)]
+        for j, d in enumerate(D):
+            if deck_type[j] in key_2_tsv_name:
+                D[j] = tsv_to_deck(key_2_tsv_name[deck_type[j]][0])
+                D[j].set_leader_class(key_2_tsv_name[deck_type[j]][1])
+            else:
+                assert False
+        D[0].mean_cost = D[0].get_mean_cost()
+        D[1].mean_cost = D[1].get_mean_cost()
+
+        if (i + 1) % epoc_len == 1 or epoc_len == 1:
+            epoc_win_lose = [int(win_lose[0]), int(win_lose[1])]
+            epoc_lib_num = int(lib_num)
+            epoch_first_num = [int(first_num[0]), int(first_num[1])]
+        Turn_Players[i % 2].is_first = True
+        Turn_Players[i % 2].player_num = 0
+        Turn_Players[(i + 1) % 2].is_first = False
+        Turn_Players[(i + 1) % 2].player_num = 1
+        assert Turn_Players[0].player_num != Turn_Players[1].player_num, "same error {}".format(
+            Turn_Players[0].player_num)
+        (win_lose[i % 2], win_lose[(i + 1) % 2], lib_num, end_turn, first, (player1_win_turn, player2_win_turn)) \
+            = demo_game_play(Turn_Players[i % 2],
+                             Turn_Players[(i + 1) % 2],
+                             D[i % 2], D[(i + 1) % 2],
+                             win_lose[i % 2],
+                             win_lose[(i + 1) % 2], lib_num,
+                             virtual_flg=True, deck_name_list=None, history_flg=False)
+        first_num[i % 2] += first
+        sum_of_turn += end_turn
+        if player1_win_turn is not False:
+            win_turns[i % 2] += player1_win_turn
+        elif player2_win_turn is not False:
+            win_turns[(i + 1) % 2] += player2_win_turn
+
+
+    mylogger.info("Result:win={}, lose={}, libout_num={}, win_rate:{:<3}".format(win_lose[0], win_lose[1], lib_num,
+                                                                                 win_lose[0] / iteration))
+    if iteration > 1:
+        mylogger.info("first_win_rate:Player1:{:<3},Player2:{:<3}".format(first_num[0] / (iteration // 2),
+                                                                          first_num[1] / (iteration // 2)))
+    if win_lose[0] == 0:
+        win_lose[0] = 1
+    if win_lose[1] == 0:
+        win_lose[1] = 1
+    mylogger.info("mean_win_turn:{:.3f},{:.3f}".format(win_turns[0] / win_lose[0], win_turns[1] / win_lose[1]))
 
 
 def get_contributions(Player_1, Player_2, iteration, player1_deck_num=None, directory_name=None):
@@ -1618,6 +1597,7 @@ if __name__ == '__main__':
     parser.add_argument('--step_num',help='MCTSの繰り返し上限')
     parser.add_argument('--model_name', help='ニューラルネットワークモデルの名前')
     parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
+    parser.add_argument('--cProfile')
     args = parser.parse_args()
     mylogger.info("args:{}".format(args))
     step_num = 100
@@ -1668,12 +1648,19 @@ if __name__ == '__main__':
     model_name = None
     if args.model_name is not None:
         model_name = args.model_name
+        """
         Players.append(
             Player(9, True, policy=NN_GreedyPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 28
         Players.append(
             Player(9, True, policy=NN_A_MCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 29
         Players.append(
             Player(9, True, policy=NN_Non_Rollout_MCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 30
+        """
+
+        Players.append(
+            Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 28
+        Players.append(
+            Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy())) # 29
 
     # assert False
     n = 100
@@ -1734,15 +1721,20 @@ if __name__ == '__main__':
         virtual_flg = args.mode == "background_demo"
         graph = args.graph is not None
         if args.pairwise is not None:
-            execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)
+            if args.cProfile is not None:
+                cProfile.run('execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)',sort="tottime")
+            else:
+                execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)
         else:
-            #cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="tottime")
-            execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=virtual_flg,graph=graph)
+            if args.cProfile is not None:
+                cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="tottime")
+            else:
+                execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=virtual_flg,graph=graph)
     # elif sys.argv[-1]=="-shadow":
     elif args.mode == 'shadow':
         test_3(d1, d2, n)
     # elif sys.argv[-1]=="-policy":
-    elif args.mode == 'policy':
+    elif args.mode == 'policy_table':
         # file_name=sys.argv[-2]
         n = int(args.N)
         assert args.decktype1 is not None and args.decktype2 is not None, "deck1:{},deck2:{}".format(args.decktype1, args.decktype2)
@@ -1834,7 +1826,22 @@ if __name__ == '__main__':
 
         make_mirror_match_table(d1,d2,n,deck_lists=deck_list,pairwise=args.pairwise is not None,
                                 out_put=args.output is not None)
-    else:
+    elif args.mode == "random_match":
+        n = int(args.N)
+        a = int(args.playertype1) - 1
+        b = int(args.playertype2) - 1
+        if args.playertype1 == '0':
+            d1 = copy.deepcopy(human_player)
+        else:
+            d1 = copy.deepcopy(Players[a])
+        if args.playertype2 == '0':
+            d2 = copy.deepcopy(human_player)
+        else:
+            d2 = copy.deepcopy(Players[b])
+
+        random_match(d1, d2, n, virtual_flg=True)
+
+    elif args.mode == "deck_table":
         if args.N is not None:
             iteration = int(args.N)
             a = int(args.playertype1) - 1
@@ -1849,6 +1856,8 @@ if __name__ == '__main__':
                 make_deck_table(d1, d2, iteration, same_flg=True, result_name=file_name, basic=basic_flg,deck_lists=deck_list)
             else:
                 make_deck_table(d1, d2, iteration, result_name=file_name, basic=basic_flg,deck_lists=deck_list)
+    else:
+        assert False
     mylogger.info(t1)
     t2 = datetime.datetime.now()
     mylogger.info(t2)

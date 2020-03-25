@@ -85,9 +85,8 @@ class Field:
         return True
 
     def set_data(self, field):
-        # self.card_location=copy.deepcopy(field.card_location)
-        assert len(self.card_location[0]) <= self.max_field_num, "card_num:{}".format(len(self.card_location[0]))
-        assert len(self.card_location[1]) <= self.max_field_num, "card_num:{}".format(len(self.card_location[1]))
+        #assert len(self.card_location[0]) <= self.max_field_num, "card_num:{}".format(len(self.card_location[0]))
+        #assert len(self.card_location[1]) <= self.max_field_num, "card_num:{}".format(len(self.card_location[1]))
         self.card_location[0].clear()
         self.card_location[1].clear()
         for i in range(2):
@@ -98,9 +97,6 @@ class Field:
         self.cost = field.cost[:]
         self.remain_cost = field.remain_cost[:]
         self.turn_end = field.turn_end
-        #self.graveyard = copy.deepcopy(field.graveyard)
-        #self.play_cards = copy.deepcopy(field.play_cards)
-        #self.drawn_cards = copy.deepcopy(field.drawn_cards)
 
         self.graveyard.shadows = [int(field.graveyard.shadows[0]),int(field.graveyard.shadows[1])]
         for i in range(2):
@@ -122,10 +118,10 @@ class Field:
         self.ex_turn_count = field.ex_turn_count[:]
         self.turn_player_num = int(field.turn_player_num)
         self.players_play_num = int(field.players_play_num)
-        if self.player_ability[0] != []:
-            field.player_ability[0] = copy.deepcopy(self.player_ability[0])
-        if self.player_ability[1] != []:
-            field.player_ability[1] = copy.deepcopy(self.player_ability[1])
+        if field.player_ability[0] != []:
+            self.player_ability[0] = field.player_ability[0][:]
+        if field.player_ability[1] != []:
+            self.player_ability[1] = field.player_ability[1][:]
         self.reset_time_stamp()
 
     def solve_lastword_ability(self, virtual=False, player_num=0):
@@ -149,8 +145,9 @@ class Field:
             target_state_log = self.state_log[index]
             for i in range(2):
                 side_id = (i + player_num) % 2
-                for player_ability in self.player_ability[side_id]:
-                    player_ability(self, self.players[side_id], virtual, state_log=target_state_log)
+                for player_ability_id in self.player_ability[side_id]:
+                    Player_Ability_setting.player_ability_id_2_func[player_ability_id]\
+                        (self, self.players[side_id], virtual, state_log=target_state_log)
                 side = self.card_location[side_id]
                 location_id = len(side) - 1
                 while location_id >= 0:
@@ -208,8 +205,9 @@ class Field:
             observable_data_dict[key]["evo_point"] = self.evo_point[player_id]
             #assert all(type(ability) is object for ability in self.player_ability[player_id]),"ability_list:{}"\
             #    .format(self.player_ability[player_id])
-            observable_data_dict[key]["leader_effects"] = "{}".format([ability.name
-                                                                       for ability in self.player_ability[player_id]])
+            observable_data_dict[key]["leader_effects"] = \
+                "{}".format([Player_Ability_setting.player_ability_id_2_func[player_ability_id].name
+                    for player_ability_id in self.player_ability[player_id]])
 
         return observable_data_dict
 
@@ -795,7 +793,7 @@ class Field:
 
     def get_able_to_play(self, player, regal_targets=None):
         if regal_targets is None:
-            regal_targets = self.get_regal_target_dict()
+            regal_targets = self.get_regal_target_dict(player, self.players[1-player.player_num])
         full_flg = len(self.card_location[player.player_num]) == self.max_field_num
         # mylogger.info("full_flg={}".format(full_flg))
         able_to_play = []
@@ -859,9 +857,10 @@ class Field:
         return able_to_creature_attack
 
     def get_able_to_evo(self, player):
+        #print(player)
         if self.current_turn[player.player_num] < self.able_to_evo_turn[player.player_num] or self.evo_point[
             player.player_num] == 0 \
-                or self.evo_flg == True:
+                or self.evo_flg:
             return []
         able_to_evo = []
         for i in self.get_creature_location()[player.player_num]:
@@ -897,6 +896,7 @@ class Field:
                 ability_id = creature_ability_condition[card.card_id]
                 if not creature_ability_condition_dict[ability_id](self, player_num, card):
                     return []
+        target_category = None
         # 0は進化効果の対象取得,1はプレイ時の対象選択
         can_be_targeted = self.get_can_be_targeted(player_num=player_num)
         regal_targets = []
@@ -1193,10 +1193,11 @@ class Field:
                     if target_thing.card_category == "Amulet":
                         if regulation_func(target_thing):
                             regal_targets.append(card_id)
-
+        card.current_target = target_category
         return regal_targets
 
     def play_turn(self, turn_player_num, win, lose, lib_num, turn, virtual_flg):
+        non_turn_player_num = 1 - turn_player_num
         while True:
             can_play = True
             can_attack = True
@@ -1212,7 +1213,7 @@ class Field:
                         lose += 1
                     else:
                         win += 1
-                elif self.players[1 - turn_player_num].life <= 0 or len(self.players[1 - turn_player_num].deck.deck) == 0:
+                elif self.players[non_turn_player_num].life <= 0 or len(self.players[non_turn_player_num].deck.deck) == 0:
                     if turn_player_num == 0:
                         win += 1
                     else:
@@ -1235,7 +1236,7 @@ class Field:
             self.time = time.time()
             while time.time() - self.time < 90:
                 end_flg = self.players[turn_player_num].decide(self.players[turn_player_num],
-                                                               self.players[1 - turn_player_num], self,
+                                                               self.players[non_turn_player_num], self,
                                                                virtual=virtual_flg)
                 if end_flg:
                     break
@@ -1252,13 +1253,13 @@ class Field:
                 self.show_field()
 
             if self.check_game_end():
-                if self.players[turn_player_num].life <= 0 or self.players[turn_player_num].lib_out_flg == True:
+                if self.players[turn_player_num].life <= 0 or self.players[turn_player_num].lib_out_flg:
                     if turn_player_num == 0:
                         lose += 1
                     else:
                         win += 1
-                elif self.players[1 - turn_player_num].life <= 0 or self.players[
-                    1 - turn_player_num].lib_out_flg:
+                elif self.players[non_turn_player_num].life <= 0 or self.players[
+                    non_turn_player_num].lib_out_flg:
                     if turn_player_num == 0:
                         win += 1
                     else:
@@ -1268,13 +1269,13 @@ class Field:
             self.end_of_turn(turn_player_num, virtual=virtual_flg)
 
             if self.check_game_end():
-                if self.players[turn_player_num].life <= 0 or self.players[turn_player_num].lib_out_flg == True:
+                if self.players[turn_player_num].life <= 0 or self.players[turn_player_num].lib_out_flg:
                     if turn_player_num == 0:
                         lose += 1
                     else:
                         win += 1
-                elif self.players[1 - turn_player_num].life <= 0 or self.players[
-                    1 - turn_player_num].lib_out_flg == True:
+                elif self.players[non_turn_player_num].life <= 0 or self.players[
+                    non_turn_player_num].lib_out_flg:
                     if turn_player_num == 0:
                         win += 1
                     else:
@@ -1293,8 +1294,8 @@ class Field:
             state_value = self.state_value(turn_player_num)
             self.state_value_history.append(state_value)
         elif self.check_game_end():
-            assert self.players[1-turn_player_num].name == "Alice","Bob!"
-            state_value = self.state_value(1-turn_player_num)
+            assert self.players[non_turn_player_num].name == "Alice","Bob!"
+            state_value = self.state_value(non_turn_player_num)
             self.state_value_history.append(state_value)
 
 
@@ -1303,6 +1304,7 @@ class Field:
     def play_turn_for_train(self, turn_player_num):
         win, lose, lib_num, turn = 0, 0, 0, 0
         train_datas = []
+        non_turn_player_num = 1 - turn_player_num
         count = 0
         while True:
             self.untap(turn_player_num)
@@ -1317,7 +1319,7 @@ class Field:
                         lose += 1
                     else:
                         win += 1
-                elif self.players[1 - turn_player_num].life <= 0 or len(self.players[1 - turn_player_num].deck.deck) == 0:
+                elif self.players[non_turn_player_num].life <= 0 or len(self.players[non_turn_player_num].deck.deck) == 0:
                     if turn_player_num == 0:
                         win += 1
                     else:
@@ -1340,7 +1342,7 @@ class Field:
             while time.time() - self.time < 90:
 
                 end_flg = self.players[turn_player_num].decide(self.players[turn_player_num],
-                                                               self.players[1 - turn_player_num], self,
+                                                               self.players[non_turn_player_num], self,
                                                                virtual=True)
                 train_datas.append(get_data(self,player_num=turn_player_num))
                 if end_flg:
@@ -1352,7 +1354,7 @@ class Field:
                         lose += 1
                     else:
                         win += 1
-                elif self.players[1 - turn_player_num].life <= 0 or self.players[
+                elif self.players[non_turn_player_num].life <= 0 or self.players[
                     1 - turn_player_num].lib_out_flg:
                     if turn_player_num == 0:
                         win += 1
@@ -1369,7 +1371,7 @@ class Field:
                     else:
                         win += 1
                 elif self.players[1 - turn_player_num].life <= 0 or self.players[
-                    1 - turn_player_num].lib_out_flg:
+                    non_turn_player_num].lib_out_flg:
                     if turn_player_num == 0:
                         win += 1
                     else:
@@ -1385,7 +1387,110 @@ class Field:
 
 
         return win, lose, self.check_game_end(), train_datas
-    
+
+
+    def play_turn_for_dual(self, turn_player_num):
+        win, lose, lib_num, turn = 0, 0, 0, 0
+        train_datas = []
+        count = 0
+        player = self.players[turn_player_num]
+        opponent = self.players[1-turn_player_num]
+        non_turn_player_num = 1 - turn_player_num
+        while True:
+            self.untap(turn_player_num)
+            self.increment_cost(turn_player_num)
+            self.start_of_turn(turn_player_num, virtual=True)
+            self.start_count += 1
+            assert self.start_count < 1000,"infinite start_of_turn:{},{}\n{}{}".format(self.players[0].lib_out_flg,self.players[1].lib_out_flg,
+                                                                                       self.show_field(),self.get_observable_data(turn_player_num))
+            if self.check_game_end():
+                if player.life <= 0 or len(player.deck.deck) == 0:
+                    if turn_player_num == 0:
+                        lose += 1
+                    else:
+                        win += 1
+                elif player.life <= 0 or len(opponent.deck.deck) == 0:
+                    if turn_player_num == 0:
+                        win += 1
+                    else:
+                        lose += 1
+                else:
+                    assert False
+            draw_cards(player, True, num=1)
+            if turn_player_num == 1 and self.current_turn[turn_player_num] == 1:
+                draw_cards(player, True, num=1)
+            if self.check_game_end():
+                if turn_player_num == 0:
+                    lose += 1
+                else:
+                    win += 1
+                lib_num += 1
+                return win, lose, self.check_game_end(), train_datas
+            self.time = time.time()
+            # data = (state, action, next_state)
+            while time.time() - self.time < 90:
+                state = get_data(self, player_num=turn_player_num)
+                detailed_action_code = self.get_detailed_action_code(player)
+                end_flg, single_action = player.decide(player, opponent, self, virtual=True, dual=True)
+                next_state = get_data(self, player_num=turn_player_num)
+                action_code = 0
+                if single_action[0] == Action_Code.TURN_END.value:
+                    action_code = 0
+                elif single_action[0] == Action_Code.PLAY_CARD.value:
+                    action_code = single_action[1] + 1
+                elif single_action[0] == Action_Code.ATTACK_TO_FOLLOWER.value:
+                    action_code = single_action[1]*5 + single_action[2] + 10
+                elif single_action[0] == Action_Code.ATTACK_TO_PLAYER.value:
+                    action_code = single_action[1] + 35
+                elif single_action[0] == Action_Code.EVOLVE.value:
+                    action_code = single_action[1] + 40
+                else:
+                    assert False, "invalid action_code error(action:{})".format(single_action)
+
+                assert detailed_action_code['able_to_choice'][action_code] == 1,"{} {}\n{}\n{}".format(
+                    single_action,action_code,detailed_action_code['able_to_choice'],
+                    self.get_observable_data(player_num=player.player_num),player.show_hand(),self.show_field())
+                train_datas.append((state, action_code, next_state,detailed_action_code))
+                if end_flg:
+                    break
+
+            if self.check_game_end():
+                if player.life <= 0 or player.lib_out_flg:
+                    if turn_player_num == 0:
+                        lose += 1
+                    else:
+                        win += 1
+                elif opponent.life <= 0 or opponent.lib_out_flg:
+                    if turn_player_num == 0:
+                        win += 1
+                    else:
+                        lose += 1
+                break
+
+            self.end_of_turn(turn_player_num, virtual=True)
+
+            if self.check_game_end():
+                if player.life <= 0 or player.lib_out_flg:
+                    if turn_player_num == 0:
+                        lose += 1
+                    else:
+                        win += 1
+                elif opponent.life <= 0 or opponent.lib_out_flg:
+                    if turn_player_num == 0:
+                        win += 1
+                    else:
+                        lose += 1
+                break
+            turn += 1
+            count += 1
+            assert count < 100, "infinite_loop!".format(self.show_field())
+            if self.ex_turn_count[turn_player_num] > 0:
+                self.ex_turn_count[turn_player_num] -= 1
+            else:
+                break
+
+        return win, lose, self.check_game_end(), train_datas
+
     
     def state_value(self, player_num):
 
@@ -1404,6 +1509,84 @@ class Field:
         board_diff /= 10
         value = board_diff*0.45+life_diff*0.45+hand_diff*0.1
         return 1/(1+np.exp(-(value*10)))
+
+    def get_detailed_action_code(self, player):
+        margin = 500
+        category_range = 1000
+        able_to_play = self.get_able_to_play(player)
+        able_to_creature_attack = self.get_able_to_creature_attack(player)
+        able_to_attack = self.get_able_to_attack(player)
+        able_to_evo = self.get_able_to_evo(player)
+        can_be_attacked = self.get_can_be_attacked(player.player_num)
+        action_codes = [(0, 0, 0, 0, 0)]#行動カテゴリー, プレイしたカードのid, 攻撃したカードのid, 攻撃されたカードのid,
+        #進化したカードのid
+        able_to_choice = [1]
+        follower_choice = []
+        leader_choice = []
+        evolve_choice = []
+        for play_id in range(9):
+            if play_id in able_to_play:
+                target_card = player.hand[play_id]
+                category_num = Card_Category[target_card.card_category].value - 1
+                long_card_id = target_card.card_id + margin + category_range * category_num
+                action_codes.append((Action_Code.PLAY_CARD.value,
+                                        long_card_id, 0, 0, 0))
+                #assert long_card_id < 3*category_range and long_card_id > 0,"{}".format(long_card_id)
+                able_to_choice.append(1)
+            else:
+                action_codes.append((0, 0, 0, 0, 0))
+                able_to_choice.append(0)
+
+        follower_attack_codes = []
+        player_attack_codes = []
+        evolve_codes = []
+        for attacker_id in range(5):
+            if attacker_id in able_to_creature_attack:
+                attacking_card = self.card_location[player.player_num][attacker_id]
+                for attacked_id in range(5):
+                    if attacked_id in can_be_attacked:
+                        attacked_card = self.card_location[1-player.player_num][attacked_id]
+                        follower_attack_codes.append((Action_Code.ATTACK_TO_FOLLOWER.value, 0,
+                                                        attacking_card.card_id + margin,
+                                                        attacked_card.card_id + margin, 0))
+                        follower_choice.append(1)
+                    else:
+                        follower_attack_codes.append((0, 0, 0, 0, 0))
+                        follower_choice.append(0)
+            else:
+                follower_attack_codes.extend([(0, 0, 0, 0, 0)]*5)
+                follower_choice.extend([0]*5)
+
+            if attacker_id in able_to_attack:
+                attacking_card = self.card_location[player.player_num][attacker_id]
+                player_attack_codes.append((Action_Code.ATTACK_TO_PLAYER.value, 0,
+                                            attacking_card.card_id + margin, 0, 0))
+                leader_choice.append(1)
+            else:
+                player_attack_codes.append((0, 0, 0, 0, 0))
+                leader_choice.append(0)
+
+            if attacker_id in able_to_evo:
+                evolving_card = self.card_location[player.player_num][attacker_id]
+                evolve_codes.append((Action_Code.EVOLVE.value, 0, 0, 0,
+                                     evolving_card.card_id + margin))
+                evolve_choice.append(1)
+            else:
+                evolve_codes.append((0, 0, 0, 0, 0))
+                evolve_choice.append(0)
+
+        action_codes.extend(follower_attack_codes)
+        action_codes.extend(player_attack_codes)
+        action_codes.extend(evolve_codes)
+
+        able_to_choice += follower_choice + leader_choice + evolve_choice
+
+        assert len(action_codes) == 45 and len(able_to_choice) == 45,\
+            "length:{},{}".format(len(action_codes),len(able_to_choice))
+
+        action_codes = {'action_codes':action_codes,'able_to_choice':able_to_choice}
+        return action_codes
+
 
 
 class Graveyard:

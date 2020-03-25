@@ -75,11 +75,11 @@ State_Code=__State_Code
 
 class __Action_Code(Enum):
     ERROR = -10
-    EVOLVE = -1
     TURN_END = 0
     PLAY_CARD = 1
     ATTACK_TO_FOLLOWER = 2
     ATTACK_TO_PLAYER = 3
+    EVOLVE = 4
 
 Action_Code=__Action_Code
 
@@ -104,6 +104,7 @@ class __Target_Type(Enum):
     ENEMY_CARD = 9
     ALLY = 10
     ALLIED_AMULET = 11
+    ENEMY_AMULET = 12
 
 Target_Type = __Target_Type
 

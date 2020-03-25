@@ -20,6 +20,7 @@ from my_enum import *
 import csv
 import pandas as pd
 import warnings
+
 #warnings.simplefilter('ignore', NumbaWarning)
 
 
@@ -528,7 +529,7 @@ class Creature(Card):
                 self.accelerate_target = creature_accelerate_target_list[card_id]
                 if card_id in creature_accelerate_target_regulation_list:
                     self.accelerate_target_regulation = creature_accelerate_target_regulation_list[card_id]
-
+        self.current_target = None
         return
     #@jit
     def get_copy(self):
@@ -561,7 +562,8 @@ class Creature(Card):
             if creature_list[self.card_id][4][1][0]:
                 creature.spell_boost = int(self.spell_boost)
                 creature.cost_down = self.cost_down
-
+        if self.current_target is not None:
+            creature.current_target = int(self.current_target)
         return creature
 
     def untap(self):
@@ -756,6 +758,7 @@ class Spell(Card):
                 self.accelerate_target = spell_accelerate_target_list[card_id]
                 if card_id in spell_accelerate_target_regulation_list:
                     self.accelerate_target_regulation = spell_accelerate_target_regulation_list[card_id]
+        self.current_target = None
 
     def get_copy(self):
         spell = Spell(self.card_id)
@@ -765,6 +768,8 @@ class Spell(Card):
             if spell_list[self.card_id][1][1][0]:
                 spell.spell_boost = int(self.spell_boost)
                 spell.cost_down = self.cost_down
+        if self.current_target is not None:
+            spell.current_target = int(self.current_target)
         return spell
 
     def can_be_attacked(self):
@@ -887,6 +892,7 @@ class Amulet(Card):
                 self.accelerate_target = amulet_accelerate_target_list[card_id]
                 if card_id in amulet_accelerate_target_regulation_list:
                     self.accelerate_target_regulation = amulet_accelerate_target_regulation_list[card_id]
+        self.current_target = None
 
     def get_copy(self):
         amulet = Amulet(self.card_id)
@@ -898,6 +904,8 @@ class Amulet(Card):
             if amulet_list[self.card_id][2][1][0]:
                 amulet.spell_boost = int(self.spell_boost)
                 amulet.cost_down = self.cost_down
+        if self.current_target is not None:
+            amulet.current_target = int(self.current_target)
         return amulet
 
     def can_be_attacked(self):
