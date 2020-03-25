@@ -1,0 +1,201 @@
+1	Goblin	1	1	2		NEUTRAL	NONE
+2	Fighter	2	2	2		NEUTRAL	NONE
+3	Ax Fighter	3	2	3		NEUTRAL	NONE
+4	Golyat	4	3	4		NEUTRAL	NONE
+5	Feena	5	4	5		NEUTRAL	NONE
+6	Novice Trooper	3	2	2	1	SWORD	OFFICER
+7	Spectre	2	2	1	2	SHADOW	NONE
+8	Gilgamesh	8	5	4	1	NEUTRAL	NONE
+9	Healing Angel	3	2	3		NEUTRAL	NONE
+10	War Dog	3	3	3		SWORD	OFFICER
+11	Purehearted Singer	3	1	2		NEUTRAL	NONE
+12	Fire Lizard	2	2	1		DRAGON	NONE
+13	Dread Dragon	7	4	4		DRAGON	NONE
+14	Shield Angel	3	1	4	3	NEUTRAL	NONE
+15	Zeus	10	5	10	1,2,3	NEUTRAL	NONE
+16	Bahamut	10	13	13		NEUTRAL	NONE
+17	Quickblader	1	1	1	1	SWORD	OFFICER
+18	Blitz Lancer	3	3	2	4	SWORD	OFFICER
+19	Bellringer Angel	2	0	2	3	NEUTRAL	NONE
+20	Veteran Lancer	2	2	2	3	SWORD	OFFICER
+21	Sage Commander	6	4	6		SWORD	COMMANDER
+22	Sea Queen Otohime	6	3	4		SWORD	COMMANDER
+23	Aurelia, Regal Saber	5	2	6	3	SWORD	COMMANDER
+24	Courageous Knight	4	2	2		SWORD	OFFICER
+25	Oathless Knight	2	1	1		SWORD	OFFICER
+26	Floral Fencer	4	3	4		SWORD	OFFICER
+27	Lucifer	8	6	7		NEUTRAL	NONE
+28	Unicorn Dancer Unica	2	2	2		NEUTRAL	NONE
+29	Dragon Warrior	4	3	4		DRAGON	NONE
+30	Trinity Dragon	3	2	2	5	DRAGON	NONE
+31	Genesis Dragon	10	7	9	1	DRAGON	NONE
+32	Aiela, Dragon Knight	3	2	2		DRAGON	NONE
+33	Flame Destroyer	10	7	7		1,1	RUNE	NONE
+34	Rune Blade Summoner	4	1	1		1,0	RUNE	NONE
+35	Chimera	9	4	4		1,1	RUNE	NONE
+36	Zealot of Truth	9	3	5	1	1,1	RUNE	NONE
+37	Ambling Wraith	1	1	1		BLOOD	NONE
+38	Cursebrand Vampire	1	1	2		BLOOD	NONE
+39	Blood Wolf	2	2	1	1	BLOOD	NONE
+40	Dark General	4	4	3		BLOOD	NONE
+41	Wardrobe Raider	4	3	4		BLOOD	NONE
+42	Spiderweb Imp	2	1	4	3	BLOOD	NONE
+43	Temptress Vampire	9	5	5		BLOOD	NONE
+44	Righteous Devil	4	2	5		BLOOD	NONE
+45	Maid Leader	2	1	1		SWORD	OFFICER
+46	Tsubaki	6	4	3	7	SWORD	OFFICER
+47	Young Ogrehunter Momo	3	2	2	4	SWORD	OFFICER
+48	Princess Vanguard	2	1	3		SWORD	COMMANDER
+49	Lurching Corpse	2	1	2		SHADOW	NONE
+50	Demon Eater	2	1	2		SHADOW	NONE
+51	SkeltonFighter	1	1	1		SHADOW	NONE
+52	Andrealphus	2	1	2		SHADOW	NONE
+53	Belenus	2	2	2		SHADOW	NONE
+54	Lady Grey, Deathweaver	2	1	3	8	SHADOW	NONE
+55	Rabbit Necromancer	3	3	2		SHADOW	NONE
+56	Mordecai the Duelist	8	5	5		SHADOW	NONE
+57	Underworld Watchman Khawy	7	4	5	3	SHADOW	NONE
+58	Demonlord Eachtar	7	5	6		SHADOW	NONE
+59	Skull Beast	1	1	2		SHADOW	NONE
+60	Yurius, Levin Duke	2	1	3		BLOOD	NONE
+61	Rabbit Healer	2	2	1		HAVEN	NONE
+62	Radiance Angel	5	2	4		HAVEN	NONE
+63	Holy Bowman Kel	2	2	2		HAVEN	NONE
+64	Kel, Holy Marksman	4	4	3		HAVEN	NONE
+65	Elana, Purest Prayer	4	3	4	3	HAVEN	NONE
+66	Dwarf Alchemist	2	2	2		0,0	RUNE	NONE
+67	Magic Illusionist	2	2	2		0,0	RUNE	NONE
+68	Mage of Nightfall	3	3	2		0,0	RUNE	NONE
+69	Halo Golem	4	4	3		0,0	RUNE	NONE
+70	Master Mage Levi	6	4	4		0,0	RUNE	NONE
+71	Magisa, Ruinfist Witch	3	3	2		0,0	RUNE	NONE
+72	Water Fairy	1	1	1		FOREST	NONE
+73	Elf Child May	1	1	1		FOREST	NONE
+74	Fairy Whisperer	2	1	1		FOREST	NONE
+75	Rhinoceroach	2	1	1	1	FOREST	NONE
+76	Ancient Elf	3	2	3	3	FOREST	NONE
+77	Elven Princess Mage	4	3	4		FOREST	NONE
+79	Fervid Soldier	2	2	2		SWORD	OFFICER
+80	Elf Metallurgist	2	2	1		FOREST	NONE
+81	Crystalia Tia	5	1	1		FOREST	NONE
+82	Dragoon Scyther	3	2	2	2	DRAGON	NONE
+83	Wind Reader Zell	2	2	2		DRAGON	NONE
+84	Sibyl of the Waterwyrm	5	4	5		DRAGON	NONE
+85	Ouroboros	8	8	4		DRAGON	NONE
+86	Rahab	4	2	5	3	DRAGON	NONE
+87	Grimnir, War Cyclone	3	2	3	3	NEUTRAL	NONE
+88	Sahaquiel	7	4	4		NEUTRAL	NONE
+89	Israfil	9	8	8		NEUTRAL	NONE
+90	Orichalcum Golem	5	5	5		0,0	RUNE	NONE
+91	Vanguard	1	1	2		SWORD	OFFICER
+92	Perseus	1	1	2		SWORD	COMMANDER
+93	Kunoichi Trainee	2	2	1	7	SWORD	OFFICER
+94	Centaur Vanguard	2	2	1		SWORD	OFFICER
+95	Bladed Hedgehog	2	1	3		SWORD	OFFICER
+96	Maisy, Red Riding Hood	2	2	2		SWORD	OFFICER
+97	Princess Juliet	3	2	2	1	SWORD	COMMANDER
+98	Albert, Levin Saber	5	3	5	1	SWORD	COMMANDER
+99	Kunoichi Master	5	3	2	7	SWORD	OFFICER
+100	Ephemera, Angelic Slacker	4	1	3	7	NEUTRAL	NONE
+101	Dark Dragoon Forte	6	5	1	1	DRAGON	NONE
+102	Ivory Dragon	1	1	2		DRAGON	NONE
+103	Dragon Summoner	2	1	2		DRAGON	NONE
+104	Dragonrearer Matilda	2	1	1		DRAGON	NONE
+105	Prime Dragon Keeper	3	1	5		DRAGON	NONE
+106	Urd	4	3	3		NEUTRAL	NONE
+107	Shadow Reaper	2	1	1		SHADOW	NONE
+108	Little Soulsquasher	2	2	2		SHADOW	NONE
+109	Prince Catacomb	3	1	1		SHADOW	NONE
+110	Bone Chimera	3	1	1		SHADOW	NONE
+111	Elf Guard	2	1	3		FOREST	NONE
+112	Dark Elf Faure	3	2	3		FOREST	NONE
+113	Okami	4	3	4		FOREST	NONE
+114	Treant	5	4	4		FOREST	NONE
+115	Elf Tracker	6	4	5		FOREST	NONE
+116	Magna Botanist	6	5	5		FOREST	NONE
+117	Mercenary Drifter	3	3	2		NEUTRAL	NONE
+118	Angelic Sword Maiden	5	2	6	3	NEUTRAL	NONE
+119	Ascetic Knight	3	1	2		SWORD	OFFICER
+120	White General	4	3	3		SWORD	COMMANDER
+121	Ninja Master	5	4	4	7	SWORD	OFFICER
+122	Sammy, Wizard's Apprentice	2	2	2		0,0	RUNE	NONE
+123	Dragonrider	2	2	2		DRAGON	NONE
+124	Firstborn Dragon	3	2	3		DRAGON	NONE
+125	Death Dragon	4	4	4		DRAGON	NONE
+126	Disaster Dragon	5	4	5		DRAGON	NONE
+127	Dragonguard	6	5	6		DRAGON	NONE
+128	Spartoi Sergeant	2	2	2		SHADOW	NONE
+129	Apprentice Necromancer	3	2	3		SHADOW	NONE
+130	Elder Spartoi Soldier	4	4	3		SHADOW	NONE
+131	Gravewaker	5	3	3		SHADOW	NONE
+132	Ghostly Rider	6	5	5	3	SHADOW	NONE
+133	Undead King	7	4	4		SHADOW	NONE
+134	Nightmare	2	2	2		BLOOD	NONE
+135	Sweetfang Vampire	2	1	3	8	BLOOD	NONE
+136	Crazed Executioner	3	3	3		BLOOD	NONE
+137	Imp Lancer	6	3	6	1	BLOOD	NONE
+138	Abyss Beast	7	5	6		BLOOD	NONE
+139	Snake Priestess	2	1	3	3	HAVEN	NONE
+140	Curate	7	5	5		HAVEN	NONE
+141	Puppeteer	2	2	2		PORTAL	NONE
+142	Mechanized Servant	2	2	2		PORTAL	NONE
+143	Magisteel Lion	2	2	2		PORTAL	NONE
+144	Toy Soldier	3	2	1		PORTAL	NONE
+145	Automaton Knight	3	3	2		PORTAL	NONE
+146	Ironforged Fighter	4	4	3		PORTAL	NONE
+-1	Pirate	3	2	3	3	SWORD	OFFICER
+-2	Viking	3	3	2	1	SWORD	OFFICER
+-3	Otohime's Bodyguard	1	1	2		SWORD	OFFICER
+-4	Knight	1	1	1		SWORD	OFFICER
+-5	Steelclad Knight	2	2	2		SWORD	OFFICER
+-6	Windblast Dragon	6	5	5	1	DRAGON	NONE
+-7	Holy Falcon	3	2	1	1	HAVEN	NONE
+-8	Holyflame Tiger	4	4	4		HAVEN	NONE
+-9	Regal Falcon	5	3	4	1	HAVEN	NONE
+-10	Barong	6	5	4	3,6	HAVEN	NONE
+-11	Clay Golem	2	2	2		0,0	RUNE	NONE
+-12	Ghost	1	1	1	1,15	SHADOW	NONE
+-13	Zombie	2	2	2		SHADOW	NONE
+-14	Holywing Dragon	6	6	6		HAVEN	NONE
+-15	Scrap Golem	1	0	2	3	0,0	RUNE	NONE
+-16	Fairy	1	1	1		FOREST	NONE
+-17	Crystalia Eve	4	4	4		FOREST	NONE
+-18	Crab Soldier	3	1	3	1	NEUTRAL	NONE
+-19	Heart Guardian	3	1	3	3	NEUTRAL	NONE
+-20	Spade Raider	3	1	3	2	NEUTRAL	NONE
+-21	Skeleton	1	1	1		SHADOW	NONE
+-22	Heavy Knight	1	1	2		SWORD	OFFICER
+-23	Snowman	1	1	1		0,0	RUNE	NONE
+-24	Pegasus	5	5	3		HAVEN	NONE
+-25	Ancient Artifact	1	3	1	4	PORTAL	ARTIFACT
+-26	Analyzing Artifact	1	2	1		PORTAL	ARTIFACT
+-27	Mystic Artifact	3	2	3	3	PORTAL	ARTIFACT
+-28	Radiant Artifact	5	4	3	1	PORTAL	ARTIFACT
+-29	Puppet	0	1	1	4	PORTAL	NONE
+147	Black Iron Soldier	6	5	6		PORTAL	NONE
+148	Blade Mage	6	2	2	1	1,1	RUNE	NONE
+149	Twinblade Mage	8	2	2	1	1,1	RUNE	NONE
+150	Clarke, Knowledge Seeker	10	2	3		0,0	RUNE	NONE
+-30	Guardian Golem	4	3	3	3	0,0	RUNE	NONE
+-31	Lich	4	4	4		SHADOW	NONE
+151	De La Fille, Gem Princess	6	4	5	3	HAVEN	NONE
+152	Tender Rabbit Healer	1	1	1		HAVEN	NONE
+153	Magic Owl	2	2	2		0,0	RUNE	NONE
+154	Giant Chimera	9	6	6		1,0	RUNE	NONE
+155	Fairy Beast	6	4	4		FOREST	NONE
+156	Dark Conjurer	2	2	2		SHADOW	NONE
+157	Attendant of Night	3	1	1		SHADOW	NONE
+158	Orthrus	4	1	2		SHADOW	NONE
+159	Lyrial, Celestial Archer	2	2	2		NEUTRAL	NONE
+160	Cerberus	5	3	3		SHADOW	NONE
+161	Actress Feria	2	2	2		NEUTRAL	NONE
+162	Baphomet	2	2	1		BLOOD	NONE
+163	Tove	2	3	3	14	BLOOD	NONE
+164	Angel of the Word	3	2	2		NEUTRAL	NONE
+165	Goblin Leader	3	1	2		NEUTRAL	NONE
+166	Alice, Wonderland Explorer	4	3	4		NEUTRAL	NONE
+167	Big Knuckle Bodyguard	4	3	4		BLOOD	NONE
+168	Scarlet Sabreur	5	2	4	2	BLOOD	NONE
+169	Alucard	7	4	4	1	BLOOD	NONE
+170	Emeralda, Demonic Officer	7	4	5		BLOOD	NONE
+171	Spawn of the Abyss	8	6	7	7	BLOOD	NONE
