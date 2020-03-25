@@ -17,7 +17,6 @@ click==6.7
 cloud-init==18.2
 cloudpickle==1.2.1
 colorama==0.3.7
-command-not-found==0.3
 configobj==5.0.6
 configparser==3.7.4
 constantly==15.1.0
