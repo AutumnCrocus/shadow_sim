@@ -2,9 +2,6 @@ pandas==0.25.0
 Pillow==6.0.0
 PyYAML==3.12
 scikit-learn==0.21.2
-tensorboard==1.14.0
-tensorflow==1.14.0
-tensorflow-estimator==1.14.0
 termcolor==1.1.0
 terminado==0.8.2
 testpath==0.4.2
