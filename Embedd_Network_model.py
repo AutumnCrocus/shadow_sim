@@ -14,7 +14,7 @@ import random
 from my_enum import *
 import torch.optim as optim
 from pytorch_memlab import profile
-
+import argparse
 # Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 Dual_State_value = namedtuple('Value', ('state', 'action', 'next_state', 'detailed_action_code','reward'))
 Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
@@ -605,13 +605,15 @@ if __name__ == "__main__":
             f.players[1].deck = None
             f.players[1].lib_out_flg = False
             if torch.cuda.is_available() and cuda_flg:
-                for data in train_data:
-                    R.push(data[0], torch.LongTensor([data[1]]).cuda(), data[2], data[3],\
-                           torch.FloatTensor([reward]).cuda())
+                for i in range(2):
+                    for data in train_data[i]:
+                        R.push(data[0], torch.LongTensor([data[1]]).cuda(), data[2], data[3],\
+                               torch.FloatTensor([reward[i]]).cuda())
             else:
-                for data in train_data:
-                    R.push(data[0], torch.LongTensor([data[1]]), data[2], data[3], torch.FloatTensor([reward]))
-            win_num += int(reward > 0)
+                for i in range(2):
+                    for data in train_data[i]:
+                        R.push(data[0], torch.LongTensor([data[1]]), data[2], data[3], torch.FloatTensor([reward[i]]))
+            win_num += int(reward[episode % 2] > 0)
 
         print("sample_size:{}".format(len(R.memory)))
         print("win_rate:{:.2%}".format(win_num/episode_len))
