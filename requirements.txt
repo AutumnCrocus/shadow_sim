@@ -10,3 +10,4 @@ numba
 pandas
 torch
 torchvision
+matplotlib
