@@ -5,9 +5,9 @@ name: Python application
 
 on:
   push:
-    branches: [ DCG_sim ]
+    branches: [ master ]
   pull_request:
-    branches: [ DCG_sim ]
+    branches: [ master ]
 
 jobs:
   build:
