@@ -3412,7 +3412,9 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                 self.uct_search(player, opponent, field,use_existed_node=True)
 
             else:
-                return Action_Code.ERROR.value,None,None
+                self.current_node = None
+                return self.decide(player, opponent, field)
+                #return Action_Code.ERROR.value,"No hit",None
 
             if not field.secret:
                 mylogger.info("use existed tree")

@@ -87,6 +87,7 @@ class New_Dual_Net(nn.Module):
             hand_card_costs = values['hand_card_costs'][i]
             tmp_x2 = torch.cat([pp_datas, hand_card_costs, hand_card_ids, able_to_plays], dim=1)
             x2.append(F.relu(self.lin4(tmp_x2)))
+
         x2 = torch.sum(torch.stack(x2,dim=2),dim=2)
 
         x3 = []#最大フォロワー10体分のデータ
@@ -158,13 +159,15 @@ class Dual_ResNet(nn.Module):
         super(Dual_ResNet, self).__init__()
         self.fc1 = nn.Linear(n_in, n_out)
         self.fc2 = nn.Linear(n_in, n_out)
-        self.bn1 = nn.BatchNorm1d(n_out)
-        self.bn2 = nn.BatchNorm1d(n_out)
+        #self.bn1 = nn.BatchNorm1d(n_out)
+        #self.bn2 = nn.BatchNorm1d(n_out)
 
     def forward(self, x):
         #assert all(not torch.isnan(cell) for cell in x[0]), "{}".format(x[0])
-        h1 = F.relu(self.bn1(self.fc1(x)))
-        h2 = F.relu(self.bn2(self.fc2(h1)) + x)
+        #h1 = F.relu(self.bn1(self.fc1(x)))
+        #h2 = F.relu(self.bn2(self.fc2(h1)) + x)
+        h1 = F.relu(self.fc1(x))
+        h2 = F.relu(self.fc2(h1) + x)
 
         return h2
 
@@ -186,14 +189,7 @@ class Action_Value_Net(nn.Module):
         embed_action_categories = torch.sum(self.emb1(action_categories), dim=1)
 
         embed_play_card_ids = torch.sum(self.emb2(play_card_ids), dim=1)
-        #embed_attacking_card_ids = torch.sum(self.emb3(attacking_card_ids), dim=1)
-        #embed_attacked_card_ids = torch.sum(self.emb3(attacked_card_ids), dim=1)
-        #embed_evolving_card_ids = torch.sum(self.emb3(evolving_card_ids), dim=1)
         embed_field_card_ids = self.emb3(field_card_ids).view(-1,3*self.mid_size)
-        #print(states.size(),embed_action_categories.size(), embed_play_card_ids.size(),embed_field_card_ids.size())
-        #tmp = torch.cat([states, embed_action_categories, embed_play_card_ids,
-        #                 embed_attacking_card_ids, embed_attacked_card_ids,
-        #                 embed_evolving_card_ids], dim=1)
         tmp = torch.cat([states, embed_action_categories, embed_play_card_ids,
                          embed_field_card_ids], dim=1)
         output = self.lin1(tmp)
@@ -524,6 +520,7 @@ key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"]
                   9: ["SpellBoost-Rune.tsv", "RUNE"], 10: ["Dimension_Shift_Rune.tsv", "RUNE"],
                   11: ["PtP_Forest.tsv", "FOREST"], 12: ["Mid_Shadow.tsv", "SHADOW"],
                   13: ["Neutral_Blood.tsv", "BLOOD"]}
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')
 

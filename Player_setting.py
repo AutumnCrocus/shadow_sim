@@ -34,20 +34,25 @@ class Player:
 
     def get_copy(self, field):
         player = Player(self.max_hand_num, first=self.is_first, policy=self.policy, mulligan=self.mulligan_policy)
-        for card in self.hand:
-            player.hand.append(card.get_copy())
+        #for card in self.hand:
+        #    player.hand.append(card.get_copy())
+        player.hand = list(map(field.copy_func,self.hand))
         player.life = self.life
         player.deck = Deck()
         if self.deck is not None:
             player.deck.set_leader_class(self.deck.leader_class.name)
-            for i,card in enumerate(self.deck.deck):
-                player.deck.append(card)
+            #for i,card in enumerate(self.deck.deck):
+            #    player.deck.append(card)
+            player.deck.deck = deque(map(field.copy_func, self.deck.deck))
+            player.deck.remain_num = int(self.deck.remain_num)
 
         player.field = field
         player.name = self.name
         player.class_num = self.class_num
-        if len(self.effect) > 0:
-            player.effect = copy.deepcopy(self.effect)
+        player.effect = copy.copy(self.effect)
+        #if len(self.effect) > 0:
+        #player.effect = copy.deepcopy(self.effect)
+
         return player
 
     def eq(self,other):
@@ -238,13 +243,30 @@ class Player:
             mylogger.info("regal_targets:{}".format(regal_targets))
 
         # self.show_hand()
-        re_check = False
+        #re_check = False
         action_num = 0
         card_id = 0
         target_id = None
-        msg = ""
+        msg = 0
         policy_count = 0
-        action_histroy = deque()
+        #action_histroy = deque()
+        (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
+        #action_histroy.appendleft((action_num,card_id,target_id))
+        if action_num == Action_Code.ERROR.value:
+            mylogger.info(self.policy.type)
+            self.policy.starting_node.print_node()
+            assert False
+            self.policy.current_node = None
+
+
+            #continue
+
+        elif action_num != Action_Code.TURN_END.value and self.policy.policy_type == 3:
+            sim_field = self.policy.prev_node.field
+
+            action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,
+                    action_code=(action_num, card_id, target_id), msg = action_num)
+        """
         while True:
             policy_count += 1
             if policy_count > 100:
@@ -277,101 +299,15 @@ class Player:
                 self.policy.current_node = None
                 continue
 
-            assert action_num in [0, 1, 2, 3, 4],"aciton_num:{}".format(action_num)
-            re_check = False
-            if action_num == Action_Code.TURN_END.value:
-                break
-            sim_hand = None
-            assert type(card_id) == int,"illegal card_id_type_error"
-            if action_num == Action_Code.EVOLVE.value:
-                if not virtual:
-                    mylogger.info("able_to_evo:{} card_id:{}".format(field.get_able_to_evo(self), card_id))
-                if card_id not in field.get_able_to_evo(self):
-                    msg = Action_Code.EVOLVE.value
-                    re_check = True
-                else:
-                    evo_creature = field.card_location[self.player_num][card_id]
-                    if target_id is not None and\
-                        target_id not  in field.get_regal_targets(evo_creature, target_type=0, player_num=player.player_num):
-                        msg = Action_Code.EVOLVE.value
-                        re_check = True
-            elif action_num == Action_Code.PLAY_CARD.value:
-                if card_id not in able_to_play:
-                    re_check = True
-                if card_id not in regal_targets:
-                    msg = Action_Code.PLAY_CARD.value
-                    re_check = True
-                elif regal_targets[card_id] != [] and target_id is None:
-                    msg = Action_Code.PLAY_CARD.value
-                    re_check = True
-                if card_id in regal_targets and target_id is not None:
-                    if sim_hand is not None and self.hand[card_id].have_target == Target_Type.CARD_IN_HAND.value:
-                        check_targets=field.get_regal_targets(self.hand[card_id], target_type=1, player_num=self.player_num)
-                        if sim_hand[target_id].name != self.hand[target_id].name:
-                            msg = Action_Code.PLAY_CARD.value
-                    elif target_id is not None and target_id not in regal_targets[card_id]:
-                        msg = Action_Code.PLAY_CARD.value
-                        re_check = True
-
-                if len(self.hand) <= card_id:
-                    re_check = True
-                else:
-                    if player.hand[card_id].card_category != "Spell":
-                        if len(field.card_location[self.player_num]) == field.max_field_num and \
-                                not self.hand[card_id].active_accelerate_code[0]:
-                            msg = Action_Code.PLAY_CARD.value
-                            re_check = True
-                        elif self.hand[card_id].have_target != 0:
-                            if regal_targets[card_id] != [] and target_id not in regal_targets[card_id]:
-                                msg = Action_Code.PLAY_CARD.value
-                                re_check = True
-                    elif self.hand[card_id].have_target != 0:
-                        if regal_targets[card_id] == [] or target_id not in regal_targets[card_id]:
-                            msg = Action_Code.PLAY_CARD.value
-                            re_check = True
-                    if re_check:
-                        msg = Action_Code.PLAY_CARD.value
-            elif action_num == Action_Code.ATTACK_TO_FOLLOWER.value:
-                if target_id not in can_be_attacked:
-                    msg = Action_Code.ATTACK_TO_FOLLOWER.value
-                    re_check = True
-                elif card_id not in able_to_creature_attack:
-                    msg = Action_Code.ATTACK_TO_FOLLOWER.value
-                    re_check = True
-            elif action_num == Action_Code.ATTACK_TO_PLAYER.value:
-                if len(field.get_ward_list(self.player_num)) > 0:
-                    msg = Action_Code.ATTACK_TO_PLAYER.value
-                    #msg = "illegal leader attack(ward)"
-                    re_check = True
-                    mylogger.info("ward_list:{}".format(field.get_ward_list(self.player_num)))
-                    field.show_field()
-                    mylogger.info("in simulation")
-                    if self.policy.current_node.parent_node is not None:
-                        mylogger.info("from")
-                        mylogger.info("ward_list:{}".format(self.policy.current_node.parent_node.field.get_ward_list(self.player_num)))
-                        mylogger.info("children_moves:{}".format(self.policy.current_node.parent_node.children_moves))
-                        self.policy.current_node.parent_node.field.show_field()
-                    mylogger.info("to")
-                    mylogger.info("ward_list:{} type:{}".format(
-                        self.policy.current_node.field.get_ward_list(self.player_num),self.policy.type))
-                    mylogger.info("children_moves:{}".format(self.policy.current_node.children_moves))
-                    self.policy.current_node.field.show_field()
-                    assert False,"ward ignore error({}):({})".format(self.policy.name,(action_num, card_id, target_id))
-                if card_id not in able_to_attack:
-                    msg = Action_Code.ATTACK_TO_PLAYER.value
-                    re_check = True
-
-            if not re_check:
+            if self.policy.policy_type != 3 or action_num == Action_Code.TURN_END.value:
                 break
             else:
                 sim_field = self.policy.prev_node.field
-                sim_player = sim_field.players[self.player_num]
-                assert sim_field.eq(field),"".format(field.show_field(),sim_field.show_field(),self.show_hand(),sim_player.show_hand())
 
                 action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,
-                        action_code=(action_num, card_id, target_id), msg = msg)
+                        action_code=(action_num, card_id, target_id), msg = action_num)
                 break
-
+        """
 
         if not virtual:
             mylogger.info("action_num:{} card_id:{} target_id:{}".format(action_num, card_id, target_id))
@@ -385,8 +321,8 @@ class Player:
         assert self.field == field,"diff field!"
         #self.field.reset_time_stamp()
         field.reset_time_stamp()
-        if action_code is None:
-            assert False,"action_code is None!"
+        #if action_code is None:
+        #    assert False,"action_code is None!"
         (action_num, card_id, target_id) = action_code
 
         if action_num == Action_Code.EVOLVE.value:
@@ -412,7 +348,7 @@ class Player:
             self.attack_to_follower(field, card_id, target_id, virtual=virtual)
 
         elif action_num == Action_Code.ATTACK_TO_PLAYER.value:
-            assert len(field.get_ward_list(self.player_num)) == 0,"ward_ignore_error"
+            #assert len(field.get_ward_list(self.player_num)) == 0,"ward_ignore_error"
             self.attack_to_player(field, card_id, opponent, virtual=virtual)
 
 

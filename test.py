@@ -1620,17 +1620,6 @@ if __name__ == '__main__':
     Players.append(Player(9, True, policy=Flexible_Iteration_Information_Set_MCTSPolicy(N=step_num),mulligan=Min_cost_mulligan_policy()))  # 11
     Players.append(Player(9, True, policy=Opponent_Modeling_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 12
     Players.append(Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 13
-    """
-    Players.append(Player(9, True, policy=Simple_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 74
-    Players.append(Player(9, True, policy=Simple_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 75
-    Players.append(Player(9, True, policy=Simple_value_function_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 76
-    Players.append(Player(9, True, policy=Second_value_function_A_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 77
-    Players.append( Player(9, True, policy=Second_value_function_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 78
-    Players.append(Player(9, True, policy=Simple_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 91
-    Players.append(Player(9, True, policy=Second_value_function_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 92
-    Players.append(Player(9, True, policy=Cheating_MO_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  #83
-    Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  #84
-    """
     Players.append(Player(9, True, policy=Default_GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 14
     Players.append(Player(9, True, policy=Default_Aggro_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 15
     Players.append(Player(9, True, policy=Non_Rollout_A_MCTSPolicy(iteration=step_num), mulligan=Min_cost_mulligan_policy()))  # 16
@@ -1648,15 +1637,6 @@ if __name__ == '__main__':
     model_name = None
     if args.model_name is not None:
         model_name = args.model_name
-        """
-        Players.append(
-            Player(9, True, policy=NN_GreedyPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 28
-        Players.append(
-            Player(9, True, policy=NN_A_MCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 29
-        Players.append(
-            Player(9, True, policy=NN_Non_Rollout_MCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 30
-        """
-
         Players.append(
             Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 28
         Players.append(

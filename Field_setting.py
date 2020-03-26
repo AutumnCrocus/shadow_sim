@@ -47,6 +47,8 @@ class Field:
         self.secret = True
         self.state_value_history = []
         self.start_count = 0
+        self.copy_func = lambda card:card.get_copy()
+
 
     def eq(self, other):
         if type(self) != type(other):
@@ -85,13 +87,13 @@ class Field:
         return True
 
     def set_data(self, field):
-        #assert len(self.card_location[0]) <= self.max_field_num, "card_num:{}".format(len(self.card_location[0]))
-        #assert len(self.card_location[1]) <= self.max_field_num, "card_num:{}".format(len(self.card_location[1]))
         self.card_location[0].clear()
         self.card_location[1].clear()
-        for i in range(2):
-            for card in field.card_location[i]:
-                self.card_location[i].append(card.get_copy())
+        #for i in range(2):
+        #    for card in field.card_location[i]:
+        #        self.card_location[i].append(card.get_copy())
+        self.card_location[0] = list(map(self.copy_func,field.card_location[0]))
+        self.card_location[1] = list(map(self.copy_func,field.card_location[1]))
 
         self.card_num = field.card_num[:]
         self.cost = field.cost[:]
@@ -141,8 +143,10 @@ class Field:
         # ability_list.apendleft()
         if len(self.state_log) == 0: return
         index = len(self.state_log) - 1
-        while index >= 0:
-            target_state_log = self.state_log[index]
+        #while index >= 0:
+        for j in reversed(range(index)):
+            target_state_log = self.state_log[j]
+            #target_state_log = self.state_log[index]
             for i in range(2):
                 side_id = (i + player_num) % 2
                 for player_ability_id in self.player_ability[side_id]:
@@ -158,14 +162,16 @@ class Field:
                             ability_list.appendleft((ability, argument))
                             # ability(self,self.players[side_id],self.players[1-side_id],virtual,None,thing,state_log=target_state_log)
                     location_id -= 1
-            index -= 1
+            #index -= 1
 
         self.state_log.clear()
-        while len(ability_list) > 0:
-            tmp_ability_pair = ability_list.popleft()
+        #while len(ability_list) > 0:
+        for tmp_ability_pair in ability_list:
+            #tmp_ability_pair = ability_list.popleft()
             ability = tmp_ability_pair[0]
             argument = tmp_ability_pair[1]
             ability(argument[0], argument[1], argument[2], argument[3], argument[4], argument[5], state_log=argument[6])
+
         if not self.secret:
             mylogger.info("next_state_log:{}".format(self.state_log))
 
@@ -454,12 +460,13 @@ class Field:
 
     def attack_to_follower(self, attack, defence, field, virtual=False):
 
-        assert attack[1] < len(self.card_location[attack[0]]) and defence[1] < len(self.card_location[defence[0]])
+        #assert attack[1] < len(self.card_location[attack[0]]) and defence[1] < len(self.card_location[defence[0]]),\
+        #    "{},{}  {},{}".format(attack[1],len(self.card_location[attack[0]]),defence[1],len(self.card_location[defence[0]]),self.show_field())
         attacking_follower = self.card_location[attack[0]][attack[1]]
         defencing_follower = self.card_location[defence[0]][defence[1]]
-        assert attacking_follower.can_attack_to_follower() and defencing_follower.can_be_attacked(), \
-            "attack:{} defence:{}".format(attacking_follower.can_attack_to_follower(),
-                                          defencing_follower.can_be_attacked())
+        #assert attacking_follower.can_attack_to_follower() and defencing_follower.can_be_attacked(), \
+        #    "\nattack:{} defence:{}\n{}\n{}".format(attacking_follower.can_attack_to_follower(),
+        #                                  defencing_follower.can_be_attacked(),attacking_follower,defencing_follower,self.show_field())
         attacking_follower.current_attack_num += 1
         if not virtual:
             mylogger.info("Player {}'s {} attacks Player {}'s {}".format(attack[0] + 1, attacking_follower.name
@@ -501,7 +508,7 @@ class Field:
 
     def attack_to_player(self, attacker, defence_player, visible=False, virtual=False):
         attacking_follower = self.card_location[attacker[0]][attacker[1]]
-        assert attacking_follower.can_attack_to_player()
+        #assert attacking_follower.can_attack_to_player()
         attacking_follower.current_attack_num += 1
         for ability in attacking_follower.in_battle_ability:
             ability(self, self.players[attacker[0]], defence_player, attacking_follower, defence_player,
