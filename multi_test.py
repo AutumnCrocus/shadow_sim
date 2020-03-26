@@ -81,23 +81,11 @@ def preparation(episode_data):
     x2 = datetime.datetime.now()
     win_name = "Alice" if reward[int(episode%2)] > 0 else "Bob"
     print("finished:{:<4} {:<5},{}".format(episode + 1,win_name,x2-x1))
+    result_data.append(int(reward[int(episode % 2)] > 0))
     return result_data
 
 
 import itertools
-
-"""
-def multi(episode_len,p1,p2):
-    p_size = int(torch.cuda.is_available())*4 + 4
-    p = Pool(p_size)  # 最大プロセス数:10
-    iter_data = [(i,p1,p2) for i in range(episode_len)]
-    memory = p.map(preparation, iter_data)
-    #memory = p.map(preparation, range(episode_len))
-    memory = list(itertools.chain.from_iterable(memory))
-    p.close()  # add this.
-    p.terminate()  # add this.
-    return memory
-"""
 
 
 if __name__ == "__main__":
@@ -177,8 +165,8 @@ if __name__ == "__main__":
         memory = pool.map(preparation, iter_data)
         pool.close()  # add this.
         pool.terminate()  # add this.
-        #[[],[],[],[],...]
-        win_num = sum([int(memory[i][0][-1] > 0) for i in range(len(memory))])
+        #[[state,state,...,reward],[],[],[],...]
+        win_num = sum([cell.pop(-1) for cell in memory])
         print("win_rate:{:.3%}".format(win_num/episode_len))
         memories = list(itertools.chain.from_iterable(memory))
 

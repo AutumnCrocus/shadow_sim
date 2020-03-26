@@ -4,6 +4,7 @@ import copy
 from my_moduler import get_module_logger
 mylogger = get_module_logger(__name__)
 
+
 def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
     player = field.players[player_num]
     sim_player = sim_field.players[player.player_num]
@@ -84,14 +85,6 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                         target_id = i
                         return action_num, card_id, target_id
 
-                mylogger.info("sim_target_id:{}".format(target_id))
-                mylogger.info("real")
-                field.show_field()
-                mylogger.info("sim")
-                sim_field.show_field()
-                mylogger.info("{}".format(Action_Code(msg).name))
-                assert False,"error:{}".format(Target_Type(target_type).name)
-
             elif target_type == Target_Type.ALLIED_FOLLOWER.value or target_type == Target_Type.ALLIED_CARD.value or\
                     target_type == Target_Type.ALLIED_AMULET.value:
                 targeted_card = sim_field.card_location[player_num][prev_target_id]
@@ -100,31 +93,14 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                         target_id = i
                         return action_num, card_id, target_id
 
-                mylogger.info("sim_target_id:{}".format(target_id))
-                mylogger.info("real")
-                field.show_field()
-                mylogger.info("sim")
-                sim_field.show_field()
-                mylogger.info("{}".format(Action_Code(msg).name))
-                assert False,"error:{}".format(Target_Type(target_type).name)
-
             elif target_type == Target_Type.ENEMY.value:
                 if prev_target_id == -1:
                     return action_num, card_id, target_id
-                assert prev_target_id < len(sim_field.card_location[player_num]),"target_id:{}".format(target_id,sim_field.show_field())
-                targeted_card = sim_field.card_location[player_num][prev_target_id]
+                targeted_card = sim_field.card_location[opponent_num][prev_target_id]
                 for i, real_card in enumerate(field.card_location[opponent_num]):
                     if real_card.eq(targeted_card):
                         target_id = i
                         return action_num, card_id, target_id
-
-                mylogger.info("sim_target_id:{}".format(target_id))
-                mylogger.info("real")
-                field.show_field()
-                mylogger.info("sim")
-                sim_field.show_field()
-                mylogger.info("{}".format(Action_Code(msg).name))
-                assert False,"error:{}".format(Target_Type(target_type).name)
 
             elif target_type == Target_Type.FOLLOWER.value or target_type == Target_Type.CARD.value or\
                 target_type == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
@@ -136,14 +112,6 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                         if real_card.eq(targeted_card):
                             target_id = (i,j)
                             return action_num, card_id, target_id
-
-                mylogger.info("sim_target_id:{}".format(target_id))
-                mylogger.info("real")
-                field.show_field()
-                mylogger.info("sim")
-                sim_field.show_field()
-                mylogger.info("{}".format(Action_Code(msg).name))
-                assert False,"error:{}".format(Target_Type(target_type).name)
 
             elif target_type == Target_Type.CARD_IN_HAND.value:
                 if action_num == Action_Code.PLAY_CARD.value:
@@ -160,12 +128,15 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                                 target_id = i
                             return action_num, card_id, target_id
 
-                mylogger.info("sim_target_id:{}".format(target_id))
-                mylogger.info("real")
-                player.show_hand()
-                mylogger.info("sim")
-                sim_player.show_hand()
-                mylogger.info("{}".format(Action_Code(msg).name))
-                assert False, "error:{}".format(Target_Type(target_type).name)
+        mylogger.info("play_card,id:{:<2},name:{:<20},sim_target_id:{}".format(prev_card_id,sim_player.hand[prev_card_id].name, target_id))
+        mylogger.info("real")
+        player.show_hand()
+        field.show_field()
+        mylogger.info("sim")
+        sim_player.show_hand()
+        sim_field.show_field()
+        mylogger.info("{}".format(Action_Code(msg).name))
+        assert False, "error:{}".format(Target_Type(target_type).name)
+
 
     return action_num, card_id, target_id

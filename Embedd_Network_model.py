@@ -73,12 +73,17 @@ class New_Dual_Net(nn.Module):
         x1 = F.relu(self.lin1(values['life_datas']))
 
         pp_datas = F.relu(self.lin2(values['pp_datas']))
-        able_to_plays = F.relu(torch.sum(F.relu(self.emb6(values['able_to_play'])),dim=1))
-        able_to_attacks = F.relu(torch.sum(F.relu(self.emb7(values['able_to_attack'])), dim=1))
-        able_to_creature_attacks = F.relu(torch.sum(F.relu(self.emb8(values['able_to_creature_attack'])), dim=1))
+        #able_to_plays = F.relu(torch.sum(F.relu(self.emb6(values['able_to_play'])),dim=1))
+        #able_to_attacks = F.relu(torch.sum(F.relu(self.emb7(values['able_to_attack'])), dim=1))
+        #able_to_creature_attacks = F.relu(torch.sum(F.relu(self.emb8(values['able_to_creature_attack'])), dim=1))
+        able_to_plays = torch.sum(self.emb6(values['able_to_play']),dim=1)
+        able_to_attacks = torch.sum(self.emb7(values['able_to_attack']), dim=1)
+        able_to_creature_attacks = torch.sum(self.emb8(values['able_to_creature_attack']), dim=1)
+
         x2 = [] #最大手札9枚分のデータ
         for i in range(9):
-            hand_card_ids = F.relu(torch.sum(self.emb1(hand_ids[i]),dim=1))
+            #hand_card_ids = F.relu(torch.sum(self.emb1(hand_ids[i]),dim=1))
+            hand_card_ids = torch.sum(self.emb1(hand_ids[i]), dim=1)
             hand_card_costs = values['hand_card_costs'][i]
             tmp_x2 = torch.cat([pp_datas, hand_card_costs, hand_card_ids, able_to_plays], dim=1)
             x2.append(F.relu(self.lin4(tmp_x2)))
@@ -86,24 +91,24 @@ class New_Dual_Net(nn.Module):
 
         x3 = []#最大フォロワー10体分のデータ
         x4 = [] # 最大アミュレット10個分のデータ
-        able_to_evos = F.relu(torch.sum(F.relu(self.emb5(able_to_evo)),dim=1))
+        #able_to_evos = F.relu(torch.sum(F.relu(self.emb5(able_to_evo)),dim=1))
+        able_to_evos = torch.sum(self.emb5(able_to_evo), dim=1)
         for i in range(10):#自分のフォロワー
             stats = F.relu(self.lin3(values['follower_stats'][i]))
-            abilities = F.relu(torch.sum(self.emb4(follower_abilities[i]),dim=1))
-            follower_ids = F.relu(torch.sum(self.emb2(follower_card_ids[i]), dim=1))
-
+            #abilities = F.relu(torch.sum(self.emb4(follower_abilities[i]),dim=1))
+            #follower_ids = F.relu(torch.sum(self.emb2(follower_card_ids[i]), dim=1))
+            abilities = torch.sum(self.emb4(follower_abilities[i]),dim=1)
+            follower_ids = torch.sum(self.emb2(follower_card_ids[i]), dim=1)
+            amulet_ids = torch.sum(self.emb3(amulet_card_ids[i]), dim=1)
+            x4.append(amulet_ids)
             if i <= 4:
                 tmp_x3 = torch.cat(
                     [stats, abilities, follower_ids, able_to_evos, able_to_attacks, able_to_creature_attacks], dim=1)
                 x3.append(F.relu(self.lin5(tmp_x3)))
-                amulet_ids = F.relu(torch.sum(self.emb3(amulet_card_ids[i]),dim=1))
-                x4.append(amulet_ids)
+
             else:
                 tmp_x3 = torch.cat([stats, abilities, follower_ids, able_to_evos],dim=1)
                 x3.append(F.relu(self.lin6(tmp_x3)))
-                amulet_ids = F.relu(torch.sum(self.emb3(amulet_card_ids[i]),dim=1))
-                x4.append(amulet_ids)
-
 
         x3 = torch.sum(torch.stack(x3, dim=2), dim=2)
         x4 = torch.sum(torch.stack(x4, dim=2), dim=2)
@@ -118,14 +123,16 @@ class New_Dual_Net(nn.Module):
         #card_locations = detailed_action_codes['card_locations']
         #card_ids = detailed_action_codes['card_ids']
         play_card_ids = detailed_action_codes['play_card_ids']
-        attacking_card_ids = detailed_action_codes['attacking_card_ids']
-        attacked_card_ids = detailed_action_codes['attacked_card_ids']
-        evolving_card_ids = detailed_action_codes['evolving_card_ids']
+        #attacking_card_ids = detailed_action_codes['attacking_card_ids']
+        #attacked_card_ids = detailed_action_codes['attacked_card_ids']
+        #evolving_card_ids = detailed_action_codes['evolving_card_ids']
+        field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
         #print(detailed_action_codes)
         for i in range(45):
-            tmp = self.action_value_net(x, action_categories[i], play_card_ids[i], attacking_card_ids[i],
-                                        attacked_card_ids[i], evolving_card_ids[i])
+            #tmp = self.action_value_net(x, action_categories[i], play_card_ids[i], attacking_card_ids[i],
+            #                            attacked_card_ids[i], evolving_card_ids[i])
+            tmp = self.action_value_net(x, action_categories[i], play_card_ids[i], field_card_ids[i])
             action_value_list.append(tmp)
         h_p2 = torch.cat(action_value_list,dim=1)
 
@@ -172,18 +179,23 @@ class Action_Value_Net(nn.Module):
         self.lin1 = nn.Linear(6 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
 
-    def forward(self, states, action_categories, play_card_ids,
-                attacking_card_ids, attacked_card_ids, evolving_card_ids):
+    #def forward(self, states, action_categories, play_card_ids,
+    #            attacking_card_ids, attacked_card_ids, evolving_card_ids):
+    def forward(self, states, action_categories, play_card_ids, field_card_ids):
 
         embed_action_categories = torch.sum(self.emb1(action_categories), dim=1)
 
         embed_play_card_ids = torch.sum(self.emb2(play_card_ids), dim=1)
-        embed_attacking_card_ids = torch.sum(self.emb3(attacking_card_ids), dim=1)
-        embed_attacked_card_ids = torch.sum(self.emb3(attacked_card_ids), dim=1)
-        embed_evolving_card_ids = torch.sum(self.emb3(evolving_card_ids), dim=1)
+        #embed_attacking_card_ids = torch.sum(self.emb3(attacking_card_ids), dim=1)
+        #embed_attacked_card_ids = torch.sum(self.emb3(attacked_card_ids), dim=1)
+        #embed_evolving_card_ids = torch.sum(self.emb3(evolving_card_ids), dim=1)
+        embed_field_card_ids = self.emb3(field_card_ids).view(-1,3*self.mid_size)
+        #print(states.size(),embed_action_categories.size(), embed_play_card_ids.size(),embed_field_card_ids.size())
+        #tmp = torch.cat([states, embed_action_categories, embed_play_card_ids,
+        #                 embed_attacking_card_ids, embed_attacked_card_ids,
+        #                 embed_evolving_card_ids], dim=1)
         tmp = torch.cat([states, embed_action_categories, embed_play_card_ids,
-                         embed_attacking_card_ids, embed_attacked_card_ids,
-                         embed_evolving_card_ids], dim=1)
+                         embed_field_card_ids], dim=1)
         output = self.lin1(tmp)
         output = self.lin2(output)
 
@@ -458,6 +470,7 @@ def Detailed_action_code_2_Tensor(action_codes, cuda = False):
     tensor_attacking_card_ids_in_action = [[] for _ in range(45)]
     tensor_attacked_card_ids_in_action = [[] for _ in range(45)]
     tensor_evolving_card_ids_in_action = [[] for _ in range(45)]
+    tensor_field_card_ids_in_action = [[] for _ in range(45)]
     able_to_choice = []
     if torch.cuda.is_available() and cuda:
         for action_code in action_codes:
@@ -465,9 +478,10 @@ def Detailed_action_code_2_Tensor(action_codes, cuda = False):
                 target_action = action_code['action_codes'][i]
                 tensor_action_categories[i].append(torch.LongTensor([target_action[0]]).cuda())
                 tensor_play_card_ids_in_action[i].append(torch.LongTensor([target_action[1]]).cuda())
-                tensor_attacking_card_ids_in_action[i].append(torch.LongTensor([target_action[2]]).cuda())
-                tensor_attacked_card_ids_in_action[i].append(torch.LongTensor([target_action[3]]).cuda())
-                tensor_evolving_card_ids_in_action[i].append(torch.LongTensor([target_action[4]]).cuda())
+                #tensor_attacking_card_ids_in_action[i].append(torch.LongTensor([target_action[2]]).cuda())
+                #tensor_attacked_card_ids_in_action[i].append(torch.LongTensor([target_action[3]]).cuda())
+                #tensor_evolving_card_ids_in_action[i].append(torch.LongTensor([target_action[4]]).cuda())
+                tensor_field_card_ids_in_action[i].append(torch.LongTensor([target_action[2:5]]).cuda())
             able_to_choice.append(torch.Tensor(action_code['able_to_choice']).cuda())
 
     else:
@@ -476,19 +490,21 @@ def Detailed_action_code_2_Tensor(action_codes, cuda = False):
                 target_action = action_code['action_codes'][i]
                 tensor_action_categories[i].append(torch.LongTensor([target_action[0]]))
                 tensor_play_card_ids_in_action[i].append(torch.LongTensor([target_action[1]]))
-                tensor_attacking_card_ids_in_action[i].append(torch.LongTensor([target_action[2]]))
-                tensor_attacked_card_ids_in_action[i].append(torch.LongTensor([target_action[3]]))
-                tensor_evolving_card_ids_in_action[i].append(torch.LongTensor([target_action[4]]))
+                #tensor_attacking_card_ids_in_action[i].append(torch.LongTensor([target_action[2]]))
+                #tensor_attacked_card_ids_in_action[i].append(torch.LongTensor([target_action[3]]))
+                #tensor_evolving_card_ids_in_action[i].append(torch.LongTensor([target_action[4]]))
+                tensor_field_card_ids_in_action[i].append(torch.LongTensor([target_action[2:5]]))
             able_to_choice.append(torch.Tensor(action_code['able_to_choice']))
 
 
     action_codes_dict = {'action_categories': [torch.stack(tensor_action_categories[i], dim=0) for i in range(45)],
                          'play_card_ids': [torch.stack(tensor_play_card_ids_in_action[i], dim=0) for i in range(45)],
-                         'attacking_card_ids': [torch.stack(tensor_attacking_card_ids_in_action[i], dim=0) for i in range(45)],
-                         'attacked_card_ids': [torch.stack(tensor_attacked_card_ids_in_action[i], dim=0) for i in
-                                                range(45)],
-                         'evolving_card_ids': [torch.stack(tensor_evolving_card_ids_in_action[i], dim=0) for i in
-                                                range(45)],
+                         #'attacking_card_ids': [torch.stack(tensor_attacking_card_ids_in_action[i], dim=0) for i in range(45)],
+                         #'attacked_card_ids': [torch.stack(tensor_attacked_card_ids_in_action[i], dim=0) for i in
+                         #                       range(45)],
+                         #'evolving_card_ids': [torch.stack(tensor_evolving_card_ids_in_action[i], dim=0) for i in
+                         #                       range(45)],
+                         'field_card_ids':[torch.stack(tensor_field_card_ids_in_action[i], dim=0) for i in range(45)],
                          'able_to_choice': torch.stack(able_to_choice,dim=0)}
     return action_codes_dict
 
