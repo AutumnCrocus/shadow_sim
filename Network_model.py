@@ -106,13 +106,16 @@ def state_change_to_full(origin):
     convert_states = []
 
     for data in origin:
-        cell = data.state
+        if len(origin) == 70:
+            cell = origin
+        else:
+            cell = data.state
         assert len(cell) == 70,"cell_len:{}".format(len(cell))
         tmp = []
         for i in range(9):
             tmp.extend(list(np.identity(4)[cell[3*i]]))
             tmp.append(cell[3*i+1])
-            tmp.extend(list(np.identity(1000)[3*i+2 + 500]))
+            tmp.extend(list(np.identity(1000)[cell[3*i+2] + 500]))
         #9*(4+1+1000) = 9*1005 = 9045
         for i in range(10):
             j = Field_START + 4*i
@@ -128,6 +131,8 @@ def state_change_to_full(origin):
         assert len(cell[LIFE_START:]) == 3,"data:{}".format(cell[LIFE_START:])
         tmp.extend(cell[LIFE_START:])
         convert_states.append(torch.Tensor(tmp))
+        if len(origin) == 70:
+            break
 
     return convert_states
 
@@ -238,8 +243,6 @@ if __name__ == "__main__":
         p2.field = f
         train_data, reward = G.start_for_train_data(f, virtual_flg=True,target_player_num=episode%2)
         for data in train_data:
-            #R.push(torch.Tensor(data), torch.FloatTensor([reward]))
-            #print(data)
             R.push(data,torch.FloatTensor([reward]))
     net.zero_grad()
     print("sample_num:{}/{}".format(len(R.memory),CAPACITY))

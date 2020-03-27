@@ -80,7 +80,7 @@ def preparation(episode_data):
 
     x2 = datetime.datetime.now()
     win_name = "Alice" if reward[int(episode%2)] > 0 else "Bob"
-    print("finished:{:<4} {:<5},{}".format(episode + 1,win_name,x2-x1))
+    print("finished:{:<4} {:<5}(len:{:<3}),{}".format(episode + 1,win_name,len(train_data[0])+len(train_data[1]),x2-x1))
     result_data.append(int(reward[int(episode % 2)] > 0))
     return result_data
 
@@ -90,9 +90,9 @@ import itertools
 
 if __name__ == "__main__":
 
-    p_size = 2#cpu_count() - 1#int(torch.cuda.is_available()) * 4 + 4
-    #if torch.cuda.is_available():
-    #    p_size = 4
+    p_size = 3#cpu_count() - 1#int(torch.cuda.is_available()) * 4 + 4
+    if torch.cuda.is_available():
+        p_size = 2
     print("use cpu num:{}".format(p_size))
 
 
