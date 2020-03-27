@@ -190,8 +190,10 @@ class Player:
             field.play_as_other_card(self.hand, card_id, self.player_num, virtual=virtual, target=target)
             return
         else:
+            assert field.remain_cost[self.player_num] - self.hand[card_id].cost >= 0, "minus-pp error:{} < {}"\
+                .format(field.remain_cost[self.player_num],self.hand[card_id.cost])
             field.remain_cost[self.player_num] -= self.hand[card_id].cost
-            assert field.remain_cost[self.player_num]>=0,"minus-pp error"
+
 
         if self.hand[card_id].card_category == "Creature":
             field.play_creature(self.hand, card_id, self.player_num, player, opponent, virtual=virtual, target=target)

@@ -628,13 +628,13 @@ class Creature(Card):
         return True
 
     def get_active_ability(self):
-        assert self.have_active_ability == True, "invalid acitve ability error"
+        assert self.have_active_abilit, "invalid acitve ability error"
         for ability_id in self.active_ability:
             self.ability.append(ability_id)
         self.ability = list(set(self.ability))
 
     def lose_active_ability(self):
-        assert self.have_active_ability == True, "invalid acitve ability error"
+        assert self.have_active_ability, "invalid acitve ability error"
         for ability_id in self.active_ability:
             if ability_id in self.ability:
                 self.ability.remove(ability_id)
@@ -651,6 +651,8 @@ class Creature(Card):
         if self.power != other.power:
             return False
         if self.get_current_toughness() != other.get_current_toughness():
+            return False
+        if self.cost != other.cost:
             return False
         if self.evolved != other.evolved:
             return False
@@ -686,13 +688,13 @@ class Creature(Card):
                                                   str(self.toughness - self.damage))
         else:
             text += "name:{:<25} {}/{}/{}".format(self.name, str(self.cost), str(self.power), str(self.toughness))
-            if self.have_enhance == True and self.active_enhance_code[0] == True:
+            if self.have_enhance and self.active_enhance_code[0]:
                 text += " enhance:{}".format(self.active_enhance_code[1])
-            elif self.have_accelerate == True and self.active_accelerate_code[0] == True:
+            elif self.have_accelerate and self.active_accelerate_code[0]:
                 text += " accelerate:{}".format(self.active_accelerate_code[1])
         if self.card_class.name == "RUNE" and self.spell_boost is not None and self.is_in_field == False:
             text += " spell_boost:{:<2}".format(self.spell_boost)
-        if self.ability != [] and self.is_in_field == True:
+        if self.ability != [] and self.is_in_field:
             text += " ability={}".format([KeywordAbility(i).name for i in self.ability])
         if self.is_in_field:
             if len(self.lastword_ability) > 0:
@@ -785,6 +787,8 @@ class Spell(Card):
             return False
 
         if self.name != other.name:
+            return False
+        if self.cost != other.cost:
             return False
         if self.card_class.name == "RUNE":
             if self.spell_boost != other.spell_boost:
@@ -936,6 +940,8 @@ class Amulet(Card):
             return False
         if self.name != other.name:
             return False
+        if self.cost != other.cost:
+            return False
         if self.countdown != other.countdown:
             return False
         if self.countdown:
@@ -955,7 +961,7 @@ class Amulet(Card):
 
         if self.countdown:
             tmp = tmp + " count:{:<2}".format(self.current_count)
-        if self.have_enhance == True and self.active_enhance_code[0] == True:
+        if self.have_enhance and self.active_enhance_code[0]:
             tmp += " enhance:{}".format(self.active_enhance_code[1])
         if self.is_in_field:
             if len(self.lastword_ability) > 0:

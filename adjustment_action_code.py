@@ -20,6 +20,20 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 card_id = i
                 error_flg = False
                 break
+        if player.hand[card_id].cost > field.remain_cost[player_num]:
+            if player.hand[card_id].have_accelerate and player.hand[card_id].active_accelerate_code[1] > field.remain_cost:
+                mylogger.info("over pp error:{},{}".format(player.hand[card_id].active_accelerate_code[1],field.remain_cost[player_num]))
+                mylogger.info("prev_card_id:{}, card_id:{}".format(prev_card_id,card_id))
+                mylogger.info("real:{}".format(field.remain_cost))
+                mylogger.info(player.hand[card_id].active_accelerate_code)
+                mylogger.info(player.hand[card_id].have_accelerate)
+                player.show_hand()
+
+                mylogger.info("sim:{}".format(sim_field.remain_cost))
+                mylogger.info(sim_player.hand[prev_card_id].active_accelerate_code)
+                mylogger.info(sim_player.hand[prev_card_id].have_accelerate)
+                sim_player.show_hand()
+
 
     elif msg == Action_Code.ATTACK_TO_FOLLOWER.value:
         attacking_card = sim_field.card_location[player.player_num][card_id]
@@ -91,13 +105,6 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                         target_id = i
                         return action_num, card_id, target_id
                 mylogger.info("error\n")
-                for i, real_card in enumerate(field.card_location[opponent_num]):
-                    if real_card.name == targeted_card.name:
-                        targeted_dict = targeted_card.__dict__
-                        real_dict = real_card.__dict__
-                        for key in list(targeted_card.__dict__.keys()):
-                            if targeted_dict[key] != real_dict[key]:
-                                mylogger.info("{:<3}: {} is not {}".format(key,targeted_dict[key], real_dict[key]))
 
             elif target_type == Target_Type.ALLIED_FOLLOWER.value or target_type == Target_Type.ALLIED_CARD.value or\
                     target_type == Target_Type.ALLIED_AMULET.value:
@@ -107,13 +114,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                         target_id = i
                         return action_num, card_id, target_id
                 mylogger.info("error\n")
-                for i, real_card in enumerate(field.card_location[player_num]):
-                    if real_card.name == targeted_card.name:
-                        targeted_dict = targeted_card.__dict__
-                        real_dict = real_card.__dict__
-                        for key in list(targeted_card.__dict__.keys()):
-                            if targeted_dict[key] != real_dict[key]:
-                                mylogger.info("{:<3}: {} is not {}".format(key,targeted_dict[key], real_dict[key]))
+
 
             elif target_type == Target_Type.ENEMY.value:
                 if prev_target_id == -1:
@@ -124,16 +125,9 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                         target_id = i
                         return action_num, card_id, target_id
                 mylogger.info("error\n")
-                for i, real_card in enumerate(field.card_location[opponent_num]):
-                    if real_card.name == targeted_card.name:
-                        targeted_dict = targeted_card.__dict__
-                        real_dict = real_card.__dict__
-                        for key in list(targeted_card.__dict__.keys()):
-                            if targeted_dict[key] != real_dict[key]:
-                                mylogger.info("{:<3}: {} is not {}".format(key,targeted_dict[key], real_dict[key]))
 
-            elif target_type == Target_Type.FOLLOWER.value or target_type == Target_Type.CARD.value or\
-                target_type == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
+
+            elif target_type == Target_Type.FOLLOWER.value or target_type == Target_Type.CARD.value:
                 targeted_card = sim_field.card_location[prev_target_id[0]][prev_target_id[1]]
                 for i in range(2):
                     if prev_target_id[0] != i:
@@ -143,17 +137,24 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                             target_id = (i,j)
                             return action_num, card_id, target_id
                 mylogger.info("error\n")
-                for i in range(2):
-                    if prev_target_id[0] != i:
-                        continue
-                    for j, real_card in enumerate(field.card_location[i]):
-                        if real_card.name == targeted_card.name:
-                            targeted_dict = targeted_card.__dict__
-                            real_dict = real_card.__dict__
-                            for key in list(targeted_card.__dict__.keys()):
-                                if targeted_dict[key] != real_dict[key]:
-                                    mylogger.info("{:<3}: {} is not {}".format(key, targeted_dict[key], real_dict[key]))
-
+            elif target_type == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
+                first_targeted_card = sim_field.card_location[player_num][prev_target_id[0]]
+                second_targeted_card = sim_field.card_location[opponent_num][prev_target_id[1]]
+                new_first_target_id = None
+                new_second_target_id = None
+                for i,player_card in enumerate(field.card_location[player_num]):
+                    if player_card.eq(first_targeted_card):
+                        new_first_target_id = i
+                        break
+                if first_targeted_card is None:
+                    mylogger.info("first target is not found.")
+                    assert False
+                for j, opponent_card in enumerate(field.card_location[opponent_num]):
+                    if opponent_card.eq(second_targeted_card):
+                        new_second_target_id = j
+                        target_id = (new_first_target_id,new_second_target_id)
+                        return action_num, card_id, target_id
+                mylogger.info("second target is not found.\n")
             elif target_type == Target_Type.CARD_IN_HAND.value:
                 if action_num == Action_Code.PLAY_CARD.value:
                     itself_index = sim_player.hand.index(sim_player.hand[prev_card_id])
@@ -168,13 +169,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                             else:
                                 target_id = i
                             return action_num, card_id, target_id
-                    for i, hand_card in enumerate(player.hand):
-                        if hand_card.name == targeted_card.name:
-                            targeted_dict = targeted_card.__dict__
-                            real_dict = hand_card.__dict__
-                            for key in list(targeted_card.__dict__.keys()):
-                                if targeted_dict[key] != real_dict[key]:
-                                    mylogger.info("{:<3}: {} is not {}".format(key, targeted_dict[key], real_dict[key]))
+
 
             mylogger.info("play_card_id:{:<2},name:{:<20},sim_target_id:{}".format(prev_card_id,sim_player.hand[prev_card_id].name, prev_target_id))
             mylogger.info("\nreal_card:{}\ntarget_card:{}\neq:{}".format(real_card,targeted_card,targeted_card.eq(real_card)))
