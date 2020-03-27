@@ -21,7 +21,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 error_flg = False
                 break
         if player.hand[card_id].cost > field.remain_cost[player_num]:
-            if player.hand[card_id].have_accelerate and player.hand[card_id].active_accelerate_code[1] > field.remain_cost:
+            if player.hand[card_id].have_accelerate and player.hand[card_id].active_accelerate_code[1] > field.remain_cost[player_num]:
                 mylogger.info("over pp error:{},{}".format(player.hand[card_id].active_accelerate_code[1],field.remain_cost[player_num]))
                 mylogger.info("prev_card_id:{}, card_id:{}".format(prev_card_id,card_id))
                 mylogger.info("real:{}".format(field.remain_cost))

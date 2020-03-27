@@ -628,7 +628,7 @@ class Creature(Card):
         return True
 
     def get_active_ability(self):
-        assert self.have_active_abilit, "invalid acitve ability error"
+        assert self.have_active_ability, "invalid acitve ability error"
         for ability_id in self.active_ability:
             self.ability.append(ability_id)
         self.ability = list(set(self.ability))
