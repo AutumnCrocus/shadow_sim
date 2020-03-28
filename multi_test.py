@@ -1,8 +1,10 @@
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count
 
 try:
-    set_start_method('spawn')
-    print("spawn is run.")
+    #set_start_method('spawn')
+    #print("spawn is run.")
+    set_start_method('fork')
+    print('fork')
 except RuntimeError:
     pass
 from test import *  # importの依存関係により必ず最初にimport
@@ -79,13 +81,34 @@ def preparation(episode_data):
             result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[i]))
 
     x2 = datetime.datetime.now()
+
     win_name = "Alice" if reward[int(episode%2)] > 0 else "Bob"
-    print("finished:{:<4} {:<5}(len:{:<3}),{}".format(episode + 1,win_name,len(train_data[0])+len(train_data[1]),x2-x1))
+    all_len = len(train_data[0])+len(train_data[1])
+    tmp_x3 = (x2-x1).total_seconds()/all_len
+    x3 = datetime.timedelta(seconds=tmp_x3)
+    print("finished:{:<4} {:<5}(len:{:<3}) time_per_move:{},{}".format(episode + 1,win_name,all_len,x3,x2-x1))
     result_data.append(int(reward[int(episode % 2)] > 0))
     return result_data
 
 
 import itertools
+
+def multi_train(data):
+    net, dataset = data
+    optimizer =  optim.Adam(net.parameters(), weight_decay=0.01)
+    optimizer.zero_grad()
+    states, actions, rewards = dataset
+    states['target'] = {'actions': actions, 'rewards': rewards}
+    p, v, loss = net(states, target=True)
+    z = rewards
+    pai = actions  # 45種類の抽象化した行動
+    # loss.backward()
+    loss[0].backward()
+    all_loss = float(loss[0].item())
+    MSE = float(loss[1].item())
+    CEE = float(loss[2].item())
+    optimizer.step()
+    return all_loss, MSE, CEE
 
 
 if __name__ == "__main__":
@@ -111,6 +134,7 @@ if __name__ == "__main__":
     parser.add_argument('--mcts', help='サンプリングAIをMCTSにする(オリジナルの場合は[OM])')
     parser.add_argument('--deck', help='サンプリングに用いるデッキの選び方')
     parser.add_argument('--cuda', help='gpuを使用するかどうか')
+    parser.add_argument('--multi_train',help="学習時も並列化するかどうか")
     args = parser.parse_args()
     cuda_flg = args.cuda == "True"
     net = New_Dual_Net(100)
@@ -210,20 +234,35 @@ if __name__ == "__main__":
         sum_of_MSE = 0
         sum_of_CEE = 0
         p, pai, z, states = None, None, None, None
-        for i in tqdm(range(iteration)):
-            states, actions, rewards = R.sample(batch_size)
-            optimizer.zero_grad()
+        if args.multi_train is not None:
+            net.share_memory()
+            iter_data = [[net, R.sample(batch_size)] for i in range(iteration)]
+            pool = Pool(p_size)  # 最大プロセス数:8
+            #loss_data = pool.map(multi_train, iter_data)
+            imap = pool.imap(multi_train, iter_data)
+            loss_data = list(tqdm(imap, total=iteration))
 
-            states['target'] = {'actions': actions, 'rewards': rewards}
-            p, v, loss = net(states, target=True)
-            z = rewards
-            pai = actions  # 45種類の抽象化した行動
-            #loss.backward()
-            loss[0].backward()
-            sum_of_loss += float(loss[0].item())
-            sum_of_MSE += float(loss[1].item())
-            sum_of_CEE += float(loss[2].item())
-            optimizer.step()
+            pool.close()  # add this.
+            pool.terminate()  # add this.
+            sum_of_loss = sum(map(lambda data: data[0],loss_data))
+            sum_of_MSE = sum(map(lambda data: data[1], loss_data))
+            sum_of_CEE = sum(map(lambda data: data[2], loss_data))
+        else:
+            for i in tqdm(range(iteration)):
+                states, actions, rewards = R.sample(batch_size)
+                optimizer.zero_grad()
+
+                states['target'] = {'actions': actions, 'rewards': rewards}
+                p, v, loss = net(states, target=True)
+                z = rewards
+                pai = actions  # 45種類の抽象化した行動
+                #loss.backward()
+                loss[0].backward()
+                sum_of_loss += float(loss[0].item())
+                sum_of_MSE += float(loss[1].item())
+                sum_of_CEE += float(loss[2].item())
+                optimizer.step()
+
         print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}"\
               .format(sum_of_loss/iteration,sum_of_MSE/iteration,sum_of_CEE/iteration))
         t4 = datetime.datetime.now()

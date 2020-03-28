@@ -169,6 +169,16 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                             else:
                                 target_id = i
                             return action_num, card_id, target_id
+                else:
+                    real_index = player.hand.index(player.hand[card_id])
+                    targeted_card = sim_player.hand[prev_target_id]
+                    for i, hand_card in enumerate(player.hand):
+                        if hand_card.eq(targeted_card):
+                            if i > real_index:
+                                target_id = i - 1
+                            else:
+                                target_id = i
+                            return action_num, card_id, target_id
 
 
             mylogger.info("play_card_id:{:<2},name:{:<20},sim_target_id:{}".format(prev_card_id,sim_player.hand[prev_card_id].name, prev_target_id))

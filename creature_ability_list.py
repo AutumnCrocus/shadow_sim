@@ -506,14 +506,23 @@ def creature_ability_064(field, player, opponent, virtual, target, itself):
 
 def creature_ability_065(field, player, opponent, virtual, target, itself):
     if target is not None:
-        creature = player.hand.pop(target)
+        #creature = player.hand.pop(target)
+        creature = player.hand[target]
         if creature.card_category != "Creature":
+            mylogger.info("target_id:{} name:{}".format(target, creature.name))
+            mylogger.info("real")
             player.show_hand()
             field.show_field()
-            mylogger.info("target_id:{} name:{}".format(target, creature.name))
-            assert False
+            mylogger.info("sim")
+            sim_field = player.policy.prev_node.field
+            sim_player = sim_field.players[player.player_num]
+            sim_player.show_hand()
+            sim_field.show_field()
+
+            assert False,"non-follower-error"
         if not virtual:
             mylogger.info("Player{} put {} to field from hand".format(player.player_num + 1, creature.name))
+        creature = player.hand.pop(target)
         field.set_card(creature, player.player_num, virtual=virtual)
         add_ability_to_creature(field, player, creature, virtual, add_ability=[4])
         creature.turn_end_ability.append(creature_ability_066)

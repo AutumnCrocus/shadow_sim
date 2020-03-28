@@ -43,6 +43,8 @@ class New_Dual_Net(nn.Module):
         self.emb6 = nn.Embedding(10, n_mid, padding_idx=0)  # 手札最大9枚の位置と空白
         self.emb7 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
         self.emb8 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
+        self.emb9 = nn.Embedding(9, n_mid, padding_idx=0)#両プレイヤーのリーダークラス
+        self.fc0 = nn.Linear(6*n_mid,n_mid)
         self.fc1 = nn.Linear(n_mid, n_mid)
         layer = [Dual_ResNet(n_mid, n_mid) for _ in range(19)]
         self.layer = nn.ModuleList(layer)
@@ -60,6 +62,7 @@ class New_Dual_Net(nn.Module):
 
         self.loss_fn = Dual_Loss()
         self.filtered_softmax = filtered_softmax()
+        self.n_mid = n_mid
 
     #@profile
     def forward(self, states,target=False):
@@ -70,6 +73,9 @@ class New_Dual_Net(nn.Module):
         follower_abilities = states['follower_abilities']
         able_to_evo = states['able_to_evo']
         detailed_action_codes = states['detailed_action_codes']
+        class_datas = values['class_datas']
+
+        #print("x5:{}".format(x5.size()))
         x1 = F.relu(self.lin1(values['life_datas']))
 
         pp_datas = F.relu(self.lin2(values['pp_datas']))
@@ -113,7 +119,12 @@ class New_Dual_Net(nn.Module):
 
         x3 = torch.sum(torch.stack(x3, dim=2), dim=2)
         x4 = torch.sum(torch.stack(x4, dim=2), dim=2)
-        x = x1 + x2 + x3 + x4
+        x5 = self.emb9(class_datas).view(-1,2*self.n_mid)
+        #print("x1:{},x2:{},x3:{},x4:{}".format(x1.size(),x2.size(),x3.size(),x4.size()))
+        #x = x1 + x2 + x3 + x4
+        x6 = torch.cat([x1,x2,x3,x4,x5],dim=1)
+        x = self.fc0(x6)
+        #print(x6.size())
         x = F.relu(self.fc1(x))
         for i in range(19):
             x = self.layer[i](x)
@@ -280,13 +291,15 @@ def get_data(f,player_num=0):
             follower_stats.append([0, 0])
             follower_abilities.append([])
             amulet_card_ids.append(0)
-    life_data = [player.life, opponent.life, len(player.hand),len(opponent.hand) ,f.current_turn[player_num]]
+    life_data = [player.life, opponent.life,len(player.hand),len(opponent.hand) ,f.current_turn[player_num]]
     pp_data = [f.cost[player_num],f.remain_cost[player_num]]
     able_to_play = f.get_able_to_play(player)
     able_to_play = [cell+1 for cell in able_to_play]
     able_to_attack = f.get_able_to_attack(player)
     able_to_creature_attack = f.get_able_to_creature_attack(player)
-
+    class_data = [player.deck.leader_class.value,
+                    opponent.deck.leader_class.value]
+    life_data = (life_data, class_data)
     datas = Detailed_State_data(hand_ids, hand_card_costs, follower_card_ids, amulet_card_ids,
                               follower_stats, follower_abilities, able_to_evo, life_data, pp_data,
                               able_to_play, able_to_attack, able_to_creature_attack)
@@ -346,6 +359,7 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
     pp_datas = []
     #values = []
     life_datas = []
+    class_datas = []
     if torch.cuda.is_available() and cuda:
         #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         for data in datas:
@@ -385,7 +399,8 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
             one_hot_able_actions.append(torch.Tensor(tmp).cuda())
             tmp_values = []
             pp_datas.append(torch.Tensor(data.pp_data).cuda())
-            life_datas.append(torch.Tensor(data.life_data).cuda())
+            life_datas.append(torch.Tensor(data.life_data[0]).cuda())
+            class_datas.append(torch.LongTensor(data.life_data[1]).cuda())
     else:
         for data in datas:
             for i in range(9):
@@ -424,10 +439,12 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
             one_hot_able_actions.append(torch.Tensor(tmp))
             tmp_values = []
             pp_datas.append(torch.Tensor(data.pp_data))
-            life_datas.append(torch.Tensor(data.life_data))
+            life_datas.append(torch.Tensor(data.life_data[0]))
+            class_datas.append(torch.LongTensor(data.life_data[1]))
     ans = None
     if torch.cuda.is_available() and cuda:
         ans = {'values': {'life_datas': torch.stack(life_datas, dim=0).cuda(),
+                          'class_datas': torch.stack(class_datas, dim=0).cuda(),
                           'hand_card_costs': [torch.stack(hand_card_costs[i], dim=0) for i in range(9)],
                           'follower_stats': [torch.Tensor(follower_stats[i]).cuda() for i in range(10)],
                           'pp_datas': torch.stack(pp_datas, dim=0).cuda(),
@@ -444,6 +461,7 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
 
     else:
         ans = {'values':{'life_datas':torch.stack(life_datas, dim=0),
+                         'class_datas': torch.stack(class_datas, dim=0),
                          'hand_card_costs': [torch.stack(hand_card_costs[i], dim=0) for i in range(9)],
                          'follower_stats': [torch.Tensor(follower_stats[i]) for i in range(10)],
                          'pp_datas':torch.stack(pp_datas,dim=0),
@@ -574,18 +592,21 @@ if __name__ == "__main__":
     for epoch in range(epoch_num):
         print("epoch {}".format(epoch+1))
         R = New_Dual_ReplayMemory(100000)
-        p1 = Player(9, True, policy=AggroPolicy())
-        if args.mcts == "OM":
-            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net,cuda=cuda_flg))
-        elif mcts:
-            p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
+        #p1 = Player(9, True, policy=AggroPolicy())
+        #if args.mcts == "OM":
+        #    p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net,cuda=cuda_flg))
+        #elif mcts:
+        #    p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
+        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg))
         p1.name = "Alice"
-        p2 = Player(9, False, policy=AggroPolicy())
-        if args.mcts == "OM":
-            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net,cuda=cuda_flg))
-        elif mcts:
-            p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
+        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg))
         p2.name = "Bob"
+        #p2 = Player(9, False, policy=AggroPolicy())
+        #if args.mcts == "OM":
+        #    p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net,cuda=cuda_flg))
+        #elif mcts:
+        #    p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
+        #p2.name = "Bob"
         win_num = 0
         for episode in tqdm(range(episode_len)):
             f = Field(5)

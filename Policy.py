@@ -3412,8 +3412,9 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                 self.uct_search(player, opponent, field,use_existed_node=True)
 
             else:
-                self.current_node = None
-                return self.decide(player, opponent, field)
+                self.uct_search(player, opponent, field)
+                #self.current_node = None
+                #return self.decide(player, opponent, field)
                 #return Action_Code.ERROR.value,"No hit",None
 
             if not field.secret:
@@ -3769,6 +3770,8 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
 
     def execute_best(self, node, player_num=0):
         children = node.child_nodes
+        if len(children) == 0:
+            return node, (Action_Code.TURN_END.value, "no children", 0)
         action_uct_values = {}
         action_2_node = {}
         for i in range(len(children)):
@@ -3792,8 +3795,8 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
             action_2_node[action].append(children[i])
         max_value = None
         max_value_action = None
-        if len(action_uct_values) == 0:
-            return None, (Action_Code.ERROR.value, 0, 0)
+        #if len(action_uct_values) == 0:
+        #    return node, (Action_Code.ERROR.value, 0, 0)
         for key in list(action_uct_values.keys()):
             values = action_uct_values[key]
             weights = [cell.visit_num for cell in action_2_node[key]]
