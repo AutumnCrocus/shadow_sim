@@ -37,4 +37,4 @@ jobs:
 
     - name: Run Test
       run: |
-        python3 test.py --N 1000 --playertype1 2 --playertype2 2 --decklist "0,1,2,4,5,10,13" --mode mirror
+        python3 test.py --N 10 --playertype1 29 --playertype2 29 --decklist "0,1,2,4,5,10,13" --mode mirror --model_name Multi_Dual_2020_3_28_19_8_51_6%.pth
