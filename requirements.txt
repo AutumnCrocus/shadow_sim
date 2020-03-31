@@ -5,7 +5,7 @@ attrs==17.4.0
 Automat==0.6.0
 backcall==0.1.0
 bcrypt==3.1.7
-bleach==3.1.0
+bleach==3.1.4
 blinker==1.4
 cached-property==1.5.1
 certifi==2018.1.18
