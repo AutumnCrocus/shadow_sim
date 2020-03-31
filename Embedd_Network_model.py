@@ -201,13 +201,9 @@ class Dual_Loss(nn.Module):
             torch.pow((z - v),2),
             dim=1)
         MSE = torch.mean(loss)
-        #CEE = []
-        #for i in range(p.size()[0]):
-        #    CEE.append(-torch.log(p[i][pai[i]]))
-        #CEE = torch.mean(torch.stack(CEE,dim=1))
         CEE = torch.mean(torch.stack([-torch.log(p[i][pai[i]]+1.0e-8) for i in range(p.size()[0])],dim=1))
         #pai = pai.t()[0]
-        #CEE = self.cross_entropy(p,pai)
+        #CEE = self.cross_entropy(p,pai)#softmaxも含まれている
         loss = MSE + CEE
         #L2正則化はoptimizer
 
@@ -417,39 +413,6 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
 
 
 def Detailed_action_code_2_Tensor(action_codes, cuda = False):
-    """
-    tensor_action_categories = [[] for _ in range(45)]
-    tensor_play_card_ids_in_action = [[] for _ in range(45)]
-    tensor_attacking_card_ids_in_action = [[] for _ in range(45)]
-    tensor_attacked_card_ids_in_action = [[] for _ in range(45)]
-    tensor_evolving_card_ids_in_action = [[] for _ in range(45)]
-    tensor_field_card_ids_in_action = [[] for _ in range(45)]
-    #([...]*batch_size)*45→([...]*45)*batch_size
-    able_to_choice = []
-    if torch.cuda.is_available() and cuda:
-        for action_code in action_codes:
-            for i in range(45):
-                target_action = action_code['action_codes'][i]
-                tensor_action_categories[i].append(torch.LongTensor([target_action[0]]).cuda())
-                tensor_play_card_ids_in_action[i].append(torch.LongTensor([target_action[1]]).cuda())
-                tensor_field_card_ids_in_action[i].append(torch.LongTensor([target_action[2:5]]).cuda())
-            able_to_choice.append(torch.Tensor(action_code['able_to_choice']).cuda())
-
-    else:
-        for action_code in action_codes:
-            for i in range(45):
-                target_action = action_code['action_codes'][i]
-                tensor_action_categories[i].append(torch.LongTensor([target_action[0]]))
-                tensor_play_card_ids_in_action[i].append(torch.LongTensor([target_action[1]]))
-                tensor_field_card_ids_in_action[i].append(torch.LongTensor([target_action[2:5]]))
-            able_to_choice.append(torch.Tensor(action_code['able_to_choice']))
-
-
-    action_codes_dict = {'action_categories': [torch.stack(tensor_action_categories[i], dim=0) for i in range(45)],
-                         'play_card_ids': [torch.stack(tensor_play_card_ids_in_action[i], dim=0) for i in range(45)],
-                         'field_card_ids':[torch.stack(tensor_field_card_ids_in_action[i], dim=0) for i in range(45)],
-                         'able_to_choice': torch.stack(able_to_choice,dim=0)}
-    """
     tensor_action_categories = []
     tensor_play_card_ids_in_action = []
     tensor_field_card_ids_in_action = []
@@ -552,21 +515,10 @@ if __name__ == "__main__":
     for epoch in range(epoch_num):
         print("epoch {}".format(epoch+1))
         R = New_Dual_ReplayMemory(100000)
-        #p1 = Player(9, True, policy=AggroPolicy())
-        #if args.mcts == "OM":
-        #    p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net,cuda=cuda_flg))
-        #elif mcts:
-        #    p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
         p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg))
         p1.name = "Alice"
         p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg))
         p2.name = "Bob"
-        #p2 = Player(9, False, policy=AggroPolicy())
-        #if args.mcts == "OM":
-        #    p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net,cuda=cuda_flg))
-        #elif mcts:
-        #    p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
-        #p2.name = "Bob"
         win_num = 0
         for episode in tqdm(range(episode_len)):
             f = Field(5)
