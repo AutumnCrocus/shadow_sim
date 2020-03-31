@@ -1088,7 +1088,7 @@ class Field:
                 for i, hand_card in enumerate(self.players[player_num].hand):
                     if i == itself_index:
                         continue
-                    if i <= itself_index:
+                    if i < itself_index:
                         regal_targets.append(i)
                     else:
                         regal_targets.append(i - 1)
@@ -1179,7 +1179,7 @@ class Field:
                 for i in range(len(self.players[player_num].hand)):
                     if i == itself_index:
                         continue
-                    if i <= itself_index:
+                    if i < itself_index:
                         if regulation_func(self.players[player_num].hand[i]):
                             regal_targets.append(i)
                     else:

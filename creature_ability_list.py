@@ -511,10 +511,14 @@ def creature_ability_065(field, player, opponent, virtual, target, itself):
         if creature.card_category != "Creature":
             mylogger.info("target_id:{} name:{}".format(target, creature.name))
             mylogger.info("real")
+            mylogger.info("hand_regal_targets:{}".format(field.get_regal_target_dict(player,opponent)))
             player.show_hand()
             field.show_field()
             mylogger.info("sim")
             sim_field = player.policy.prev_node.field
+            sim_player = sim_field.players[player.player_num]
+            sim_opponent = sim_field.players[opponent.player_num]
+            mylogger.info("hand_regal_targets:{}".format(sim_field.get_regal_target_dict(sim_player,sim_opponent)))
             sim_player = sim_field.players[player.player_num]
             sim_player.show_hand()
             sim_field.show_field()

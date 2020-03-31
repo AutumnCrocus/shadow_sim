@@ -29,7 +29,7 @@ class Player:
         self.name = None
         self.class_num = None
         self.effect = []
-
+        self.error_count = 0
 
 
     def get_copy(self, field):
@@ -255,11 +255,18 @@ class Player:
         (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
         #action_histroy.appendleft((action_num,card_id,target_id))
         if action_num == Action_Code.ERROR.value:
-            mylogger.info(self.policy.type)
-            self.policy.starting_node.print_node()
-            assert False
+            #self.policy.starting_node.print_node()
+            #assert False
+            self.error_count += 1
+            if self.error_count >= 3:
+                self.policy.starting_node.print_tree()
+                print((action_num, card_id, target_id))
+                field.show_field()
+                mylogger.info("{}".format(self.policy.type))
+                self.policy.current_node.print_tree(single=True)
+                assert False
             self.policy.current_node = None
-
+            return self.decide(player, opponent, field, virtual,dual)
 
             #continue
 
@@ -268,6 +275,7 @@ class Player:
 
             action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,
                     action_code=(action_num, card_id, target_id), msg = action_num)
+        self.error_count = 0
         """
         while True:
             policy_count += 1

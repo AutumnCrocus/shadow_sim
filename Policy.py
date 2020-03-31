@@ -5300,7 +5300,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         if node.parent_node.node_id_2_edge_action[id(node)][0] == Action_Code.TURN_END.value:
             if len(node.parent_node.edge_action_2_node_id) > 1:
                 value = -1.0
-        assert abs(value) <= 1.0,"value:{}".format(value)
+        #assert abs(value) <= 1.0,"value:{}".format(value)
         return value
 
     def state_value(self, node, player_num):

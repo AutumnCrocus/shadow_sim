@@ -1,10 +1,10 @@
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count
 
 try:
-    #set_start_method('spawn')
-    #print("spawn is run.")
-    set_start_method('fork')
-    print('fork')
+    set_start_method('spawn')
+    print("spawn is run.")
+    #set_start_method('fork') GPU使用時CUDA initializationでerror
+    #print('fork')
 except RuntimeError:
     pass
 from test import *  # importの依存関係により必ず最初にimport
@@ -18,6 +18,8 @@ import copy
 import datetime
 # net = New_Dual_Net(100)
 import os
+
+
 
 Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
                                            'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
@@ -94,10 +96,11 @@ def preparation(episode_data):
 import itertools
 
 def multi_train(data):
-    net, dataset = data
+    net, memory = data
     optimizer =  optim.Adam(net.parameters(), weight_decay=0.01)
+    all_loss, MSE, CEE = 0, 0, 0
     optimizer.zero_grad()
-    states, actions, rewards = dataset
+    states, actions, rewards = memory
     states['target'] = {'actions': actions, 'rewards': rewards}
     p, v, loss = net(states, target=True)
     z = rewards
@@ -110,21 +113,20 @@ def multi_train(data):
     optimizer.step()
     return all_loss, MSE, CEE
 
+from test import *  # importの依存関係により必ず最初にimport
+from Field_setting import *
+from Player_setting import *
+from Policy import *
+from Game_setting import Game
 
-if __name__ == "__main__":
-
+def run_main():
+    global Global_R
     p_size = 3#cpu_count() - 1#int(torch.cuda.is_available()) * 4 + 4
     if torch.cuda.is_available():
         p_size = 2
     print("use cpu num:{}".format(p_size))
 
 
-
-    from test import *  # importの依存関係により必ず最初にimport
-    from Field_setting import *
-    from Player_setting import *
-    from Policy import *
-    from Game_setting import Game
     parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')
 
     parser.add_argument('--episode_num', help='試行回数')
@@ -135,6 +137,7 @@ if __name__ == "__main__":
     parser.add_argument('--deck', help='サンプリングに用いるデッキの選び方')
     parser.add_argument('--cuda', help='gpuを使用するかどうか')
     parser.add_argument('--multi_train',help="学習時も並列化するかどうか")
+    parser.add_argument('--epoch_interval', help="モデルの保存間隔")
     args = parser.parse_args()
     cuda_flg = args.cuda == "True"
     net = New_Dual_Net(100)
@@ -145,7 +148,7 @@ if __name__ == "__main__":
     deck_sampling_type = False
     if args.deck is not None:
         deck_sampling_type = True
-
+    epoch_interval = int(args.epoch_interval) if args.epoch_interval is not None else 10
     G = Game()
     #Over_all_R = New_Dual_ReplayMemory(100000)
     episode_len = 100
@@ -168,7 +171,7 @@ if __name__ == "__main__":
     print(t1)
     #print(net)
     prev_net = copy.deepcopy(net)
-
+    optimizer = optim.Adam(net.parameters(), weight_decay=0.01)
     for epoch in range(epoch_num):
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
@@ -229,34 +232,52 @@ if __name__ == "__main__":
 
         print("sample_size:{}".format(len(R.memory)))
         prev_net = copy.deepcopy(net)
-        optimizer = optim.Adam(net.parameters(), weight_decay=0.01)
+
         sum_of_loss = 0
         sum_of_MSE = 0
         sum_of_CEE = 0
         p, pai, z, states = None, None, None, None
         if args.multi_train is not None:
             net.share_memory()
-            iter_data = [[net, R.sample(batch_size)] for i in range(iteration)]
+            block_size = iteration // p_size
+            remainder = iteration % p_size
+
+            iter_data = [[net,R.sample(batch_size)] for i in range(iteration)]
             pool = Pool(p_size)  # 最大プロセス数:8
             #loss_data = pool.map(multi_train, iter_data)
             imap = pool.imap(multi_train, iter_data)
             loss_data = list(tqdm(imap, total=iteration))
+            #[(1,1,1),(),()]
+            sum_of_loss = sum(map(lambda data: data[0], loss_data))
+            sum_of_MSE = sum(map(lambda data: data[1], loss_data))
+            sum_of_CEE = sum(map(lambda data: data[2], loss_data))
 
             pool.close()  # add this.
             pool.terminate()  # add this.
-            sum_of_loss = sum(map(lambda data: data[0],loss_data))
-            sum_of_MSE = sum(map(lambda data: data[1], loss_data))
-            sum_of_CEE = sum(map(lambda data: data[2], loss_data))
+
         else:
             for i in tqdm(range(iteration)):
+            #for i in range(iteration):
+                #print("\ni:{}\n".format(i))
                 states, actions, rewards = R.sample(batch_size)
-                optimizer.zero_grad()
-
+                #optimizer.zero_grad()
                 states['target'] = {'actions': actions, 'rewards': rewards}
                 p, v, loss = net(states, target=True)
                 z = rewards
                 pai = actions  # 45種類の抽象化した行動
-                #loss.backward()
+                #if (i + 1) % 100 == 0:
+                #    print("target:{} output:{}".format(z[0], v[0]))
+                #    print("target:{} output:{}\n {}".format(pai[0], p[0], p[0][pai[0]]))
+                    #    #print("loss:{}".format([loss[j].item() for j in range(3)]))
+                #if True in torch.isnan(loss[0]):
+                #    # section 3
+                #    net = current_net
+                #    optimizer = torch.optim.Adam(net.parameters())
+                #    optimizer.load_state_dict(prev_optimizer.state_dict())
+                #else:
+                #    current_net = copy.deepcopy(net)
+                #    prev_optimizer = copy.deepcopy(optimizer)
+                optimizer.zero_grad()
                 loss[0].backward()
                 sum_of_loss += float(loss[0].item())
                 sum_of_MSE += float(loss[1].item())
@@ -267,7 +288,7 @@ if __name__ == "__main__":
               .format(sum_of_loss/iteration,sum_of_MSE/iteration,sum_of_CEE/iteration))
         t4 = datetime.datetime.now()
         print(t4-t3)
-        if epoch_num > 4 and (epoch+1) % (epoch_num//4) == 0 and epoch+1 < epoch_num:
+        if epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num:
             PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{:.0%}.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                  t1.second, (epoch+1)/epoch_num)
             if torch.cuda.is_available() and cuda_flg:
@@ -289,5 +310,9 @@ if __name__ == "__main__":
     t2 = datetime.datetime.now()
     print(t2)
     print(t2-t1)
+
+
+if __name__ == "__main__":
+    run_main()
 
 
