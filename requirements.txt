@@ -8,7 +8,7 @@ testpath==0.4.2
 tqdm==4.32.2
 numba
 pandas
-torch
+torch==1.4.0
 torchvision
 matplotlib
 pytorch_memlab
