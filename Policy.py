@@ -5246,6 +5246,9 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
         if not field.secret and self.prev_node is not None:
             pai = self.prev_node.pai
+            sim_field = self.prev_node.field
+            sim_player = sim_field.players[player.player_num]
+            sim_opponent = sim_field.players[opponent.player_num]
             if type(pai) != list:
                 mylogger.info("action probability distribution")
                 #print(pai)
@@ -5256,22 +5259,23 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                             txt = "{:<40}".format(Action_Code.TURN_END.name)
 
                         elif action_code_id >= 1 and action_code_id <= 9:
-                            txt = "{},{}".format(Action_Code.PLAY_CARD.name, player.hand[action_code_id-1].name)
+                            assert action_code_id-1 < len(sim_player.hand),"over_id!".format(sim_player.show_hand())
+                            txt = "{},{}".format(Action_Code.PLAY_CARD.name, sim_player.hand[action_code_id-1].name)
 
                         elif action_code_id >= 10 and action_code_id <= 34:
                             attacking_id  = (action_code_id - 10) // 5
                             attacked_id = action_code_id % 5
                             txt = "{},{},{}".format(Action_Code.ATTACK_TO_FOLLOWER.name,
-                                                 field.card_location[player.player_num][attacking_id].name,
-                                                 field.card_location[opponent.player_num][attacked_id].name)
+                                                 sim_field.card_location[player.player_num][attacking_id].name,
+                                                 sim_field.card_location[opponent.player_num][attacked_id].name)
                         elif action_code_id >= 35 and action_code_id <= 39:
                             attacking_id = action_code_id - 35
                             txt = "{},{}".format(Action_Code.ATTACK_TO_PLAYER.name,
-                                                 field.card_location[player.player_num][attacking_id].name)
+                                                 sim_field.card_location[player.player_num][attacking_id].name)
                         elif action_code_id <= 44:
                             evolving_id = action_code_id - 40
                             txt = "{},{}".format(Action_Code.EVOLVE.name,
-                                                 field.card_location[player.player_num][evolving_id].name)
+                                                 sim_field.card_location[player.player_num][evolving_id].name)
                         else:
                             assert False
 

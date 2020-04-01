@@ -7,7 +7,9 @@ mylogger = get_module_logger(__name__)
 
 def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
     player = field.players[player_num]
+    opponent = field.players[1-player_num]
     sim_player = sim_field.players[player.player_num]
+    sim_opponent = sim_field.players[opponent.player_num]
     action_num, card_id, target_id = action_code
     prev_card_id = int(card_id)
     prev_target_id = copy.copy(target_id)
@@ -157,14 +159,17 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 mylogger.info("second target is not found.\n")
             elif target_type == Target_Type.CARD_IN_HAND.value:
                 if action_num == Action_Code.PLAY_CARD.value:
-                    itself_index = sim_player.hand.index(sim_player.hand[prev_card_id])
-                    real_index = player.hand.index(player.hand[card_id])
-                    if prev_target_id > itself_index:
+                    #itself_index = sim_player.hand.index(sim_player.hand[prev_card_id])
+                    #real_index = player.hand.index(player.hand[card_id])
+                    if prev_target_id >= prev_card_id:
                         prev_target_id += 1
                     targeted_card = sim_player.hand[prev_target_id]
+                    regal_target = field.get_regal_target_dict(player,opponent)[card_id]
                     for i, hand_card in enumerate(player.hand):
                         if hand_card.eq(targeted_card):
-                            if i > real_index:
+                            if i == card_id:
+                                continue
+                            if i > card_id:
                                 target_id = i - 1
                             else:
                                 target_id = i

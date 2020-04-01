@@ -19,13 +19,29 @@ import datetime
 # net = New_Dual_Net(100)
 import os
 
+parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')
 
+parser.add_argument('--episode_num', help='試行回数')
+parser.add_argument('--iteration_num', help='イテレーション数')
+parser.add_argument('--epoch_num', help='エポック数')
+parser.add_argument('--batch_size', help='バッチサイズ')
+parser.add_argument('--mcts', help='サンプリングAIをMCTSにする(オリジナルの場合は[OM])')
+parser.add_argument('--deck', help='サンプリングに用いるデッキの選び方')
+parser.add_argument('--cuda', help='gpuを使用するかどうか')
+parser.add_argument('--multi_train', help="学習時も並列化するかどうか")
+parser.add_argument('--epoch_interval', help="モデルの保存間隔")
+parser.add_argument('--fixed_deck_id', help="使用デッキidの固定")
+parser.add_argument('--cpu_num', help="使用CPU数",default=2 if torch.cuda.is_available() else 3)
+parser.add_argument('--batch_num', help='サンプルに対するバッチの数')
+args = parser.parse_args()
+deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
 
 Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
                                            'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
                                            'life_data', 'pp_data', 'able_to_play', 'able_to_attack',
                                            'able_to_creature_attack'))
-
+cpu_num = int(args.cpu_num)
+batch_num = int(args.batch_num) if args.batch_num is not None else None
 G = Game()
 
 def preparation(episode_data):
@@ -34,8 +50,12 @@ def preparation(episode_data):
     f = Field(5)
     p1 = episode_data[1].get_copy(f)
     p2 = episode_data[2].get_copy(f)
-    deck_type1 = random.choice(list(key_2_tsv_name.keys()))
-    deck_type2 = random.choice(list(key_2_tsv_name.keys()))
+    if deck_flg is None:
+        deck_type1 = random.choice(list(key_2_tsv_name.keys()))
+        deck_type2 = random.choice(list(key_2_tsv_name.keys()))
+    else:
+        deck_type1 = deck_flg
+        deck_type2 = deck_flg
     d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
     d1.set_leader_class(key_2_tsv_name[deck_type1][1])
     d2 = tsv_to_deck(key_2_tsv_name[deck_type2][0])
@@ -120,25 +140,11 @@ from Policy import *
 from Game_setting import Game
 
 def run_main():
-    global Global_R
-    p_size = 3#cpu_count() - 1#int(torch.cuda.is_available()) * 4 + 4
-    if torch.cuda.is_available():
-        p_size = 2
+    p_size = cpu_num
     print("use cpu num:{}".format(p_size))
 
 
-    parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')
 
-    parser.add_argument('--episode_num', help='試行回数')
-    parser.add_argument('--iteration_num', help='イテレーション数')
-    parser.add_argument('--epoch_num', help='エポック数')
-    parser.add_argument('--batch_size', help='バッチサイズ')
-    parser.add_argument('--mcts', help='サンプリングAIをMCTSにする(オリジナルの場合は[OM])')
-    parser.add_argument('--deck', help='サンプリングに用いるデッキの選び方')
-    parser.add_argument('--cuda', help='gpuを使用するかどうか')
-    parser.add_argument('--multi_train',help="学習時も並列化するかどうか")
-    parser.add_argument('--epoch_interval', help="モデルの保存間隔")
-    args = parser.parse_args()
     cuda_flg = args.cuda == "True"
     net = New_Dual_Net(100)
     if torch.cuda.is_available() and cuda_flg:
@@ -256,10 +262,13 @@ def run_main():
             pool.terminate()  # add this.
 
         else:
+            batch = len(R.memory) // batch_num if batch_num is not None else batch_size
+            print("batch_size:{}".format(batch))
             for i in tqdm(range(iteration)):
             #for i in range(iteration):
                 #print("\ni:{}\n".format(i))
-                states, actions, rewards = R.sample(batch_size)
+
+                states, actions, rewards = R.sample(batch)
                 #optimizer.zero_grad()
                 states['target'] = {'actions': actions, 'rewards': rewards}
                 p, v, loss = net(states, target=True)
