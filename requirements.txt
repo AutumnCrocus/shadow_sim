@@ -1,5 +1,5 @@
-Pillow==6.0.0
-PyYAML==3.12
+Pillow==6.2.0
+pyyaml>=4.2b1
 Cython
 scikit-learn
 termcolor==1.1.0
