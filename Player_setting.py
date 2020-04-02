@@ -36,14 +36,14 @@ class Player:
         player = Player(self.max_hand_num, first=self.is_first, policy=self.policy, mulligan=self.mulligan_policy)
         #for card in self.hand:
         #    player.hand.append(card.get_copy())
-        player.hand = list(map(field.copy_func,self.hand))
+        player.hand = list(map(field.copy_func,self.hand)) if field is not None else []
         player.life = self.life
         player.deck = Deck()
         if self.deck is not None:
             player.deck.set_leader_class(self.deck.leader_class.name)
             #for i,card in enumerate(self.deck.deck):
             #    player.deck.append(card)
-            player.deck.deck = deque(map(field.copy_func, self.deck.deck))
+            player.deck.deck = deque(map(field.copy_func, self.deck.deck)) if field is not None else deque()
             player.deck.remain_num = int(self.deck.remain_num)
 
         player.field = field
