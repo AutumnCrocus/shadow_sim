@@ -153,7 +153,8 @@ class Player:
         length = 0
         print("Player", self.player_num + 1, "'s hand")
         print("====================================================================")
-        for i in range(len(self.hand)):
+        hand_len = len(self.hand)
+        for i in range(hand_len):
             print(i, ": ", self.hand[i])
             length = i
         print("====================================================================")
@@ -170,7 +171,8 @@ class Player:
         self.draw(deck, len(return_cards))
         if not virtual:
             self.show_hand()
-        for i in range(len(return_cards)):
+        return_cards_len = len(return_cards)
+        for i in range(return_cards_len):
             deck.append(return_cards.pop())
 
         deck.shuffle()
@@ -332,10 +334,11 @@ class HumanPlayer(Player):
     def mulligan(self, deck, virtual=False):
         self.show_hand()
         tmp = input("input change card id(if you want to change all card,input ↑):")
+        hand_len = len(self.hand)
         if tmp == "":
             return
         elif tmp == "\x1b[A":
-            tmp = [i for i in range(len(self.hand))]
+            tmp = [i for i in range(hand_len )]
         else:
             tmp = tmp.split(",")
         # mylogger.info("tmp:{} type:{}".format(tmp, type(tmp)))
@@ -345,7 +348,8 @@ class HumanPlayer(Player):
             return_cards = [self.hand.pop(i) for i in change_cards_id[::-1]]
             self.draw(deck, len(return_cards))
             self.show_hand()
-            for i in range(len(return_cards)):
+            return_cards_len = len(return_cards)
+            for i in range(return_cards_len):
                 deck.append(return_cards.pop())
 
             deck.shuffle()

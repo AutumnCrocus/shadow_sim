@@ -26,7 +26,7 @@ import warnings
 
 def tsv_to_card_list(tsv_name):
     card_list = {}
-    card_category = list(tsv_name.split("_"))[1]
+    card_category = tuple(tsv_name.split("_"))[1]
     with open("Card_List_TSV/" + tsv_name) as f:
         reader = csv.reader(f, delimiter='\t', lineterminator='\n')
         for row in reader:
@@ -62,7 +62,7 @@ def tsv_to_card_list(tsv_name):
                     has_count = int(row[-1])
                 ability = []
                 if row[3] != "":
-                    txt = list(row[3].split(","))
+                    txt = tuple(row[3].split(","))
                     ability = [int(ele) for ele in txt]
                 card_list[card_id].append(ability)
 
@@ -72,8 +72,8 @@ def tsv_to_card_list(tsv_name):
             else:
                 assert False, "{}".format(card_category)
             if card_class == LeaderClass["RUNE"].value:
-                spell_boost = list(row[-3 - int(card_category == "Amulet")].split(","))
-                check_spellboost = [bool(int(spell_boost[i])) for i in range(2)]
+                spell_boost = tuple(row[-3 - int(card_category == "Amulet")].split(","))
+                check_spellboost = [bool(int(cell)) for cell in spell_boost]
                 card_list[card_id].append([card_class, check_spellboost, card_traits])
             else:
                 card_list[card_id].append([card_class, card_traits])
@@ -84,7 +84,7 @@ def tsv_to_card_list(tsv_name):
 
 
 def tsv_to_dataframe(tsv_name):
-    card_category = list(tsv_name.split("_"))[1]
+    card_category = tuple(tsv_name.split("_"))[1]
     my_columns = []
     sample = []
     assert card_category in ["Creature", "Spell", "Amulet"]
@@ -122,7 +122,7 @@ def tsv_to_dataframe(tsv_name):
                 toughness = int(row[4])
                 ability = []
                 if row[5] != "":
-                    txt = list(row[5].split(","))
+                    txt = tuple(row[5].split(","))
                     ability = [KeywordAbility(int(ele)).value for ele in txt]
                 data.extend([power, toughness, ability])
             elif card_category == "Amulet":
@@ -133,7 +133,7 @@ def tsv_to_dataframe(tsv_name):
                     has_count = int(row[-1])
                 ability = []
                 if row[3] != "":
-                    txt = list(row[3].split(","))
+                    txt = tuple(row[3].split(","))
                     ability = [KeywordAbility(int(ele)).value for ele in txt]
                 data.append(ability)
 
@@ -143,7 +143,7 @@ def tsv_to_dataframe(tsv_name):
             else:
                 assert False, "{}".format(card_category)
             if card_class == LeaderClass["RUNE"].name:
-                spell_boost = list(row[-3 - int(card_category == "Amulet")].split(","))
+                spell_boost = tuple(row[-3 - int(card_category == "Amulet")].split(","))
                 check_spellboost = [bool(int(spell_boost[i])) for i in range(2)]
                 spell_boost_type = "None"
                 if check_spellboost[0]:
@@ -177,7 +177,7 @@ def tsv_2_ability_dict(file_name, name_to_id=None):
 creature_list = tsv_to_card_list("New-All_Creature_Card_List.tsv")
 
 creature_name_to_id = {}
-for key in list(creature_list.keys()):
+for key in tuple(creature_list.keys()):
     creature_name_to_id[creature_list[key][-1]] = key
 creature_fanfare_ability = tsv_2_ability_dict("All_fanfare_list.tsv", name_to_id=creature_name_to_id)
 creature_lastword_ability = tsv_2_ability_dict("All_lastword_list.tsv", name_to_id=creature_name_to_id)
@@ -278,7 +278,7 @@ active_ability_check_func_list = {
 
 spell_list = tsv_to_card_list("New-All_Spell_Card_List.tsv")
 spell_name_to_id = {}
-for key in list(spell_list.keys()):
+for key in tuple(spell_list.keys()):
     spell_name_to_id[spell_list[key][-1]] = key
 spell_triggered_ability = tsv_2_ability_dict("All_spell_effect_list.tsv", name_to_id=spell_name_to_id)
 spell_has_target = tsv_2_ability_dict("All_spell_target_list.tsv", name_to_id=spell_name_to_id)
@@ -314,7 +314,7 @@ spell_accelerate_target_regulation_list = {}
 # amulet_list=tsv_to_card_list("ALL_Amulet_Card_List.tsv")
 amulet_list = tsv_to_card_list("New-All_Amulet_Card_List.tsv")
 amulet_name_to_id = {}
-for key in list(amulet_list.keys()):
+for key in tuple(amulet_list.keys()):
     amulet_name_to_id[amulet_list[key][-1]] = key
 Earth_sigil_list = [-1, 15, 16]
 amulet_start_of_turn_ability = {
@@ -373,14 +373,14 @@ amulet_active_ability_list = {}
 class_card_list = {}
 for i in range(9):
     class_card_list[i] = {"Creature": {}, "Spell": {}, "Amulet": {}}
-for i in list(creature_list):
-    class_num = creature_list[i][4][0]
+for data in creature_list:
+    class_num = data[4][0]
     class_card_list[class_num]["Creature"][i] = creature_list[i]
-for i in list(spell_list):
-    class_num = spell_list[i][1][0]
+for data in spell_list:
+    class_num = data[1][0]
     class_card_list[class_num]["Spell"][i] = spell_list[i]
-for i in list(amulet_list):
-    class_num = amulet_list[i][2][0]
+for data in amulet_list:
+    class_num = data[2][0]
     class_card_list[class_num]["Amulet"][i] = amulet_list[i]
 
 
@@ -1042,7 +1042,7 @@ class Deck:
     def show_remain_card_set(self):
         remain_card_set = self.get_remain_card_set()
         print("remain_cards_in_deck")
-        for key in sorted(list(remain_card_set.keys())):
+        for key in sorted(tuple(remain_card_set.keys())):
             print("{}:{}".format(key, remain_card_set[key]))
         print("")
     """

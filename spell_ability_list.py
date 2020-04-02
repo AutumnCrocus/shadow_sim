@@ -229,7 +229,8 @@ def spell_ability_030(field, player, opponent, virtual, target, itself):
 
 
 def spell_ability_031(field, player, opponent, virtual, target, itself):
-    for i in range(len(player.hand)):
+    hand_len = len(player.hand)
+    for i in range(hand_len):
         get_damage_to_random_creature(field, opponent, virtual, num=1)
 
 

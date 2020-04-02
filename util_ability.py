@@ -363,7 +363,8 @@ def put_card_from_deck_in_play(field, player, virtual, condition=None):
 
 
 def put_cards_into_deck(field, player, cards, virtual):
-    final_len = range(len(player.deck.deck) + len(cards))
+    sum_len = len(player.deck.deck) + len(cards)
+    final_len = range(sum_len)
     insert_locations = random.sample(final_len, len(cards))
     inserts = dict(zip(insert_locations, cards))
     inputs = iter(player.deck.deck)

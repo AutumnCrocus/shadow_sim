@@ -55,33 +55,50 @@ class Field:
             assert False, "NoImplemented"
         if len(self.card_location[0]) != len(other.card_location[0]): return False
         if len(self.card_location[1]) != len(other.card_location[1]): return False
-        for i in range(2):
-            observable = self.get_observable_data(player_num=i)
-            other_observable = other.get_observable_data(player_num=i)
-            for key in list(observable.keys()):
-                for second_key in list(observable[key].keys()):
-                    if observable[key][second_key] != other_observable[key][second_key]:
-                        return False
+        observable = self.get_observable_data(player_num=0)
+        other_observable = other.get_observable_data(player_num=0)
+        for key in list(observable.keys()):
+            player_first = observable[key]
+            other_first = other_observable[key]
+            for second_key in list(observable[key].keys()):
+                if player_first[second_key] !=other_first[second_key]:
+                    return False
+
+        observable = self.get_observable_data(player_num=1)
+        other_observable = other.get_observable_data(player_num=1)
+        for key in list(observable.keys()):
+            player_first = observable[key]
+            other_first = other_observable[key]
+            for second_key in list(observable[key].keys()):
+                if player_first[second_key] !=other_first[second_key]:
+                    return False
         #仮実装
         self.play_cards.play_cards_set()
         other.play_cards.play_cards_set()
         for i in range(2):
-            for j in range(len(self.card_location[i])):
+            i_len = len(self.card_location[i])
+            for j in range(i_len):
                 first_card = self.card_location[i][j]
                 second_card = other.card_location[i][j]
                 if not first_card.eq(second_card):
                     return False
-            for cost_key in sorted(list(self.play_cards.name_list[i].keys())):
-                if cost_key not in other.play_cards.name_list[i]:
+            player_name_list = self.play_cards.name_list[i]
+            for cost_key in sorted(list(player_name_list.keys())):
+                other_name_list = other.play_cards.name_list[i]
+                if cost_key not in other_name_list:
                     return False
-                for category_key in sorted(list(self.play_cards.name_list[i][cost_key].keys())):
-                    if category_key not in other.play_cards.name_list[i][cost_key]:
+                other_cost_list = other_name_list[cost_key]
+                player_cost_list = player_name_list[cost_key]
+                for category_key in sorted(list(player_cost_list.keys())):
+                    if category_key not in other_cost_list:
                         return False
-                    for name_key in sorted(list(self.play_cards.name_list[i][cost_key][category_key].keys())):
-                        if name_key not in other.play_cards.name_list[i][cost_key][category_key]:
+                    player_category_list = player_cost_list[category_key]
+                    other_category_list = other_cost_list[category_key]
+                    for name_key in sorted(list(player_category_list.keys())):
+                        if name_key not in other_category_list:
                             return False
-                        if other.play_cards.name_list[i][cost_key][category_key][name_key] !=\
-                            self.play_cards.name_list[i][cost_key][category_key][name_key]:
+                        if other_category_list[name_key] !=\
+                            player_category_list[name_key]:
                             return False
 
         return True
@@ -89,9 +106,6 @@ class Field:
     def set_data(self, field):
         self.card_location[0].clear()
         self.card_location[1].clear()
-        #for i in range(2):
-        #    for card in field.card_location[i]:
-        #        self.card_location[i].append(card.get_copy())
         self.card_location[0] = list(map(self.copy_func,field.card_location[0]))
         self.card_location[1] = list(map(self.copy_func,field.card_location[1]))
 
@@ -101,11 +115,19 @@ class Field:
         self.turn_end = field.turn_end
 
         self.graveyard.shadows = [int(field.graveyard.shadows[0]),int(field.graveyard.shadows[1])]
-        for i in range(2):
-            self.drawn_cards.name_list[i] = field.drawn_cards.name_list[i][:]
-            self.play_cards.play_cards[i] = field.play_cards.play_cards[i][:]
-            self.play_cards.played_turn_dict[i] = copy.copy(field.play_cards.played_turn_dict[i])
-            self.graveyard.graveyard[i] = field.graveyard.graveyard[i][:]
+        #for i in range(2):
+        #    self.drawn_cards.name_list[i] = field.drawn_cards.name_list[i][:]
+        #    self.play_cards.play_cards[i] = field.play_cards.play_cards[i][:]
+        #    self.play_cards.played_turn_dict[i] = copy.copy(field.play_cards.played_turn_dict[i])
+        #    self.graveyard.graveyard[i] = field.graveyard.graveyard[i][:]
+        self.drawn_cards.name_list[0] = field.drawn_cards.name_list[0][:]
+        self.play_cards.play_cards[0] = field.play_cards.play_cards[0][:]
+        self.play_cards.played_turn_dict[0] = copy.copy(field.play_cards.played_turn_dict[0])
+        self.graveyard.graveyard[0] = field.graveyard.graveyard[0][:]
+        self.drawn_cards.name_list[1] = field.drawn_cards.name_list[1][:]
+        self.play_cards.play_cards[1] = field.play_cards.play_cards[1][:]
+        self.play_cards.played_turn_dict[1] = copy.copy(field.play_cards.played_turn_dict[1])
+        self.graveyard.graveyard[1] = field.graveyard.graveyard[1][:]
 
 
         self.players[0] = field.players[0].get_copy(field)
@@ -201,17 +223,16 @@ class Field:
         observable_data_dict = {"player": {}, "opponent": {}}
         for key in list(observable_data_dict.keys()):
             player_id = (1 - 2 * int(key != "player")) * player_num + int(key != "player")
-            observable_data_dict[key]["leader_class"] = self.players[player_id].deck.leader_class.name
-            observable_data_dict[key]["life"] = self.players[player_id].life
-            observable_data_dict[key]["max_life"] = self.players[player_id].max_life
-            observable_data_dict[key]["hand_len"] = len(self.players[player_id].hand)
-            observable_data_dict[key]["deck_len"] = len(self.players[player_id].deck.deck)
-            observable_data_dict[key]["shadows"] = self.graveyard.shadows[player_id]
-            observable_data_dict[key]["pp/max_pp"] = (self.remain_cost[player_id], self.cost[player_id])
-            observable_data_dict[key]["evo_point"] = self.evo_point[player_id]
-            #assert all(type(ability) is object for ability in self.player_ability[player_id]),"ability_list:{}"\
-            #    .format(self.player_ability[player_id])
-            observable_data_dict[key]["leader_effects"] = \
+            target_dict = observable_data_dict[key]
+            target_dict["leader_class"] = self.players[player_id].deck.leader_class.name
+            target_dict["life"] = self.players[player_id].life
+            target_dict["max_life"] = self.players[player_id].max_life
+            target_dict["hand_len"] = len(self.players[player_id].hand)
+            target_dict["deck_len"] = len(self.players[player_id].deck.deck)
+            target_dict["shadows"] = self.graveyard.shadows[player_id]
+            target_dict["pp/max_pp"] = (self.remain_cost[player_id], self.cost[player_id])
+            target_dict["evo_point"] = self.evo_point[player_id]
+            target_dict["leader_effects"] = \
                 "{}".format([Player_Ability_setting.player_ability_id_2_func[player_ability_id].name
                     for player_ability_id in self.player_ability[player_id]])
 
@@ -404,7 +425,8 @@ class Field:
             else:
                 mylogger.info("Player {}'s {} is broken".format(location[0] + 1,
                                                                 tmp.name))
-        for i in range(len(tmp.lastword_ability)):
+        lastword_len = len(tmp.lastword_ability)
+        for i in range(lastword_len):
             #self.stack.appendleft((tmp.lastword_ability[i], location[0], copy.deepcopy(tmp)))
             self.stack.appendleft((tmp.lastword_ability[i], location[0], tmp.get_copy()))
         tmp.is_in_field = False
@@ -454,7 +476,8 @@ class Field:
     def show_field(self):
         for i in range(2):
             print("player", i + 1, "'s field")
-            for j in range(len(self.card_location[i])):
+            side_len = len(self.card_location[i])
+            for j in range(side_len):
                 print(j, ": ", self.card_location[i][j])
             print("\n")
 
@@ -679,7 +702,7 @@ class Field:
 
     def evolve(self, creature, virtual=False, target=None):
         # if virtual==False:mylogger.info("evo_check")
-        if creature.evolved  or self.evo_flg :
+        if self.evo_flg  or creature.evolved:
             first = creature in self.card_location[0]
 
             mylogger.info("first:{} policy:{}".format(first, self.players[1 - int(first)].policy.name))
@@ -866,8 +889,7 @@ class Field:
     def get_able_to_evo(self, player):
         #print(player)
         if self.current_turn[player.player_num] < self.able_to_evo_turn[player.player_num] or self.evo_point[
-            player.player_num] == 0 \
-                or self.evo_flg:
+            player.player_num] == 0 or self.evo_flg:
             return []
         able_to_evo = []
         for i in self.get_creature_location()[player.player_num]:
@@ -892,7 +914,7 @@ class Field:
         able_to_evo = self.get_able_to_evo(player)
         if len(able_to_creature_attack) == 0 and len(able_to_attack) == 0:
             can_attack = False
-        if len(able_to_evo) == 0 or self.evo_flg == True:
+        if len(able_to_evo) == 0 or self.evo_flg:
             can_evo = False
 
         return (can_play, can_attack, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo)
@@ -949,8 +971,9 @@ class Field:
                         regal_targets.append(card_id)
 
                 elif target_category == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
+                    player_len = len(self.card_location[player_num])
                     for player_target_id, opponent_target_id in itertools.product(
-                            range(len(self.card_location[player_num])), can_be_targeted):
+                            range(player_len), can_be_targeted):
                         regal_targets.append((player_target_id, opponent_target_id))
                 elif target_category == Target_Type.CARD_IN_HAND.value:
                     for i, hand_card in enumerate(self.players[player_num].hand):
@@ -1006,8 +1029,9 @@ class Field:
                             regal_targets.append(card_id)
 
                 elif target_category == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
+                    player_len = len(self.card_location[player_num])
                     for player_target_id, opponent_target_id in itertools.product(
-                            range(len(self.card_location[player_num])), can_be_targeted):
+                            range(player_len), can_be_targeted):
                         target_creature = self.card_location[1 - player_num][opponent_target_id]
                         if evo_target_regulation(target_creature, card):
                             regal_targets.append((player_target_id, opponent_target_id))
@@ -1079,8 +1103,9 @@ class Field:
                     regal_targets.append(card_id)
 
             elif target_category == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
+                player_len = len(self.card_location[player_num])
                 for player_target_id, opponent_target_id in itertools.product(
-                        range(len(self.card_location[player_num])), can_be_targeted):
+                        range(player_len), can_be_targeted):
                     regal_targets.append((player_target_id, opponent_target_id))
 
             elif target_category == Target_Type.CARD_IN_HAND.value:
@@ -1168,15 +1193,17 @@ class Field:
                         regal_targets.append(card_id)
 
             elif target_category == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
+                player_len = len(self.card_location[player_num])
                 for player_target_id, opponent_target_id in itertools.product(
-                        range(len(self.card_location[player_num])), can_be_targeted):
+                        range(player_len), can_be_targeted):
                     target_creature = self.card_location[1 - player_num][opponent_target_id]
                     if regulation_func(target_creature):
                         regal_targets.append((player_target_id, opponent_target_id))
 
             elif target_category == Target_Type.CARD_IN_HAND.value:
                 itself_index = self.players[player_num].hand.index(card)
-                for i in range(len(self.players[player_num].hand)):
+                hand_len = len(self.players[player_num].hand)
+                for i in range(hand_len):
                     if i == itself_index:
                         continue
                     if i < itself_index:
@@ -1422,6 +1449,8 @@ class Field:
                     else:
                         lose += 1
                 else:
+                    self.show_field()
+                    mylogger.info("{}".format(self.get_observable_data(player_num=player.player_num)))
                     assert False
             draw_cards(player, True, num=1)
             if turn_player_num == 1 and self.current_turn[turn_player_num] == 1:
@@ -1609,7 +1638,8 @@ class Graveyard:
     def show_graveyard(self):
         for i in range(2):
             print("Player", i + 1, "Graveyard")
-            for j in range(len(self.graveyard[i])):
+            grave_len = len(self.graveyard[i])
+            for j in range(grave_len):
                 if self.graveyard[i][j][0] == "Creature":
                     print('{:<2}'.format(j), ":", creature_list[self.graveyard[i][j]][-1])
                 elif self.graveyard[i][j][0] == "Spell":
@@ -1671,7 +1701,8 @@ class Play_Cards:
     def show_play_cards(self):
         for i in range(2):
             print("Player", i + 1, "Graveyard")
-            for j in range(len(self.play_cards[i])):
+            play_card_len = len(self.play_cards[i])
+            for j in range(play_card_len):
                 if self.play_cards[i][j][0] == "Creature":
                     print('{:<2}'.format(j), ":", creature_list[self.play_cards[i][j]][-1])
                 elif self.play_cards[i][j][0] == "Spell":

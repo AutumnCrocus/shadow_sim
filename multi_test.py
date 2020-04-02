@@ -116,21 +116,50 @@ def preparation(episode_data):
 import itertools
 
 def multi_train(data):
-    net, memory = data
+    net, memory, batch_size, iteration_num = data
     optimizer =  optim.Adam(net.parameters(), weight_decay=0.01)
     all_loss, MSE, CEE = 0, 0, 0
-    optimizer.zero_grad()
-    states, actions, rewards = memory
-    states['target'] = {'actions': actions, 'rewards': rewards}
-    p, v, loss = net(states, target=True)
-    z = rewards
-    pai = actions  # 45種類の抽象化した行動
-    # loss.backward()
-    loss[0].backward()
-    all_loss = float(loss[0].item())
-    MSE = float(loss[1].item())
-    CEE = float(loss[2].item())
-    optimizer.step()
+
+    all_states, all_actions, all_rewards = memory
+    states_keys = list(all_states.keys())
+    value_keys = list(all_states['values'].keys())
+    action_code_keys = list(all_states['detailed_action_codes'].keys())
+    memory_len = all_actions.size()[0]
+
+
+    #states, actions, rewards = memory
+    for i in range(iteration_num):
+        optimizer.zero_grad()
+        key = [random.randint(0, memory_len-1) for _ in range(batch_size)]
+        states = {}
+        for dict_key in states_keys:
+            if dict_key == 'values':
+                states['values'] = {}
+                for sub_key in value_keys:
+                    states['values'][sub_key] = all_states['values'][sub_key][key]
+            elif dict_key == 'detailed_action_codes':
+                states['detailed_action_codes'] = {}
+                for sub_key in action_code_keys:
+                    states['detailed_action_codes'][sub_key] = \
+                        all_states['detailed_action_codes'][sub_key][key]
+            else:
+                states[dict_key] = all_states[dict_key][key]
+
+        actions = all_actions[key]
+        rewards = all_rewards[key]
+        states['target'] = {'actions': actions, 'rewards': rewards}
+
+        p, v, loss = net(states, target=True)
+        z = rewards
+        pai = actions  # 45種類の抽象化した行動
+        # loss.backward()
+        loss[0].backward()
+        all_loss = float(loss[0].item())
+        MSE = float(loss[1].item())
+        CEE = float(loss[2].item())
+        optimizer.step()
+        if (i+1) % (iteration_num//10) == 0:
+            print("{}0% finished.".format((i+1) // (iteration_num//10)))
     return all_loss, MSE, CEE
 
 from test import *  # importの依存関係により必ず最初にimport
@@ -203,38 +232,20 @@ def run_main():
         print("win_rate:{:.3%}".format(win_num/episode_len))
         memories = list(itertools.chain.from_iterable(memory))
 
-
-        if torch.cuda.is_available() and cuda_flg:
-            for data in memories:
-                before_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
-                                data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
-                                data[0]['follower_stats'], data[0]['follower_abilities'],
-                                data[0]['able_to_evo'], data[0]['life_data'],
-                                data[0]['pp_data'], data[0]['able_to_play'],
-                                data[0]['able_to_attack'], data[0]['able_to_creature_attack'])
-                after_state = Detailed_State_data(data[2]['hand_ids'], data[2]['hand_card_costs'],
-                                data[2]['follower_card_ids'], data[2]['amulet_card_ids'],
-                                data[2]['follower_stats'], data[2]['follower_abilities'],
-                                data[2]['able_to_evo'], data[2]['life_data'],
-                                data[2]['pp_data'], data[2]['able_to_play'],
-                                data[2]['able_to_attack'], data[2]['able_to_creature_attack'])
-                R.push(before_state, torch.LongTensor([data[1]]).cuda(), after_state, data[3], torch.FloatTensor([data[4]]).cuda())
-                #R.push(data[0], torch.LongTensor([data[1]]).cuda(), data[2], data[3], torch.FloatTensor([reward]).cuda())
-        else:
-            for data in memories:
-                before_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
-                                data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
-                                data[0]['follower_stats'], data[0]['follower_abilities'],
-                                data[0]['able_to_evo'], data[0]['life_data'],
-                                data[0]['pp_data'], data[0]['able_to_play'],
-                                data[0]['able_to_attack'], data[0]['able_to_creature_attack'])
-                after_state = Detailed_State_data(data[2]['hand_ids'], data[2]['hand_card_costs'],
-                                data[2]['follower_card_ids'], data[2]['amulet_card_ids'],
-                                data[2]['follower_stats'], data[2]['follower_abilities'],
-                                data[2]['able_to_evo'], data[2]['life_data'],
-                                data[2]['pp_data'], data[2]['able_to_play'],
-                                data[2]['able_to_attack'], data[2]['able_to_creature_attack'])
-                R.push(before_state, torch.LongTensor([data[1]]), after_state, data[3], torch.FloatTensor([data[4]]))
+        for data in memories:
+            before_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
+                            data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
+                            data[0]['follower_stats'], data[0]['follower_abilities'],
+                            data[0]['able_to_evo'], data[0]['life_data'],
+                            data[0]['pp_data'], data[0]['able_to_play'],
+                            data[0]['able_to_attack'], data[0]['able_to_creature_attack'])
+            after_state = Detailed_State_data(data[2]['hand_ids'], data[2]['hand_card_costs'],
+                            data[2]['follower_card_ids'], data[2]['amulet_card_ids'],
+                            data[2]['follower_stats'], data[2]['follower_abilities'],
+                            data[2]['able_to_evo'], data[2]['life_data'],
+                            data[2]['pp_data'], data[2]['able_to_play'],
+                            data[2]['able_to_attack'], data[2]['able_to_creature_attack'])
+            R.push(before_state,data[1], after_state, data[3], data[4])
 
         print("sample_size:{}".format(len(R.memory)))
         prev_net = copy.deepcopy(net)
@@ -243,16 +254,16 @@ def run_main():
         sum_of_MSE = 0
         sum_of_CEE = 0
         p, pai, z, states = None, None, None, None
+        batch = len(R.memory) // batch_num if batch_num is not None else batch_size
+        print("batch_size:{}".format(batch))
         if args.multi_train is not None:
             net.share_memory()
-            block_size = iteration // p_size
-            remainder = iteration % p_size
-
-            iter_data = [[net,R.sample(batch_size)] for i in range(iteration)]
+            iter_data = [[net,R.sample(batch_size,all=True),batch,iteration//p_size]
+                         for i in range(p_size)]
             pool = Pool(p_size)  # 最大プロセス数:8
-            #loss_data = pool.map(multi_train, iter_data)
-            imap = pool.imap(multi_train, iter_data)
-            loss_data = list(tqdm(imap, total=iteration))
+            loss_data = pool.map(multi_train, iter_data)
+            #imap = pool.imap(multi_train, iter_data)
+            #loss_data = list(tqdm(imap, total=p_size))
             #[(1,1,1),(),()]
             sum_of_loss = sum(map(lambda data: data[0], loss_data))
             sum_of_MSE = sum(map(lambda data: data[1], loss_data))
@@ -260,10 +271,11 @@ def run_main():
 
             pool.close()  # add this.
             pool.terminate()  # add this.
+            print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+                  .format(sum_of_loss / p_size, sum_of_MSE / p_size, sum_of_CEE / p_size))
 
         else:
-            batch = len(R.memory) // batch_num if batch_num is not None else batch_size
-            print("batch_size:{}".format(batch))
+
             for i in tqdm(range(iteration)):
             #for i in range(iteration):
                 #print("\ni:{}\n".format(i))
@@ -274,27 +286,16 @@ def run_main():
                 p, v, loss = net(states, target=True)
                 z = rewards
                 pai = actions  # 45種類の抽象化した行動
-                #if (i + 1) % 100 == 0:
-                #    print("target:{} output:{}".format(z[0], v[0]))
-                #    print("target:{} output:{}\n {}".format(pai[0], p[0], p[0][pai[0]]))
-                    #    #print("loss:{}".format([loss[j].item() for j in range(3)]))
-                #if True in torch.isnan(loss[0]):
-                #    # section 3
-                #    net = current_net
-                #    optimizer = torch.optim.Adam(net.parameters())
-                #    optimizer.load_state_dict(prev_optimizer.state_dict())
-                #else:
-                #    current_net = copy.deepcopy(net)
-                #    prev_optimizer = copy.deepcopy(optimizer)
                 optimizer.zero_grad()
                 loss[0].backward()
                 sum_of_loss += float(loss[0].item())
                 sum_of_MSE += float(loss[1].item())
                 sum_of_CEE += float(loss[2].item())
                 optimizer.step()
+            print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+                  .format(sum_of_loss / iteration, sum_of_MSE / iteration, sum_of_CEE / iteration))
 
-        print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}"\
-              .format(sum_of_loss/iteration,sum_of_MSE/iteration,sum_of_CEE/iteration))
+
         t4 = datetime.datetime.now()
         print(t4-t3)
         if epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num:

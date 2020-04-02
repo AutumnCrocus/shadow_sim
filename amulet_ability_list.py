@@ -31,30 +31,9 @@ def amulet_ability_003(field, player, opponent, virtual, target, itself):
     if not virtual:
         mylogger.info("Deal 6 damage to all opponent")
     get_damage_to_player(opponent,virtual,num=6)
-    #opponent.get_damage(6)
     if opponent.life <= 0:
         return
     get_damage_to_all_enemy_follower(field, opponent, virtual, num=6)
-    #mylogger.info("opponent.life:{}".format(opponent.life))
-    #for i, thing in enumerate(field.card_location[opponent.player_num]):
-    #    if thing.card_category == "Creature":
-    #        damage = thing.get_damage(6)
-    #        # mylogger.info("Player {}'s {} get {} damage".format(opponent.player_num+1,thing.name,damage))
-
-    while True:
-        break_flg = True
-        continue_flg = False
-        for i, creature in enumerate(field.card_location[opponent.player_num]):
-            if creature.is_in_graveyard:
-                field.remove_card([opponent.player_num, i], virtual=virtual)
-                break_flg = False
-                continue_flg = True
-                break
-            if continue_flg:
-                break
-
-        if break_flg:
-            break
 
 
 def amulet_ability_004(field, player, opponent, virtual, target, itself):

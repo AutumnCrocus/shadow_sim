@@ -24,6 +24,7 @@ Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follo
    input = {'values', 'hand_ids','follower_card_ids', 
         'amulet_card_ids', 'follower_abilities', 'able_to_evo'}
 """
+
 class New_Dual_Net(nn.Module):
     def __init__(self,n_mid):
         super(New_Dual_Net, self).__init__()
@@ -184,10 +185,6 @@ class filtered_softmax(nn.Module):
 
         return x
 
-
-
-
-
 class Dual_Loss(nn.Module):
 
     def __init__(self):
@@ -201,7 +198,8 @@ class Dual_Loss(nn.Module):
             torch.pow((z - v),2),
             dim=1)
         MSE = torch.mean(loss)
-        CEE = torch.mean(torch.stack([-torch.log(p[i][pai[i]]+1.0e-8) for i in range(p.size()[0])],dim=1))
+        tmp_CEE = p[range(p.size()[0]),pai]+1.0e-8
+        CEE = torch.mean(-torch.log(tmp_CEE))
         #pai = pai.t()[0]
         #CEE = self.cross_entropy(p,pai)#softmaxも含まれている
         loss = MSE + CEE
@@ -209,11 +207,46 @@ class Dual_Loss(nn.Module):
 
         return loss, MSE, CEE
 
+class New_Dual_ReplayMemory:
+
+    def __init__(self, CAPACITY):
+        self.capacity = CAPACITY # メモリの最大長さ
+        self.memory = []
+        self.index = 0
+
+    def push(self, state, action, next_state, detailed_action_code, reward):
+        if len(self.memory) < self.capacity:
+            self.memory.append(None) #メモリが満タンじゃないときには追加
+        self.memory[self.index] = Dual_State_value(state, action, next_state, detailed_action_code, reward)
+        self.index = (self.index + 1) % self.capacity
+
+    def sample(self, batch_size,all=False):
+        if all:
+            tmp = self.memory
+        else:
+            tmp = random.sample(self.memory, batch_size)
+        states = [cell.state for cell in tmp]
+        states = Detailed_State_data_2_Tensor(states)
+        actions = [cell.action for cell in tmp]
+        actions = torch.LongTensor(actions)#torch.stack(actions, dim=0)
+        rewards = [[cell.reward] for cell in tmp]
+        rewards = torch.FloatTensor(rewards)
+        detailed_action_codes = [cell.detailed_action_code for cell in tmp]
+        detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes)
+        states['detailed_action_codes'] = detailed_action_codes
+
+        return states, actions, rewards
+
+    def __len__(self):
+        return len(self.memory)
+
+
 def get_data(f,player_num=0):
     hand_ids = []
     hand_card_costs = []
     player = f.players[player_num]
     opponent = f.players[1-player_num]
+    """
     for hand_card in player.hand:
         #hand_ids.append(Card_Category[hand_card.card_category].value*(hand_card.card_id+500))
         none_flg = int(Card_Category[hand_card.card_category].value != 0)
@@ -221,16 +254,51 @@ def get_data(f,player_num=0):
                             hand_card.card_id+500
         hand_ids.append(none_flg*converted_card_id)
         hand_card_costs.append(hand_card.cost)
-
+    """
+    hand_ids = [int(Card_Category[card.card_category].value != 0)*\
+                           ((Card_Category[card.card_category].value-1)*1000+
+                                card.card_id+500)for card in player.hand]
+    hand_card_costs = [card.cost for card in player.hand]
+    """
     for j in range(len(player.hand),9):
         hand_ids.append(0)
         hand_card_costs.append(0)
-    follower_card_ids = []
-    amulet_card_ids = []
-    follower_stats = []
-    follower_abilities = []
+    """
+    hand_ids.extend([0]*(9-len(player.hand)))
+    hand_card_costs.extend([0]*(9-len(player.hand)))
+    #follower_card_ids = []
+    #amulet_card_ids = []
+    #follower_stats = []
+    #follower_abilities = []
+    opponent_num = 1- player_num
     able_to_evo = f.get_able_to_evo(player)
     able_to_evo = [cell+1 for cell in able_to_evo]
+    follower_card_ids = [f.card_location[player_num][i].card_id + 500
+                         if i < len(f.card_location[player_num]) and f.card_location[player_num][
+        i].card_category == "Creature" else 0 for i in range(5)] \
+                        + [f.card_location[opponent_num][i].card_id + 500
+                           if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
+        i].card_category == "Creature" else 0 for i in range(5)]
+    follower_stats = [[f.card_location[player_num][i].power, f.card_location[player_num][i].get_current_toughness()]
+                      if i < len(f.card_location[player_num]) and f.card_location[player_num][
+        i].card_category == "Creature" else [0, 0] for i in range(5)] \
+                     + [[f.card_location[opponent_num][i].power, f.card_location[opponent_num][i].get_current_toughness()]
+                        if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
+        i].card_category == "Creature" else [0, 0] for i in range(5)]
+    follower_abilities = [f.card_location[player_num][i].ability[:]
+                          if i < len(f.card_location[player_num]) and f.card_location[player_num][
+        i].card_category == "Creature" else [] for i in range(5)] \
+                         + [f.card_location[opponent_num][i].ability[:]
+                            if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
+        i].card_category == "Creature" else [] for i in range(5)]
+
+    amulet_card_ids = [f.card_location[player_num][i].card_id + 500
+                       if i < len(f.card_location[player_num]) and f.card_location[player_num][
+        i].card_category == "Amulet" else 0 for i in range(5)] \
+                      + [f.card_location[opponent_num][i].card_id + 500
+                         if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
+        i].card_category == "Amulet" else 0 for i in range(5)]
+    """
     for j in range(2):
         i = (player_num+j)%2
         for card in f.card_location[i]:
@@ -250,6 +318,7 @@ def get_data(f,player_num=0):
             follower_stats.append([0, 0])
             follower_abilities.append([])
             amulet_card_ids.append(0)
+    """
     life_data = [player.life, opponent.life,len(player.hand),len(opponent.hand) ,f.current_turn[player_num]]
     pp_data = [f.cost[player_num],f.remain_cost[player_num]]
     able_to_play = f.get_able_to_play(player)
@@ -265,183 +334,67 @@ def get_data(f,player_num=0):
 
     return datas
 
-class New_Dual_ReplayMemory:
-
-    def __init__(self, CAPACITY):
-        self.capacity = CAPACITY # メモリの最大長さ
-        self.memory = []
-        self.index = 0
-
-    def push(self, state, action, next_state, detailed_action_code, reward):
-        if len(self.memory) < self.capacity:
-            self.memory.append(None) #メモリが満タンじゃないときには追加
-        self.memory[self.index] = Dual_State_value(state, action, next_state, detailed_action_code, reward)
-        self.index = (self.index + 1) % self.capacity
-
-    def sample(self, batch_size):
-        tmp = random.sample(self.memory, batch_size)
-        states = [cell.state for cell in tmp]
-        states = Detailed_State_data_2_Tensor(states)
-        actions = [cell.action for cell in tmp]
-        actions = torch.stack(actions, dim=0)
-        rewards = [cell.reward for cell in tmp]
-        rewards = torch.stack(rewards, dim=0)
-        detailed_action_codes = [cell.detailed_action_code for cell in tmp]
-        detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes)
-        states['detailed_action_codes'] = detailed_action_codes
-
-        return states, actions, rewards
-
-    def __len__(self):
-        return len(self.memory)
 
 
 def Detailed_State_data_2_Tensor(datas,cuda=False):
-    """
-    ('hand_ids', 'hand_card_costs', 'follower_card_ids',
-    'amulet_card_ids', 'follower_stats', 'follower_abilities',
-    'follower_is_evolved', 'life_data', 'pp_data'))
-    """
-    hand_ids = []
-    hand_card_costs = []
-    follower_card_ids = []
-    follower_stats = []
-    follower_abilities = []
-    amulet_card_ids = []
+    data_len = len(datas)
+    #print(type(datas))
+    #print(type(datas[0]))
+    hand_ids = torch.LongTensor([[datas[i].hand_ids[j] for j in range(9)] for i in range(data_len)])
+    hand_card_costs = torch.Tensor([[datas[i].hand_card_costs[j] for j in range(9)] for i in range(data_len)])
+    follower_card_ids = torch.LongTensor([[datas[i].follower_card_ids[j] for j in range(10)] for i in range(data_len)])
+    amulet_card_ids = torch.LongTensor([[datas[i].amulet_card_ids[j] for j in range(10)] for i in range(data_len)])
+    follower_abilities = torch.LongTensor([[[datas[i].follower_abilities[j][k] if k < len(
+        datas[i].follower_abilities[j]) else 0 for k in range(1, 16)] for j in range(10)] for i in range(data_len)])
+    follower_stats = torch.Tensor([[datas[i].follower_stats[j] for j in range(10)] for i in range(data_len)])
+    able_to_evo = torch.LongTensor(
+        [[datas[i].able_to_evo[j] if j < len(datas[i].able_to_evo) else 0 for j in range(10)] for i in range(data_len)])
+    able_to_play = torch.LongTensor(
+        [[datas[i].able_to_play[j] if j < len(datas[i].able_to_play) else 0 for j in range(9)] for i in
+         range(data_len)])
+    able_to_attack = torch.LongTensor(
+        [[datas[i].able_to_attack[j] if j < len(datas[i].able_to_attack) else 0 for j in range(5)] for i in
+         range(data_len)])
+    able_to_creature_attack = torch.LongTensor(
+        [[datas[i].able_to_creature_attack[j] if j < len(datas[i].able_to_creature_attack) else 0 for j in range(5)] for
+         i in range(data_len)])
 
-    #one_hot_able_actions = []
-    able_to_evo = []
-    able_to_play = []
-    able_to_attack = []
-    able_to_creature_attack = []
-    pp_datas = []
-    life_datas = []
-    class_datas = []
-    if torch.cuda.is_available() and cuda:
-        #device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        for data in datas:
-            for i in range(9):
-                hand_ids[i].append(torch.LongTensor([data.hand_ids[i]]).cuda())
-                hand_card_costs[i].append(torch.Tensor([data.hand_card_costs[i]]).cuda())
+    pp_datas = torch.Tensor([datas[i].pp_data for i in range(data_len)])
+    life_datas = torch.Tensor([datas[i].life_data[0] for i in range(data_len)])
+    class_datas = torch.LongTensor([datas[i].life_data[1] for i in range(data_len)])
 
-            for i in range(10):
-                follower_card_ids[i].append(torch.LongTensor([data.follower_card_ids[i]]).cuda())
-                amulet_card_ids[i].append(torch.LongTensor([data.amulet_card_ids[i]]).cuda())
-
-            for i in range(10):
-                inputs = data.follower_abilities[i][:]
-                inputs.extend([0 for _ in range(1, 16 - len(data.follower_abilities[i]))])
-                follower_abilities[i].append(torch.LongTensor(inputs).cuda())
-                follower_stats[i].append(data.follower_stats[i])
-
-            tmp2 = data.able_to_evo[:]
-
-            tmp2.extend([0 for _ in range(5 - len(data.able_to_evo))])
-            able_to_evo.append(torch.LongTensor(tmp2).cuda())
-            tmp2 = data.able_to_play[:]
-            tmp2.extend([0 for _ in range(9 - len(data.able_to_play))])
-            able_to_play.append(torch.LongTensor(tmp2).cuda())
-            tmp2 = data.able_to_attack[:]
-            tmp2.extend([0 for _ in range(5 - len(data.able_to_attack))])
-            able_to_attack.append(torch.LongTensor(tmp2).cuda())
-            tmp2 = data.able_to_creature_attack[:]
-            tmp2.extend([0 for _ in range(5 - len(data.able_to_creature_attack))])
-            able_to_creature_attack.append(torch.LongTensor(tmp2).cuda())
-
-            #tmp = [1.0]
-            #tmp.extend([int(cell in data.able_to_play) for cell in range(1, 10)])
-            #tmp.extend([int(cell in data.able_to_attack) for cell in range(1, 6)])
-            #tmp.extend([int(cell in data.able_to_creature_attack) for cell in range(1, 6)])
-            #tmp.extend([int(cell in data.able_to_evo) for cell in range(1, 6)])
-            #one_hot_able_actions.append(torch.Tensor(tmp).cuda())
-            #tmp_values = []
-            pp_datas.append(torch.Tensor(data.pp_data).cuda())
-            life_datas.append(torch.Tensor(data.life_data[0]).cuda())
-            class_datas.append(torch.LongTensor(data.life_data[1]).cuda())
-    else:
-        for data in datas:
-            hand_ids.append(torch.LongTensor([data.hand_ids[i] for i in range(9)]))
-            hand_card_costs.append(torch.Tensor([data.hand_card_costs[i] for i in range(9)]))
-
-            follower_card_ids.append(torch.LongTensor([data.follower_card_ids[i] for i in range(10)]))
-            amulet_card_ids.append(torch.LongTensor([data.amulet_card_ids[i] for i in range(10)]))
-            inputs= [[data.follower_abilities[i][j] if j < len(data.follower_abilities[i]) else 0 for j in range(1,16)] for i in range(10)]
-            follower_abilities.append(torch.LongTensor(inputs))
-            stats = [data.follower_stats[i] for i in range(10)]
-            follower_stats.append(torch.Tensor(stats))
-
-            tmp2 = data.able_to_evo[:]
-
-            tmp2.extend([0 for _ in range(10-len(data.able_to_evo))])
-            able_to_evo.append(torch.LongTensor(tmp2))
-            tmp2 = data.able_to_play[:]
-            tmp2.extend([0 for _ in range(9-len(data.able_to_play))])
-            able_to_play.append(torch.LongTensor(tmp2))
-            tmp2 = data.able_to_attack[:]
-            tmp2.extend([0 for _ in range(5-len(data.able_to_attack))])
-            able_to_attack.append(torch.LongTensor(tmp2))
-            tmp2 = data.able_to_creature_attack[:]
-            tmp2.extend([0 for _ in range(5-len(data.able_to_creature_attack))])
-            able_to_creature_attack.append(torch.LongTensor(tmp2))
-
-            #tmp = [1.0]
-            #tmp.extend([int(cell in data.able_to_play) for cell in range(1, 10)])
-            #tmp.extend([int(cell in data.able_to_attack) for cell in range(1, 6)])
-            #tmp.extend([int(cell in data.able_to_creature_attack) for cell in range(1, 6)])
-            #tmp.extend([int(cell in data.able_to_evo) for cell in range(1, 6)])
-            #one_hot_able_actions.append(torch.Tensor(tmp))
-            pp_datas.append(torch.Tensor(data.pp_data))
-            life_datas.append(torch.Tensor(data.life_data[0]))
-            class_datas.append(torch.LongTensor(data.life_data[1]))
-
-    ans = {'values':{'life_datas':torch.stack(life_datas, dim=0),
-                     'class_datas': torch.stack(class_datas, dim=0),
-                     'hand_card_costs': torch.stack(hand_card_costs, dim=0),
-                     'follower_stats': torch.stack(follower_stats, dim=0),
-                     'pp_datas':torch.stack(pp_datas,dim=0),
-                     'able_to_play':torch.stack(able_to_play,dim=0),
-                     'able_to_attack':torch.stack(able_to_attack, dim=0),
-                     'able_to_creature_attack':torch.stack(able_to_creature_attack, dim=0),
-                     #'one_hot_able_actions':torch.stack(one_hot_able_actions,dim=0)
-                     },
-           'hand_ids': torch.stack(hand_ids, dim=0),
-           'follower_card_ids': torch.stack(follower_card_ids, dim=0),
-           'amulet_card_ids':torch.stack(amulet_card_ids, dim=0),
-           'follower_abilities': torch.stack(follower_abilities, dim=0),
-           'able_to_evo':torch.stack(able_to_evo, dim=0)}
+    ans = {'values': {'life_datas': life_datas,
+                      'class_datas': class_datas,
+                      'hand_card_costs': hand_card_costs,
+                      'follower_stats': follower_stats,
+                      'pp_datas': pp_datas,
+                      'able_to_play': able_to_play,
+                      'able_to_attack': able_to_attack,
+                      'able_to_creature_attack': able_to_creature_attack,
+                      },
+           'hand_ids': hand_ids,
+           'follower_card_ids': follower_card_ids,
+           'amulet_card_ids': amulet_card_ids,
+           'follower_abilities': follower_abilities,
+           'able_to_evo': able_to_evo}
     return ans
 
 
 def Detailed_action_code_2_Tensor(action_codes, cuda = False):
-    tensor_action_categories = []
-    tensor_play_card_ids_in_action = []
-    tensor_field_card_ids_in_action = []
-    #([...]*batch_size)*45→([...]*45)*batch_size
-    able_to_choice = []
-    if torch.cuda.is_available() and cuda:
-        for action_code in action_codes:
-            target_action = action_code['action_codes']
+    action_code_len = len(action_codes)
 
-            tensor_action_categories.append(torch.LongTensor([target_action[i][0] for i in range(45)]).cuda())
-            tensor_play_card_ids_in_action.append(torch.LongTensor([target_action[i][1] for i in range(45)]).cuda())
-            tensor_field_card_ids_in_action.append(torch.LongTensor([target_action[i][2:5] for i in range(45)]).cuda())
-            able_to_choice.append(torch.Tensor(action_code['able_to_choice']).cuda())
+    tensor_action_categories = torch.LongTensor(
+        [[action_codes[i]['action_codes'][j][0] for j in range(45)] for i in range(action_code_len)])
+    tensor_play_card_ids_in_action = torch.LongTensor(
+        [[action_codes[i]['action_codes'][j][1] for j in range(45)] for i in range(action_code_len)])
+    tensor_field_card_ids_in_action = torch.LongTensor(
+        [[action_codes[i]['action_codes'][j][2:5] for j in range(45)] for i in range(action_code_len)])
+    able_to_choice = torch.Tensor([action_codes[i]['able_to_choice'] for i in range(action_code_len)])
 
-    else:
-        for action_code in action_codes:
-            target_action = action_code['action_codes']
-            tensor_action_categories.append(torch.LongTensor([target_action[i][0] for i in range(45)]))
-            tensor_play_card_ids_in_action.append(torch.LongTensor([target_action[i][1] for i in range(45)]))
-            tensor_field_card_ids_in_action.append(torch.LongTensor([target_action[i][2:5] for i in range(45)]))
-            able_to_choice.append(torch.Tensor(action_code['able_to_choice']))
-
-    #print("action_categories_size:{}".format(tensor_action_categories[0].size()))
-    #print("play_card_ids_size:{}".format(tensor_play_card_ids_in_action[0].size()))
-    #print("field_card_ids_size:{}".format(tensor_field_card_ids_in_action[0].size()))
-    action_codes_dict = {'action_categories':torch.stack(tensor_action_categories, dim=0),
-                         'play_card_ids': torch.stack(tensor_play_card_ids_in_action ,dim=0),
-                         'field_card_ids':torch.stack(tensor_field_card_ids_in_action, dim=0),
-                         'able_to_choice': torch.stack(able_to_choice,dim=0)}
+    action_codes_dict = {'action_categories': tensor_action_categories,
+                         'play_card_ids': tensor_play_card_ids_in_action,
+                         'field_card_ids': tensor_field_card_ids_in_action,
+                         'able_to_choice': able_to_choice}
     return action_codes_dict
 
 
@@ -550,15 +503,9 @@ if __name__ == "__main__":
             f.players[1].hand.clear()
             f.players[1].deck = None
             f.players[1].lib_out_flg = False
-            if torch.cuda.is_available() and cuda_flg:
-                for i in range(2):
-                    for data in train_data[i]:
-                        R.push(data[0], torch.LongTensor([data[1]]).cuda(), data[2], data[3],\
-                               torch.FloatTensor([reward[i]]).cuda())
-            else:
-                for i in range(2):
-                    for data in train_data[i]:
-                        R.push(data[0], torch.LongTensor([data[1]]), data[2], data[3], torch.FloatTensor([reward[i]]))
+            for i in range(2):
+                for data in train_data[i]:
+                    R.push(data[0], data[1], data[2], data[3], reward[i])
             win_num += int(reward[episode % 2] > 0)
 
         print("sample_size:{}".format(len(R.memory)))
