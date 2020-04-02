@@ -276,10 +276,10 @@ def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, v
     return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
 
 def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=None,graph=False):
-    Player1 = copy.deepcopy(Player_1)
-    Player2 = copy.deepcopy(Player_2)
-    Player1 = Player_1
-    Player2 = Player_2
+    #Player1 = copy.deepcopy(Player_1)
+    #Player2 = copy.deepcopy(Player_2)
+    Player1 = Player_1.get_copy(None)
+    Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
     Player2.name = "Bob"
     assert Player1 != Player2
@@ -480,10 +480,8 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
 
 
 def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False, deck_type=None,output=False,directory_name=None):
-    Player1 = copy.deepcopy(Player_1)
-    Player2 = copy.deepcopy(Player_2)
-    Player1 = Player_1
-    Player2 = Player_2
+    Player1 = Player_1.get_copy(None)
+    Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
     Player2.name = "Bob"
     assert Player1 != Player2
@@ -778,10 +776,8 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
 
 
 def random_match(Player_1, Player_2, iteration, virtual_flg=False):
-    Player1 = copy.deepcopy(Player_1)
-    Player2 = copy.deepcopy(Player_2)
-    Player1 = Player_1
-    Player2 = Player_2
+    Player1 = Player_1.get_copy(None)
+    Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
     Player2.name = "Bob"
     assert Player1 != Player2
@@ -873,10 +869,8 @@ def random_match(Player_1, Player_2, iteration, virtual_flg=False):
 def get_contributions(Player_1, Player_2, iteration, player1_deck_num=None, directory_name=None):
     assert player1_deck_num is not None
     assert directory_name is not None
-    Player1 = copy.deepcopy(Player_1)
-    Player2 = copy.deepcopy(Player_2)
-    Player1 = Player_1
-    Player2 = Player_2
+    Player1 = Player_1.get_copy(None)
+    Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
     Player2.name = "Bob"
     assert Player1 != Player2
@@ -1008,10 +1002,8 @@ def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, pl
                             directory_name=None):
     assert player1_deck_num is not None
     assert directory_name is not None
-    Player1 = copy.deepcopy(Player_1)
-    Player2 = copy.deepcopy(Player_2)
-    Player1 = Player_1
-    Player2 = Player_2
+    Player1 = Player_1.get_copy(None)
+    Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
     Player2.name = "Bob"
     assert Player1 != Player2
@@ -1146,10 +1138,8 @@ def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, pl
 
 def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=None, basic=False,deck_lists=None):
     mylogger.info("{} vs {}".format(Player_1.policy.name, Player_2.policy.name))
-    Player1 = copy.deepcopy(Player_1)
-    Player2 = copy.deepcopy(Player_2)
-    Player1 = Player_1
-    Player2 = Player_2
+    Player1 = Player_1.get_copy(None)
+    Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
     Player2.name = "Bob"
     if result_name is None:
@@ -1264,10 +1254,8 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
 
 
 def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_result.tsv"):
-    Player1 = copy.deepcopy(Player_1)
-    Player2 = copy.deepcopy(Player_2)
-    Player1 = Player_1
-    Player2 = Player_2
+    Player1 = Player_1.get_copy(None)
+    Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
     Player2.name = "Bob"
     assert Player1 != Player2
@@ -1343,21 +1331,21 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
     lib_num = 0
     assert initial_players is not None, "Non-players!"
     assert deck_type is not None, "Non-Deck_type!"
-    players = copy.deepcopy(initial_players)
+    #players = copy.deepcopy(initial_players)
+    players = [player.get_copy(None) for player in initial_players]
     D = [Deck() for i in range(2)]
     for i, d in enumerate(D):
         if deck_type[i] in key_2_tsv_name:
             D[i] = tsv_to_deck(key_2_tsv_name[deck_type[i]][0])
             D[i].set_leader_class(key_2_tsv_name[deck_type[i]][1])
-
     Results = {}
     for policy1_id, player1 in enumerate(players):
-        P1 = copy.deepcopy(player1)
+        P1 = player1.get_copy(None)
         P1.name = "Alice"
         last_id = len(players)
         for policy2_id in range(0, last_id):
             player2 = players[policy2_id]
-            P2 = copy.deepcopy(player2)
+            P2 = player2.get_copy(None)
             P2.name = "Bob"
             Turn_Players = [P1, P2]
             win_lose = [win, lose]
@@ -1401,10 +1389,8 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
                              directory_name=None):
     assert player1_deck_num is not None
     assert directory_name is not None
-    Player1 = copy.deepcopy(Player_1)
-    Player2 = copy.deepcopy(Player_2)
-    Player1 = Player_1
-    Player2 = Player_2
+    Player1 = Player_1.get_copy(None)
+    Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
     Player2.name = "Bob"
     assert Player1 != Player2

@@ -276,48 +276,6 @@ class Player:
             action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,
                     action_code=(action_num, card_id, target_id), msg = action_num)
         self.error_count = 0
-        """
-        while True:
-            policy_count += 1
-            if policy_count > 100:
-                if not(can_play or can_attack or can_evo) or self.policy.current_node is None:
-                    if dual:
-                        return True, (Action_Code.TURN_END.value, 0, 0)  # (action_num, card_id)
-                    return True
-
-                mylogger.info("history:{}".format(action_histroy))
-                mylogger.info("action_code:{}".format((action_num, card_id, target_id)))
-                observable_data = field.get_observable_data(player_num=self.player_num)
-                for key in list(observable_data.keys()):
-                    print("{}".format(key))
-                    for sub_key in list(observable_data[key].keys()):
-                        print("{}:{}".format(sub_key, observable_data[key][sub_key]))
-                mylogger.info("real")
-                self.show_hand()
-                field.show_field()
-                mylogger.info("in current node")
-                mylogger.info("type:{}".format(self.policy.type))
-                sim_field = self.policy.current_node.field
-                sim_field.players[self.player_num].show_hand()
-                sim_field.show_field()
-
-                assert False, "infinite loop! policy_name:{}".format(self.policy.name)
-
-            (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
-            action_histroy.appendleft((action_num,card_id,target_id))
-            if action_num == Action_Code.ERROR.value:
-                self.policy.current_node = None
-                continue
-
-            if self.policy.policy_type != 3 or action_num == Action_Code.TURN_END.value:
-                break
-            else:
-                sim_field = self.policy.prev_node.field
-
-                action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,
-                        action_code=(action_num, card_id, target_id), msg = action_num)
-                break
-        """
 
         if not virtual:
             mylogger.info("action_num:{} card_id:{} target_id:{}".format(action_num, card_id, target_id))
