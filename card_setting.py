@@ -373,14 +373,14 @@ amulet_active_ability_list = {}
 class_card_list = {}
 for i in range(9):
     class_card_list[i] = {"Creature": {}, "Spell": {}, "Amulet": {}}
-for data in creature_list:
-    class_num = data[4][0]
+for i in tuple(creature_list):
+    class_num = creature_list[i][4][0]
     class_card_list[class_num]["Creature"][i] = creature_list[i]
-for data in spell_list:
-    class_num = data[1][0]
+for i in tuple(spell_list):
+    class_num = spell_list[i][1][0]
     class_card_list[class_num]["Spell"][i] = spell_list[i]
-for data in amulet_list:
-    class_num = data[2][0]
+for i in tuple(amulet_list):
+    class_num = amulet_list[i][2][0]
     class_card_list[class_num]["Amulet"][i] = amulet_list[i]
 
 
