@@ -291,51 +291,55 @@ def add_ability_to_creature(field, player, creature, virtual, add_ability=[]):
 
 
 def add_ability_until_end_of_player_turn(field, player, creature, virtual, add_ability=[]):
-    def ability_until_end_of_player_turn(field, player, opponent, virtual, target, self_creature):
-        if field.turn_player_num == player.player_num:
-            for ability in add_ability:
-                if ability not in card_setting.creature_list[self_creature.card_id][3]\
-                        and ability in self_creature.ability:
-                    self_creature.ability.remove(ability)
-            # self_creature.turn_end_ability=[]
-            while True:
-                if ability_until_end_of_player_turn in self_creature.turn_end_ability:
-                    self_creature.turn_end_ability.remove(ability_until_end_of_player_turn)
-                else:
-                    break
-
     for ability in add_ability:
         if ability not in creature.ability:
             creature.ability.append(ability)
+    creature.tmp_keyword_ability[0][1].extend(add_ability)
+    creature.tmp_keyword_ability[0][1] = list(set(creature.tmp_keyword_ability[0][1]))
     if not virtual:
         mylogger.info(
             "{} get {} until end of player turn".format(creature.name, [KeywordAbility(i).name for i in add_ability]))
 
-    creature.turn_end_ability.append(ability_until_end_of_player_turn)
+    creature.turn_end_ability.append("ability_until_end_of_player_turn")
 
+def ability_until_end_of_player_turn(field, player, opponent, virtual, target, self_creature):
+    if field.turn_player_num == player.player_num:
+        for ability in self_creature.tmp_keyword_ability[0][1]:
+            if ability not in card_setting.creature_list[self_creature.card_id][3]\
+                    and ability in self_creature.ability:
+                self_creature.ability.remove(ability)
+        self_creature.tmp_keyword_ability[0][1].clear()
+        # self_creature.turn_end_ability=[]
+        while True:
+            if "ability_until_end_of_player_turn" in self_creature.turn_end_ability:
+                self_creature.turn_end_ability.remove("ability_until_end_of_player_turn")
+            else:
+                break
 
 def add_ability_until_end_of_opponent_turn(field, player, creature, virtual, add_ability=[]):
-    def ability_until_end_of_opponent_turn(field, player, opponent, virtual, target, self_creature):
-        if field.turn_player_num == opponent.player_num:
-            for ability in add_ability:
-                if ability not in card_setting.creature_list[self_creature.card_id][3] \
-                        and ability in self_creature.ability:
-                    self_creature.ability.remove(ability)
-            # self_creature.turn_end_ability=[]
-            while True:
-                if ability_until_end_of_opponent_turn in self_creature.turn_end_ability:
-                    self_creature.turn_end_ability.remove(ability_until_end_of_opponent_turn)
-                else:
-                    break
-
     for ability in add_ability:
         if ability not in creature.ability:
             creature.ability.append(ability)
+    creature.tmp_keyword_ability[1][1].extend(add_ability)
+    creature.tmp_keyword_ability[1][1] = list(set(creature.tmp_keyword_ability[1][1]))
     if not virtual:
         mylogger.info(
             "{} get {} until end of opponent turn".format(creature.name, [KeywordAbility(i).name for i in add_ability]))
-    creature.turn_end_ability.append(ability_until_end_of_opponent_turn)
+    creature.turn_end_ability.append("ability_until_end_of_opponent_turn")
 
+def ability_until_end_of_opponent_turn(field, player, opponent, virtual, target, self_creature):
+    if field.turn_player_num == opponent.player_num:
+        for ability in self_creature.tmp_keyword_ability[1][1]:
+            if ability not in card_setting.creature_list[self_creature.card_id][3] \
+                    and ability in self_creature.ability:
+                self_creature.ability.remove(ability)
+        self_creature.tmp_keyword_ability[1][1].clear()
+        # self_creature.turn_end_ability=[]
+        while True:
+            if "ability_until_end_of_opponent_turn" in self_creature.turn_end_ability:
+                self_creature.turn_end_ability.remove("ability_until_end_of_opponent_turn")
+            else:
+                break
 
 def gain_max_pp(field, player, virtual, num=0):
     field.gain_max_pp(player_num=player.player_num, num=num, virtual=virtual)

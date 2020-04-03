@@ -246,16 +246,7 @@ class Player:
                     "able_to_creature_attack:{} can_be_attacked:{}".format(able_to_creature_attack, can_be_attacked))
             mylogger.info("regal_targets:{}".format(regal_targets))
 
-        # self.show_hand()
-        #re_check = False
-        action_num = 0
-        card_id = 0
-        target_id = None
-        msg = 0
-        policy_count = 0
-        #action_histroy = deque()
         (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
-        #action_histroy.appendleft((action_num,card_id,target_id))
         if action_num == Action_Code.ERROR.value:
             #self.policy.starting_node.print_node()
             #assert False
@@ -269,8 +260,6 @@ class Player:
                 assert False
             self.policy.current_node = None
             return self.decide(player, opponent, field, virtual,dual)
-
-            #continue
 
         elif action_num != Action_Code.TURN_END.value and self.policy.policy_type == 3:
             sim_field = self.policy.prev_node.field
@@ -288,11 +277,7 @@ class Player:
         return end_flg
 
     def execute_action(self, field, opponent, action_code=None, virtual=False):
-        assert self.field == field,"diff field!"
-        #self.field.reset_time_stamp()
         field.reset_time_stamp()
-        #if action_code is None:
-        #    assert False,"action_code is None!"
         (action_num, card_id, target_id) = action_code
 
         if action_num == Action_Code.EVOLVE.value:

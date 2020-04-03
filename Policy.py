@@ -2260,7 +2260,7 @@ class New_Node:
                 if field.players[player_num].hand[play_id].card_category != "Spell" and len(
                         field.card_location[player_num]) >= field.max_field_num:
                     continue
-                    target_len = len(regal_targets[play_id])
+                target_len = len(regal_targets[play_id])
                 if target_len > 0:
                     for i in range(target_len):
                         children_moves.append((Action_Code.PLAY_CARD.value, play_id, regal_targets[play_id][i]))
@@ -3383,6 +3383,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
             4: 20, 5: 100
         }
         self.error_count = 0
+        self.last_node = None
 
     def state_value(self, field, player_num):
         return default_state_value(field,player_num)
@@ -3391,6 +3392,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
         self.main_player_num = player.player_num
         if self.current_node is None:
             action = self.uct_search(player, opponent, field)
+            self.last_node = self.current_node
             if not field.secret:
                 mylogger.info("generate new tree")
                 self.current_node.print_tree(single=True)
@@ -3407,11 +3409,11 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                         for child in self.prev_node.child_nodes:
                             mylogger.info("action:{} value:{}".format(self.prev_node.node_id_2_edge_action[id(child)],
                                                                       child.value/max(1,child.visit_num)))
-                self.prev_node = self.current_node
+                self.prev_node = None
                 self.current_node = None
                 self.error_count = 0
             else:
-                self.prev_node = self.current_node
+                self.prev_node = self.last_node
                 self.current_node = next_node
 
             return tmp_move  # action
@@ -3423,23 +3425,39 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                 if child.field.eq(field) and player.compare_hand(sim_player_hand):
                     hit_flg = True
                     self.current_node = child
-                    break
 
+                    break
+            #field.show_field()
             if hit_flg:
+                self.type = "hit"
+                self.last_node = self.current_node
+
                 if not field.secret:
                     mylogger.info("corresponding node is not found(visit_num:{},child_num:{})"
                                   .format(self.current_node.visit_num,
                                           len(self.current_node.child_nodes)))
                 if not field.secret:
                     mylogger.info("reuse current_node as root")
+
                 self.uct_search(player, opponent, field,use_existed_node=True)
+                #mylogger.info("yes")
+                #self.current_node.field.show_field()
 
             else:
+                self.type = "nohit"
+
                 self.uct_search(player, opponent, field)
+                #mylogger.info("no")
+                #self.current_node.field.show_field()
+                self.last_node = self.current_node
                 #self.current_node = None
                 #return self.decide(player, opponent, field)
                 #return Action_Code.ERROR.value,"No hit",None
-
+            if not player.compare_hand(self.last_node.field.players[player.player_num].hand):
+                print(self.type)
+                player.show_hand()
+                self.last_node.field.players[player.player_num].show_hand()
+                mylogger.info("differror")
             if not field.secret:
                 mylogger.info("use existed tree")
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
@@ -3449,9 +3467,11 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                         mylogger.info("choices:{}".format(self.prev_node.children_moves))
                 self.error_count = 0
                 self.current_node = None
+                self.prev_node = None
             else:
-                self.prev_node = self.current_node
+                #self.prev_node = self.current_node
                 self.current_node = next_node
+            self.prev_node = self.last_node
             return tmp_move  # action
 
     def tree_policy(self, node, player_num=0):
@@ -3742,6 +3762,10 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                         break
 
         else:
+            #mylogger.info("parent")
+            #node.field.players[player_num].show_hand()
+            #node.field.show_field()
+            #mylogger.info("able_actions:{} move:{}".format(node.children_moves,move))
             next_field.players[player_num].execute_action(next_field, next_field.players[1 - player_num],
                                                           action_code=move, virtual=True)
             flg = next_field.check_game_end()

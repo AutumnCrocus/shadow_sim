@@ -439,6 +439,7 @@ class Creature(Card):
         if card_id in special_evo_stats_id:
             self.evo_stat = evo_stats[special_evo_stats_id[card_id]]
         self.ability = creature_list[self.card_id][3][:]
+        self.tmp_keyword_ability = [[[],[]],[[],[]]]
         self.have_active_ability = card_id in creature_active_ability_card_id_list
         if self.have_active_ability:
             func_id = creature_active_ability_card_id_list[card_id]
@@ -448,9 +449,10 @@ class Creature(Card):
         if card_id in creature_fanfare_ability:
             self.fanfare_ability = creature_ability_dict[creature_fanfare_ability[card_id]]
 
-        self.lastword_ability = []
-        if card_id in creature_lastword_ability:
-            self.lastword_ability.append(creature_ability_dict[creature_lastword_ability[card_id]])
+        self.lastword_ability = [creature_lastword_ability[card_id]] if card_id in creature_lastword_ability else []
+        #self.lastword_ability = []
+        #if card_id in creature_lastword_ability:
+        #    self.lastword_ability.append(creature_ability_dict[creature_lastword_ability[card_id]])
 
         self.have_target = 0
         if card_id in creature_has_target:
@@ -466,17 +468,20 @@ class Creature(Card):
             if card_id in evo_target_regulation:
                 self.evo_target_regulation = evo_target_regulation[card_id]
 
-        self.turn_start_ability = []
-        if card_id in creature_start_of_turn_ability:
-            self.turn_start_ability.append(creature_ability_dict[creature_start_of_turn_ability[card_id]])
-
-        self.turn_end_ability = []
-        if card_id in creature_end_of_turn_ability:
-            self.turn_end_ability.append(creature_ability_dict[creature_end_of_turn_ability[card_id]])
-        self.trigger_ability = []
-        if card_id in creature_trigger_ability_dict:
-            self.trigger_ability.append(trigger_ability_dict[creature_trigger_ability_dict[card_id]]())
-            self.trigger_ability_stack = []
+        self.turn_start_ability = [creature_start_of_turn_ability[card_id]] if card_id in creature_start_of_turn_ability else []
+        #self.turn_start_ability = []
+        #if card_id in creature_start_of_turn_ability:
+        #    self.turn_start_ability.append(creature_ability_dict[creature_start_of_turn_ability[card_id]])
+        self.turn_end_ability = [creature_end_of_turn_ability[card_id]] if card_id in creature_end_of_turn_ability else []
+        #self.turn_end_ability = []
+        #if card_id in creature_end_of_turn_ability:
+        #    self.turn_end_ability.append(creature_ability_dict[creature_end_of_turn_ability[card_id]])
+        self.trigger_ability = [creature_trigger_ability_dict[card_id]] if card_id in creature_trigger_ability_dict else []
+        self.trigger_ability_stack = []
+        #self.trigger_ability = []
+        #if card_id in creature_trigger_ability_dict:
+        #    self.trigger_ability.append(trigger_ability_dict[creature_trigger_ability_dict[card_id]]())
+        #    self.trigger_ability_stack = []
 
         self.name = creature_list[self.card_id][-1]
         self.is_in_field = False
@@ -489,9 +494,10 @@ class Creature(Card):
         self.can_only_attack_target = None
         if card_id in creature_can_only_attack_list:
             self.can_only_attack_target = creature_can_only_attack_list[card_id]
-        self.in_battle_ability = []
-        if card_id in creature_in_battle_ability_list:
-            self.in_battle_ability.append(battle_ability_dict[creature_in_battle_ability_list[card_id]])
+        self.in_battle_ability = [creature_in_battle_ability_list[card_id]] if card_id in creature_in_battle_ability_list else []
+        #self.in_battle_ability = []
+        #if card_id in creature_in_battle_ability_list:
+        #    self.in_battle_ability.append(battle_ability_dict[creature_in_battle_ability_list[card_id]])
         self.cost_change_ability = None
         if card_id in creature_cost_change_ability_list:
             self.cost_change_ability = cost_change_ability_dict[creature_cost_change_ability_list[card_id]]
@@ -540,13 +546,20 @@ class Creature(Card):
         creature.buff = self.buff[:]  # スタッツ上昇量
         creature.until_turn_end_buff = self.until_turn_end_buff[:]  # ターン終了時までのスタッツ上昇量
         creature.ability = self.ability[:]
+        creature.tmp_keyword_ability = [[self.tmp_keyword_ability[0][0][:],self.tmp_keyword_ability[0][1][:]],
+                                        [self.tmp_keyword_ability[1][0][:],self.tmp_keyword_ability[1][1][:]]]
         creature.lastword_ability = self.lastword_ability[:]
+        """
         if len(creature.turn_start_ability) != len(self.turn_start_ability):
             creature.turn_start_ability = copy.deepcopy(self.turn_start_ability)
         if len(creature.turn_end_ability) != len(self.turn_end_ability):
             creature.turn_end_ability = copy.deepcopy(self.turn_end_ability)
         if len(creature.trigger_ability) != len(self.trigger_ability):
             creature.trigger_ability = copy.deepcopy(self.trigger_ability)
+        """
+        creature.turn_start_ability = self.turn_start_ability[:]
+        creature.turn_end_ability = self.turn_end_ability[:]
+        creature.trigger_ability = self.trigger_ability[:]
 
         creature.is_in_field = self.is_in_field
         creature.is_in_graveyard = self.is_in_graveyard
@@ -555,8 +568,9 @@ class Creature(Card):
         creature.current_attack_num = int(self.current_attack_num)
         creature.can_attack_num = int(self.can_attack_num)
         creature.evolved = self.evolved
-        if len(creature.in_battle_ability) != len(self.in_battle_ability):
-            creature.in_battle_ability = copy.deepcopy(self.in_battle_ability)
+        #if len(creature.in_battle_ability) != len(self.in_battle_ability):
+        #    creature.in_battle_ability = copy.deepcopy(self.in_battle_ability)
+        creature.in_battle_ability = self.in_battle_ability[:]
         if self.card_class.name == "RUNE":
             creature.spell_boost = None
             if creature_list[self.card_id][4][1][0]:
@@ -717,7 +731,9 @@ class Spell(Card):
         self.target_regulation = None
         if card_id in spell_target_regulation:
             self.target_regulation = spell_target_regulation[card_id]
+
         self.triggered_ability = [spell_ability_dict[spell_triggered_ability[card_id]]]
+
         self.have_target = 0
         if card_id in spell_has_target:
             self.have_target = spell_has_target[card_id]
@@ -819,10 +835,12 @@ class Amulet(Card):
             func_id = amulet_active_ability_card_id_list[card_id]
             self.active_ability_check_func = active_ability_check_func_list[func_id]
             self.active_ability = amulet_active_ability_list[card_id]
-        self.trigger_ability = []
-        if card_id in amulet_trigger_ability_dict:
-            self.trigger_ability.append(trigger_ability_dict[amulet_trigger_ability_dict[card_id]]())
-            self.trigger_ability_stack = []
+        self.trigger_ability = [amulet_trigger_ability_dict[card_id]] if card_id in amulet_trigger_ability_dict else []
+        self.trigger_ability_stack = []
+        #self.trigger_ability = []
+        #if card_id in amulet_trigger_ability_dict:
+        #    self.trigger_ability.append(trigger_ability_dict[amulet_trigger_ability_dict[card_id]]())
+        #    self.trigger_ability_stack = []
         self.target_regulation = None
         if card_id in amulet_target_regulation:
             self.target_regulation = amulet_target_regulation[card_id]
@@ -830,23 +848,26 @@ class Amulet(Card):
         self.fanfare_ability = None
         if card_id in amulet_fanfare_ability:
             self.fanfare_ability = amulet_ability_dict[amulet_fanfare_ability[card_id]]
-        self.lastword_ability = []
-        if card_id in amulet_lastword_ability:
-            self.lastword_ability.append(amulet_ability_dict[amulet_lastword_ability[card_id]])
+        self.lastword_ability = [amulet_lastword_ability[card_id]] if card_id in amulet_lastword_ability else []
+        #self.lastword_ability = []
+        #if card_id in amulet_lastword_ability:
+        #    self.lastword_ability.append(amulet_ability_dict[amulet_lastword_ability[card_id]])
 
         self.have_target = 0
         if card_id in amulet_has_target:
             self.have_target = amulet_has_target[card_id]
 
-        self.turn_start_ability = []
-        if card_id in amulet_start_of_turn_ability:
-            self.turn_start_ability.append(amulet_ability_dict[amulet_start_of_turn_ability[card_id]])
-            # mylogger.info("ability exist")
+        #self.turn_start_ability = []
+        #if card_id in amulet_start_of_turn_ability:
+        #    self.turn_start_ability.append(amulet_ability_dict[amulet_start_of_turn_ability[card_id]])
+        #    # mylogger.info("ability exist")
+        self.turn_start_ability = [amulet_start_of_turn_ability[card_id]] if card_id in amulet_start_of_turn_ability else []
 
-        self.turn_end_ability = []
-        if card_id in amulet_end_of_turn_ability:
-            self.turn_end_ability.append(amulet_ability_dict[amulet_end_of_turn_ability[card_id]])
-            # mylogger.info("ability exist")
+        #self.turn_end_ability = []
+        #if card_id in amulet_end_of_turn_ability:
+        #    self.turn_end_ability.append(amulet_ability_dict[amulet_end_of_turn_ability[card_id]])
+        #    # mylogger.info("ability exist")
+        self.turn_end_ability = [amulet_end_of_turn_ability[card_id]] if card_id in amulet_end_of_turn_ability else []
         self.name = amulet_list[self.card_id][-1]
         self.is_in_graveyard = False
         self.is_in_field = False
@@ -903,6 +924,9 @@ class Amulet(Card):
         amulet.cost = int(self.cost)
         amulet.is_in_field = self.is_in_field
         amulet.current_count = int(self.current_count)
+        amulet.turn_start_ability = self.turn_start_ability[:]
+        amulet.turn_end_ability = self.turn_end_ability[:]
+        amulet.trigger_ability = self.trigger_ability[:]
         if self.card_class.name == "RUNE":
             # self.spell_boost = None
             if amulet_list[self.card_id][2][1][0]:

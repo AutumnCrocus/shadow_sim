@@ -424,6 +424,13 @@ if __name__ == "__main__":
     parser.add_argument('--mcts', help='サンプリングAIをMCTSにする(オリジナルの場合は[OM])')
     parser.add_argument('--deck', help='サンプリングに用いるデッキの選び方')
     parser.add_argument('--cuda', help='gpuを使用するかどうか')
+    parser.add_argument('--multi_train', help="学習時も並列化するかどうか")
+    parser.add_argument('--epoch_interval', help="モデルの保存間隔")
+    parser.add_argument('--fixed_deck_id', help="使用デッキidの固定")
+    parser.add_argument('--cpu_num', help="使用CPU数", default=2 if torch.cuda.is_available() else 3)
+    parser.add_argument('--batch_num', help='サンプルに対するバッチの数')
+    args = parser.parse_args()
+    deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
     args = parser.parse_args()
     net = New_Dual_Net(100)
     if torch.cuda.is_available() and args.cuda == "True":
@@ -436,9 +443,9 @@ if __name__ == "__main__":
     from Policy import *
     from Game_setting import Game
 
-    deck_sampling_type = False
-    if args.deck is not None:
-        deck_sampling_type = True
+    #deck_sampling_type = False
+    #if args.deck is not None:
+    #    deck_sampling_type = True
 
     G = Game()
     episode_len = 100
@@ -475,9 +482,9 @@ if __name__ == "__main__":
         win_num = 0
         for episode in tqdm(range(episode_len)):
             f = Field(5)
-            deck_type1 = 0
-            deck_type2 = 0
-            if deck_sampling_type:
+            deck_type1 = deck_flg
+            deck_type2 = deck_flg
+            if deck_flg is None:
                 deck_type1 = random.choice(list(key_2_tsv_name.keys()))
                 deck_type2 = random.choice(list(key_2_tsv_name.keys()))
             d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])

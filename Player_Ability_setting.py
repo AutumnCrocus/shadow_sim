@@ -37,8 +37,10 @@ class restore_1_defense_to_all_allies():
 
     def __call__(self,field, player, virtual, state_log=None):
         if state_log[0] != State_Code.END_OF_TURN.value:
+            #mylogger.info("{}".format(state_log))
             return
         if state_log[1] != player.player_num:
+            #mylogger.info("{}".format(state_log))
             return
         if not virtual:
             mylogger.info("De La Fille, Gem Princess's leader effect is actived")

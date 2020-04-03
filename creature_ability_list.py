@@ -250,7 +250,8 @@ def creature_ability_032(field, player, opponent, virtual, target, itself):
         mylogger.info("Player{}'s followers in hand get Last Words: Draw a card.".format(player.player_num + 1))
     for card in player.hand:
         if card.card_category == "Creature":
-            card.lastword_ability.append(creature_ability_003)
+            #card.lastword_ability.append(creature_ability_003)
+            card.lastword_ability.append(3)
 
 
 def creature_ability_033(field, player, opponent, virtual, target, itself):
@@ -510,18 +511,49 @@ def creature_ability_065(field, player, opponent, virtual, target, itself):
         creature = player.hand[target]
         if creature.card_category != "Creature":
             mylogger.info("target_id:{} name:{}".format(target, creature.name))
+            mylogger.info("type:{}".format(player.policy.type))
             mylogger.info("real")
             mylogger.info("hand_regal_targets:{}".format(field.get_regal_target_dict(player,opponent)))
             player.show_hand()
             field.show_field()
-            mylogger.info("sim")
-            sim_field = player.policy.prev_node.field
+            #mylogger.info("sim")
+            #sim_field = player.policy.prev_node.field
+            #sim_player = sim_field.players[player.player_num]
+            #sim_opponent = sim_field.players[opponent.player_num]
+            #mylogger.info("hand_regal_targets:{}".format(sim_field.get_regal_target_dict(sim_player, sim_opponent)))
+            #sim_player = sim_field.players[player.player_num]
+            #sim_player.show_hand()
+            #sim_field.show_field()
+            mylogger.info("last")
+            sim_field = player.policy.last_node.field
             sim_player = sim_field.players[player.player_num]
             sim_opponent = sim_field.players[opponent.player_num]
-            mylogger.info("hand_regal_targets:{}".format(sim_field.get_regal_target_dict(sim_player,sim_opponent)))
+            mylogger.info("hand_regal_targets:{}".format(sim_field.get_regal_target_dict(sim_player, sim_opponent)))
             sim_player = sim_field.players[player.player_num]
             sim_player.show_hand()
             sim_field.show_field()
+            """
+            mylogger.info("target_id:{} name:{}".format(target, creature.name))
+            mylogger.info("real")
+            mylogger.info("hand_regal_targets:{}".format(field.get_regal_target_dict(player,opponent)))
+            player.show_hand()
+            field.show_field()
+            if player.policy.prev_node is not None:
+                mylogger.info("sim")
+                sim_field = player.policy.prev_node.field
+                sim_player = sim_field.players[player.player_num]
+                sim_opponent = sim_field.players[opponent.player_num]
+                mylogger.info("hand_regal_targets:{}".format(sim_field.get_regal_target_dict(sim_player,sim_opponent)))
+                sim_player = sim_field.players[player.player_num]
+                sim_player.show_hand()
+                sim_field.show_field()
+                mylogger.info("eq:{}".format(field.eq(sim_field)))
+                mylogger.info("hand_eq:{}".format(player.compare_hand(sim_player.hand)))
+            mylogger.info("current_node")
+            current_field = player.policy.current_node.field
+            current_field.players[player.player_num].show_field()
+            current_field.show_field()
+            """
 
             assert False,"non-follower-error"
         if not virtual:
@@ -529,7 +561,8 @@ def creature_ability_065(field, player, opponent, virtual, target, itself):
         creature = player.hand.pop(target)
         field.set_card(creature, player.player_num, virtual=virtual)
         add_ability_to_creature(field, player, creature, virtual, add_ability=[4])
-        creature.turn_end_ability.append(creature_ability_066)
+        #creature.turn_end_ability.append(creature_ability_066)
+        creature.turn_end_ability.append(66)
 
 
 def creature_ability_066(field, player, opponent, virtual, target, itself):
@@ -687,14 +720,13 @@ def creature_ability_082(field, player, opponent, virtual, target, itself):
     Fanfare: Give all allied followers Last Words - Summon a Skeleton.
     """
 
-    def summon_a_skeleton(field, player, opponent, virtual, target, itself):
-        summon_creature(field, player, virtual, name="Skeleton", num=1)
+
 
     if not virtual:
         mylogger.info("All Player{}'s follower get Last Words - Summon a Skeleton".format(player.player_num + 1))
     for card in field.card_location[player.player_num]:
         if card.card_category == "Creature":
-            card.lastword_ability.append(summon_a_skeleton)
+            card.lastword_ability.append(-3)
 
 
 def creature_ability_083(field, player, opponent, virtual, target, itself):
@@ -1180,6 +1212,12 @@ def token_creature_ability_002(field, player, opponent, virtual, target, itself)
         destroy_opponent_creature(field, player, virtual, itself_index)
         # field.remove_card([player.player_num,itself_index],virtual)
 
+def token_creature_ability_003(field, player, opponent, virtual, target, itself):
+    """
+    summon skelton
+    """
+    summon_creature(field, player, virtual, name="Skeleton", num=1)
+
 
 creature_ability_dict = {
     0: None, 1: creature_ability_001, 2: creature_ability_002, 3: creature_ability_003,
@@ -1229,4 +1267,6 @@ creature_ability_dict = {
     118: creature_ability_118, 119: creature_ability_119, 120: creature_ability_120,
     121: creature_ability_121, 122: creature_ability_122, 123: creature_ability_123,
     124: creature_ability_124, 125: creature_ability_125,
-    -1: token_creature_ability_001, -2: token_creature_ability_002}
+    -1: token_creature_ability_001, -2: token_creature_ability_002,-3: token_creature_ability_003,
+    "ability_until_end_of_opponent_turn":util_ability.ability_until_end_of_opponent_turn,
+    "ability_until_end_of_player_turn":util_ability.ability_until_end_of_player_turn}

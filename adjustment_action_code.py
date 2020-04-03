@@ -6,6 +6,7 @@ mylogger = get_module_logger(__name__)
 
 
 def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
+    assert sim_field.eq(field),"diff field!"
     player = field.players[player_num]
     opponent = field.players[1-player_num]
     sim_player = sim_field.players[player.player_num]
@@ -173,6 +174,7 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                                 target_id = i - 1
                             else:
                                 target_id = i
+                            assert target_id in regal_target,"{} not in {}".format(target_id,regal_target)
                             return action_num, card_id, target_id
                 else:
                     targeted_card = sim_player.hand[prev_target_id]
