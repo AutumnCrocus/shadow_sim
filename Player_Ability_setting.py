@@ -37,10 +37,8 @@ class restore_1_defense_to_all_allies():
 
     def __call__(self,field, player, virtual, state_log=None):
         if state_log[0] != State_Code.END_OF_TURN.value:
-            #mylogger.info("{}".format(state_log))
             return
         if state_log[1] != player.player_num:
-            #mylogger.info("{}".format(state_log))
             return
         if not virtual:
             mylogger.info("De La Fille, Gem Princess's leader effect is actived")
@@ -56,12 +54,8 @@ class  search_three_followers():
     def __call__(self,field, player, virtual, state_log=None):
         if state_log is None: return
         if state_log[0] != State_Code.START_OF_TURN.value:
-            if not field.secret:
-                mylogger.info("state_log:{}".format(State_Code(state_log[0]).name))
             return
         if state_log[1] != player.player_num:
-            if not field.secret:
-                mylogger.info("player_num:{}".format(state_log[0]))
             return
         if not virtual:
             mylogger.info("Staircase to Paradise's ability is actived")

@@ -1,3 +1,4 @@
+from my_moduler import get_module_logger
 import numpy as np
 import random
 import math
@@ -7,9 +8,9 @@ import collections
 from collections import deque
 import itertools
 import Player_Ability_setting
-from my_moduler import get_module_logger
 
-mylogger = get_module_logger(__name__)
+
+
 from util_ability import *
 # mylogger = get_module_logger('mylogger')
 from my_enum import *
@@ -18,6 +19,8 @@ import os
 check_follower = lambda card:card.card_category=="Creature"
 from Game_setting import get_data
 from trigger_ability_list import *
+mylogger = get_module_logger(__name__)
+
 class Field:
     def __init__(self, max_field_num):
         self.card_location = [[], []]
@@ -171,68 +174,78 @@ class Field:
 
     def solve_field_trigger_ability(self, virtual=False, player_num=0):
         ability_list = deque()
-        # ability_list.apendleft()
         if len(self.state_log) == 0: return
         index = len(self.state_log)
         if not self.secret:
             mylogger.info("current_state_log:{}".format([State_Code(cell[0]).name for cell in self.state_log]))
-        #while index >= 0:
+
+        [[
+            (
+                [Player_Ability_setting.player_ability_id_2_func[player_ability_id](self, self.players[(i + player_num) % 2],
+                                                                            virtual,
+                                                                            state_log=self.state_log[j]) for
+            player_ability_id in self.player_ability[(i + player_num) % 2]],
+
+            [[ability_list.appendleft(
+            (ability_id, [self, self.players[(i + player_num) % 2], self.players[(i + player_num) % 2], virtual, None,
+                          self.card_location[(i + player_num) % 2][location_id], self.state_log[j]])) for ability_id in
+            self.card_location[(i + player_num) % 2][location_id].trigger_ability] for location_id
+                in reversed(range(len(self.card_location[(i + player_num) % 2]) - 1))
+            if self.card_location[(i + player_num) % 2][location_id].time_stamp < self.state_log[j][-1]]
+            )
+
+            for i in range(2)]
+        for j in reversed(range(index))]
+        """
+
         for j in reversed(range(index)):
             target_state_log = self.state_log[j]
-            #target_state_log = self.state_log[index]
             for i in range(2):
                 side_id = (i + player_num) % 2
-                #mylogger.info("leader_ability:{} virtual:{}".format(self.player_ability[side_id],virtual))
-                for player_ability_id in self.player_ability[side_id]:
-                    ability = Player_Ability_setting.player_ability_id_2_func[player_ability_id]
-                    ability(self, self.players[side_id], virtual, state_log=target_state_log)
-
-                    #Player_Ability_setting.player_ability_id_2_func[player_ability_id]\
-                    #    (self, self.players[side_id], virtual, state_log=target_state_log)
-                #[Player_Ability_setting.player_ability_id_2_func[player_ability_id]
-                # (self, self.players[side_id], virtual, state_log=target_state_log) for player_ability_id in self.player_ability[side_id]]
+                [Player_Ability_setting.player_ability_id_2_func[player_ability_id](self, self.players[side_id], virtual,
+                        state_log=target_state_log) for player_ability_id in self.player_ability[side_id]]
+                
+                #for player_ability_id in self.player_ability[side_id]:
+                #    ability = Player_Ability_setting.player_ability_id_2_func[player_ability_id]
+                #    ability(self, self.players[side_id], virtual, state_log=target_state_log)
+                
                 side = self.card_location[side_id]
-                location_id = len(side) - 1
-                while location_id >= 0:
-                    #if not virtual:
-                    #    mylogger.info("time stamp : {}".format(target_state_log[-1]))
-                    if side[location_id].time_stamp < target_state_log[-1]:
-                        for ability_id in side[location_id].trigger_ability:
-                            argument = [self, self.players[side_id], self.players[1 - side_id], virtual, None,
-                                        side[location_id], target_state_log]
-                            ability_list.appendleft((ability_id, argument))
-                    #elif not virtual:
-                        #mylogger.info("{}'s time stamp is {}".format(side[location_id].name,side[location_id].time_stamp))
-                        #argument = [self, self.players[side_id], self.players[1 - side_id], virtual, None,
-                        #            side[location_id], target_state_log]
-                        #[ability_list.appendleft((ability_id, argument)) for ability_id in side[location_id].trigger_ability]
-                        #for ability in side[location_id].trigger_ability:
-                        #    argument = [self, self.players[side_id], self.players[1 - side_id], virtual, None,
-                        #                side[location_id], target_state_log]
-                        #    ability_list.appendleft((ability, argument))
-                            # ability(self,self.players[side_id],self.players[1-side_id],virtual,None,thing,state_log=target_state_log)
-                    location_id -= 1
-            #index -= 1
+                #location_id = len(side) - 1
+                initial_id = len(side) - 1
+                [[ability_list.appendleft(
+                    (ability_id, [self, self.players[side_id], self.players[1 - side_id], virtual, None,
+                                  side[location_id], target_state_log])) for ability_id in
+                 side[location_id].trigger_ability] for location_id in reversed(range(initial_id))
+                    if side[location_id].time_stamp < target_state_log[-1]]
+                
+                #while location_id >= 0:
+                #    if side[location_id].time_stamp < target_state_log[-1]:
+                #        [ability_list.appendleft((ability_id, [self, self.players[side_id], self.players[1 - side_id], virtual, None,
+                #                    side[location_id], target_state_log])) for ability_id in side[location_id].trigger_ability]
+                #        
+                #        for ability_id in side[location_id].trigger_ability:
+                #            argument = [self, self.players[side_id], self.players[1 - side_id], virtual, None,
+                #                        side[location_id], target_state_log]
+                #            ability_list.appendleft((ability_id, argument))
+                #        
+                #    location_id -= 1
+                #
+        """
+        [self.state_log.popleft() for _ in range(index)]
+        """
         for _ in range(index):
             self.state_log.popleft()
-        #while len(ability_list) > 0:
-        #for tmp_ability_pair in ability_list:
-        #    #tmp_ability_pair = ability_list.popleft()
-        #    ability = tmp_ability_pair[0]
-        #    argument = tmp_ability_pair[1]
-        #    ability(argument[0], argument[1], argument[2], argument[3], argument[4], argument[5], state_log=argument[6])
-        #mylogger.info("start:{}".format(ability_list))
-        #tmp=[trigger_ability_dict[tmp_ability_pair[0]](tmp_ability_pair[1][0], tmp_ability_pair[1][1], tmp_ability_pair[1][2],
-        #                                          tmp_ability_pair[1][3], tmp_ability_pair[1][4], tmp_ability_pair[1][5],
-        #                                          state_log=tmp_ability_pair[1][6]) for tmp_ability_pair in ability_list]
-        #mylogger.info("end:{}".format(tmp))
-        #mylogger.info("full_abilities:{}".format(len(ability_list)))
+        """
+        [trigger_ability_dict[tmp_ability_pair[0]](tmp_ability_pair[1][0], tmp_ability_pair[1][1], tmp_ability_pair[1][2],
+                tmp_ability_pair[1][3], tmp_ability_pair[1][4], tmp_ability_pair[1][5],
+                state_log=tmp_ability_pair[1][6]) for tmp_ability_pair in ability_list]
+        """
         for tmp_ability_pair in ability_list:
-            #mylogger.info("ability:{}".format(trigger_ability_dict[tmp_ability_pair[0]]))
             ability = trigger_ability_dict[tmp_ability_pair[0]]
             ability(tmp_ability_pair[1][0], tmp_ability_pair[1][1], tmp_ability_pair[1][2],
                                                       tmp_ability_pair[1][3], tmp_ability_pair[1][4], tmp_ability_pair[1][5],
                                                       state_log=tmp_ability_pair[1][6])
+        """
 
         if not self.secret:
             mylogger.info("next_state_log:{}".format(self.state_log))
@@ -279,6 +292,8 @@ class Field:
         return observable_data_dict
 
     def discard_card(self, player,hand_id):
+        if not self.secret:
+            mylogger.info("Player{} discard {}".format(player.hand[hand_id]))
         del player.hand[hand_id]
         self.graveyard.shadows[player.player_num] += 1
 

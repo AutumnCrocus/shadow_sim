@@ -335,8 +335,6 @@ class trigger_ability_014:
 
         if self not in itself.trigger_ability :
             return
-        #self.state_log.append([State_Code.SET.value,
-        # (player_num, card.card_category, card.card_id, id(card)),self.stack_num])
         if state_log is not None and state_log[0]==State_Code.SET.value and state_log[1][0] == player.player_num:
             if state_log[1][1] == "Creature" and \
                 card_setting.creature_list[state_log[1][2]][-2][0] == LeaderClass.NEUTRAL.value:
@@ -351,22 +349,15 @@ class trigger_ability_014:
                                                                     KeywordAbility.RUSH.name))
 
 def trigger_ability_014(field,player,opponent,virtual,target,itself,state_log=None):
-    #if self not in itself.trigger_ability:
-    #    return
-    # self.state_log.append([State_Code.SET.value,
-    # (player_num, card.card_category, card.card_id, id(card)),self.stack_num])
     if state_log is not None and state_log[0] == State_Code.SET.value and state_log[1][0] == player.player_num:
         if state_log[1][1] == "Creature" and \
                 card_setting.creature_list[state_log[1][2]][-2][0] == LeaderClass.NEUTRAL.value:
-            assert KeywordAbility.CANT_ATTACK.value in itself.ability, "{} don't have {},{}" \
-                .format(itself.ability, KeywordAbility.CANT_ATTACK.value, itself.trigger_ability)
-            itself.ability.remove(KeywordAbility.CANT_ATTACK.value) if KeywordAbility.CANT_ATTACK.value in itself.ability else None
-            add_ability_to_creature(field, player, itself, virtual, add_ability=[KeywordAbility.RUSH.value])
-            #assert self in itself.trigger_ability, "{}".format(itself.trigger_ability)
-            #itself.trigger_ability.remove(self)
-            if not virtual:
-                mylogger.info("{} loses {} and gains {}".format(itself.name, KeywordAbility.CANT_ATTACK.name,
-                                                                KeywordAbility.RUSH.name))
+            if KeywordAbility.CANT_ATTACK.value in itself.ability:
+                itself.ability.remove(KeywordAbility.CANT_ATTACK.value)
+                add_ability_to_creature(field, player, itself, virtual, add_ability=[KeywordAbility.RUSH.value])
+                if not virtual:
+                    mylogger.info("{} loses {} and gains {}".format(itself.name, KeywordAbility.CANT_ATTACK.name,
+                                                                    KeywordAbility.RUSH.name))
 """
 class special_trigger_ability_001:
     def __init__(self):

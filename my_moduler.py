@@ -9,7 +9,9 @@ def get_module_logger(modname):
     #logger.propagate = False
     streamhandler = logging.StreamHandler()
     #handler2 = logging.handlers.TimedRotatingFileHandler('log/battle.log',when='H',interval=1,backupCount=24)
-    formatter = logging.Formatter('%(name)s:%(message)s')
+    #formatter = logging.Formatter('%(name)s:%(message)s')
+    #print(modname)
+    formatter = logging.Formatter("%(name)s:%(message)s")
     streamhandler.setFormatter(formatter)
     logger.addHandler(streamhandler)
     #filehandler = logging.FileHandler(filename='log/battle.log')

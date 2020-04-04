@@ -1635,7 +1635,7 @@ if __name__ == '__main__':
     v = False
     deck_flg = False
     p1, p2 = 0, 0
-    human_player = HumanPlayer(9, first=True)
+    #human_player = HumanPlayer(9, first=True)
     file_name = None
     if args.filename is not None:
         file_name = args.filename
@@ -1675,11 +1675,11 @@ if __name__ == '__main__':
         a = int(args.playertype1) - 1
         b = int(args.playertype2) - 1
         if args.playertype1 == '0':
-            d1 = copy.deepcopy(human_player)
+            d1 = HumanPlayer(9, first=True)
         else:
             d1 = copy.deepcopy(Players[a])
         if args.playertype2 == '0':
-            d2 = copy.deepcopy(human_player)
+            d2 = HumanPlayer(9, first=True)
         else:
             d2 = copy.deepcopy(Players[b])
         p1 = int(args.decktype1)

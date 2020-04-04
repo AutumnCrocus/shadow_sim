@@ -313,8 +313,38 @@ class Player:
 
 
 class HumanPlayer(Player):
-    def __init__(self, max_hand_num, first=True, policy=RandomPolicy(), mulligan=Random_mulligan_policy()):
-        super(HumanPlayer, self).__init__(max_hand_num, first=True, policy=policy, mulligan=mulligan)
+    def __init__(self, max_hand_num, first=True, policy=HumanPolicy(), mulligan=None):
+        self.hand = []
+        self.max_hand_num = max_hand_num
+        self.is_first = first
+        self.player_num = 1 - int(self.is_first)
+        self.life = 20
+        self.max_life = 20
+        self.policy = policy
+        self.mulligan_policy = mulligan
+        self.deck = None
+        self.lib_out_flg = False
+        self.field = None
+        self.name = None
+        self.class_num = None
+        self.effect = []
+        self.error_count = 0
+
+    def get_copy(self, field):
+        player = HumanPlayer(self.max_hand_num, first=self.is_first, policy=HumanPolicy(), mulligan=None)
+        player.hand = list(map(field.copy_func,self.hand)) if field is not None else []
+        player.life = self.life
+        player.deck = Deck()
+        if self.deck is not None:
+            player.deck.set_leader_class(self.deck.leader_class.name)
+            player.deck.deck = deque(map(field.copy_func, self.deck.deck)) if field is not None else deque()
+            player.deck.remain_num = int(self.deck.remain_num)
+
+        player.field = field
+        player.name = self.name
+        player.class_num = self.class_num
+        player.effect = copy.copy(self.effect)
+        return player
 
     def mulligan(self, deck, virtual=False):
         self.show_hand()
@@ -339,7 +369,8 @@ class HumanPlayer(Player):
 
             deck.shuffle()
 
-    def decide(self, player, opponent, field, virtual=False):
+    def decide(self, player, opponent, field, virtual=False,dual=False):
+        os.system('clear')
         field.reset_time_stamp()
 
         (ward_list, can_be_targeted, can_be_attacked, regal_targets) = field.get_situation(player, opponent)
@@ -355,29 +386,25 @@ class HumanPlayer(Player):
         self.show_hand()
         field.show_field()
 
-        choices = [0]
+        choices = [Action_Code.TURN_END.value]
         if can_evo:
-            print("if you want to evolve creature,input -1")
-            choices.append(-1)
+            choices.append(Action_Code.EVOLVE.value)
         if can_play:
-            print("if you want to play card, input 1")
-            choices.append(1)
+            choices.append(Action_Code.PLAY_CARD.value)
 
         if can_attack:
             if len(can_be_attacked) > 0:
-                print("if you want to attack to creature, input 2")
-                choices.append(2)
+                choices.append(Action_Code.ATTACK_TO_FOLLOWER.value)
 
             if ward_list == [] and len(able_to_attack) > 0:
-                print("if you want to attack to player, input 3")
-                choices.append(3)
+                choices.append(Action_Code.ATTACK_TO_PLAYER.value)
 
-        print("if you want to call turn end, input 0")
+        [print("{:<25}:{}".format(Action_Code(i).name,i))for i in choices]
 
         tmp = input("you can input {} :".format(choices))
-        action_num = 0
+        action_num = Action_Code.TURN_END.value
         if tmp == "":
-            action_num = 0
+            action_num = Action_Code.TURN_END.value
         elif tmp == "\x1b[C":
             self.deck.show_remain_card_set()
             input("input any key to quit remain_card_set:")
@@ -496,6 +523,9 @@ class HumanPlayer(Player):
         if action_num == Action_Code.ATTACK_TO_PLAYER.value:
             print("able to attack:{}".format(able_to_attack))
             card_id = input("input creature id you want to let attack:")
+            if card_id == "":
+                print("invalid id!")
+                return can_play, can_attack, field.check_game_end()
             if int(card_id) not in able_to_attack:
                 print("can't attack!")
                 return can_play, can_attack, False

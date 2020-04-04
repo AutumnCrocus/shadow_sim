@@ -46,6 +46,9 @@ class Policy:
     def __str__(self):
         pass
 
+class HumanPolicy:
+    def __init__(self):
+        self.name = "humanPolicy"
 
 class RandomPolicy(Policy):
     def __defaults__(self):
