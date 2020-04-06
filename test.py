@@ -1635,7 +1635,7 @@ if __name__ == '__main__':
     v = False
     deck_flg = False
     p1, p2 = 0, 0
-    #human_player = HumanPlayer(9, first=True)
+    human_player = HumanPlayer(9, first=True)
     file_name = None
     if args.filename is not None:
         file_name = args.filename

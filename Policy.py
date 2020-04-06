@@ -2952,6 +2952,7 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
         self.main_player_num = player.player_num
         if self.current_node is None:
             action = self.uct_search(player, opponent, field)
+            self.last_node = self.current_node
             if not field.secret:
                 mylogger.info("generate new tree")
 
@@ -2960,8 +2961,13 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
                 next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
                 self.prev_node = self.current_node
                 self.current_node = next_node
+
             if tmp_move[0] == Action_Code.TURN_END.value:
                 self.current_node = None
+            else:
+                self.prev_node = self.last_node
+                self.current_node = next_node
+
 
             return tmp_move  # action
         else:
@@ -2975,6 +2981,8 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
                     break
 
             if hit_flg:
+                self.type = "hit"
+                self.last_node = self.current_node
                 if not field.secret:
                     mylogger.info("corresponding node is not found(visit_num:{},child_num:{})"
                                   .format(self.current_node.visit_num,
@@ -2982,20 +2990,24 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
                 self.uct_search(player, opponent, field,use_existed_node=True)
 
             else:
-                return Action_Code.ERROR.value,None,None
-            assert len(self.current_node.child_nodes) > 0,"current_node have no child!\n{}"\
-                .format(self.current_node.print_tree(single=True))
+                self.type = "nohit"
+                self.uct_search(player, opponent, field)
+                self.last_node = self.current_node
+                #return Action_Code.ERROR.value,None,None
+            #assert len(self.current_node.child_nodes) > 0,"current_node have no child!\n{}"\
+            #    .format(self.current_node.print_tree(single=True))
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
             self.prev_node = self.current_node
             self.current_node = next_node
-            if tmp_move == (0, 0, 0):
-                if not field.secret:
-                    if self.current_node.parent_node is not None:
-                        if self.current_node.parent_node.children_moves != [(0,0,0)]:
-                            mylogger.info("turn end is prior to other moves")
-                            mylogger.info("children_moves:{}".format(self.current_node.parent_node.children_moves))
-                            self.current_node.parent_node.print_tree(single=True)
+            if tmp_move[0] == Action_Code.TURN_END.value:
+                if not field.secret and len(self.prev_node.children_moves) > 1:
+                    mylogger.info("choices:{}".format(self.prev_node.children_moves))
+                self.error_count = 0
                 self.current_node = None
+                self.prev_node = None
+            else:
+                self.current_node = next_node
+            self.prev_node = self.last_node
             return tmp_move  # action
 
     def uct_search(self, player, opponent, field,use_existed_node=False):
@@ -3465,9 +3477,8 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                 mylogger.info("use existed tree")
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
             if tmp_move[0] == Action_Code.TURN_END.value:
-                if len(self.prev_node.children_moves) > 1:
-                    if not field.secret:
-                        mylogger.info("choices:{}".format(self.prev_node.children_moves))
+                if not field.secret and len(self.prev_node.children_moves) > 1:
+                    mylogger.info("choices:{}".format(self.prev_node.children_moves))
                 self.error_count = 0
                 self.current_node = None
                 self.prev_node = None
