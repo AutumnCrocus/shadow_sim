@@ -2987,15 +2987,22 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
                     mylogger.info("corresponding node is not found(visit_num:{},child_num:{})"
                                   .format(self.current_node.visit_num,
                                           len(self.current_node.child_nodes)))
-                self.uct_search(player, opponent, field,use_existed_node=True)
+                tmp_move = self.uct_search(player, opponent, field,use_existed_node=True)
 
             else:
                 self.type = "nohit"
-                self.uct_search(player, opponent, field)
+                tmp_move  = self.uct_search(player, opponent, field)
                 self.last_node = self.current_node
                 #return Action_Code.ERROR.value,None,None
             #assert len(self.current_node.child_nodes) > 0,"current_node have no child!\n{}"\
             #    .format(self.current_node.print_tree(single=True))
+            if tmp_move[0] == Action_Code.TURN_END.value:
+                if not field.secret and len(self.prev_node.children_moves) > 1:
+                    mylogger.info("choices:{}".format(self.prev_node.children_moves))
+                self.error_count = 0
+                self.current_node = None
+                self.prev_node = None
+                return tmp_move
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
             self.prev_node = self.current_node
             self.current_node = next_node
