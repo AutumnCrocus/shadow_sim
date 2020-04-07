@@ -19,7 +19,8 @@ import argparse
 Dual_State_value = namedtuple('Value', ('state', 'action', 'next_state', 'detailed_action_code','reward'))
 Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
                                          'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
-                                         'life_data', 'pp_data','able_to_play','able_to_attack', 'able_to_creature_attack'))
+                                         'life_data', 'pp_data','able_to_play','able_to_attack', 'able_to_creature_attack',
+                                           'deck_data'))
 """
    input = {'values', 'hand_ids','follower_card_ids', 
         'amulet_card_ids', 'follower_abilities', 'able_to_evo'}
@@ -46,7 +47,8 @@ class New_Dual_Net(nn.Module):
         self.emb7 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
         self.emb8 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
         self.emb9 = nn.Embedding(9, n_mid, padding_idx=0)#両プレイヤーのリーダークラス
-        self.fc0 = nn.Linear(6*n_mid,n_mid)
+        #self.fc0 = nn.Linear(6*n_mid,n_mid)
+        self.fc0 = nn.Linear(7*n_mid,n_mid)
         self.fc1 = nn.Linear(n_mid, n_mid)
         layer = [Dual_ResNet(n_mid, n_mid) for _ in range(19)]
         self.layer = nn.ModuleList(layer)
@@ -81,6 +83,7 @@ class New_Dual_Net(nn.Module):
 
         pp_datas = F.relu(self.lin2(values['pp_datas']))
 
+
         able_to_plays = torch.sum(self.emb6(values['able_to_play']),dim=1)
         hand_card_ids = self.emb1(hand_ids)
         hand_card_costs = values['hand_card_costs'].unsqueeze(-1)
@@ -98,8 +101,12 @@ class New_Dual_Net(nn.Module):
         tmp_x3 = torch.cat([stats, abilities, follower_ids, able_to_evos],dim=2)
         x3 = torch.sum(F.relu(self.lin6(tmp_x3)),dim=1)
         x5 = self.emb9(class_datas).view(-1,2*self.n_mid)
-        x6 = torch.cat([x1,x2,x3,x4,x5],dim=1)
-        x = self.fc0(x6)
+        deck_datas = states['deck_datas']
+        x6 = torch.sum(self.emb1(deck_datas),dim=1)
+        x7 = torch.cat([x1,x2,x3,x4,x5,x6],dim=1)
+        #x6 = torch.cat([x1,x2,x3,x4,x5],dim=1)
+        x = self.fc0(x7)
+        #x = self.fc0(x6)
         x = F.relu(self.fc1(x))
         for i in range(19):
             x = self.layer[i](x)
@@ -255,8 +262,10 @@ def get_data(f,player_num=0):
         hand_ids.append(none_flg*converted_card_id)
         hand_card_costs.append(hand_card.cost)
     """
-    hand_ids = [int(Card_Category[card.card_category].value != 0)*\
-                           ((Card_Category[card.card_category].value-1)*1000+
+    #hand_ids = [int(Card_Category[card.card_category].value != 0)*\
+    #                       ((Card_Category[card.card_category].value-1)*1000+
+    #                            card.card_id+500)for card in player.hand]
+    hand_ids = [((Card_Category[card.card_category].value-1)*1000+
                                 card.card_id+500)for card in player.hand]
     hand_card_costs = [card.cost for card in player.hand]
     """
@@ -266,6 +275,9 @@ def get_data(f,player_num=0):
     """
     hand_ids.extend([0]*(9-len(player.hand)))
     hand_card_costs.extend([0]*(9-len(player.hand)))
+    deck_data = sorted([((Card_Category[card.card_category].value-1)*1000+
+                                card.card_id+500) for card in player.deck.deck])
+    deck_data.extend([0]*(40-len(player.deck.deck)))
     #follower_card_ids = []
     #amulet_card_ids = []
     #follower_stats = []
@@ -330,7 +342,7 @@ def get_data(f,player_num=0):
     life_data = (life_data, class_data)
     datas = Detailed_State_data(hand_ids, hand_card_costs, follower_card_ids, amulet_card_ids,
                               follower_stats, follower_abilities, able_to_evo, life_data, pp_data,
-                              able_to_play, able_to_attack, able_to_creature_attack)
+                              able_to_play, able_to_attack, able_to_creature_attack,deck_data)
 
     return datas
 
@@ -362,6 +374,7 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
     pp_datas = torch.Tensor([datas[i].pp_data for i in range(data_len)])
     life_datas = torch.Tensor([datas[i].life_data[0] for i in range(data_len)])
     class_datas = torch.LongTensor([datas[i].life_data[1] for i in range(data_len)])
+    deck_datas = torch.LongTensor([datas[i].deck_data for i in range(data_len)])
 
     ans = {'values': {'life_datas': life_datas,
                       'class_datas': class_datas,
@@ -376,7 +389,8 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
            'follower_card_ids': follower_card_ids,
            'amulet_card_ids': amulet_card_ids,
            'follower_abilities': follower_abilities,
-           'able_to_evo': able_to_evo}
+           'able_to_evo': able_to_evo,
+           'deck_datas':deck_datas}
     return ans
 
 

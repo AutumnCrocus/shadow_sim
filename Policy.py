@@ -49,6 +49,7 @@ class Policy:
 class HumanPolicy:
     def __init__(self):
         self.name = "humanPolicy"
+        self.policy_type = 0
 
 class RandomPolicy(Policy):
     def __defaults__(self):

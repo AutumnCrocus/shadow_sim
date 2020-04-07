@@ -187,7 +187,7 @@ class Field:
             player_ability_id in self.player_ability[(i + player_num) % 2]],
 
             [[ability_list.appendleft(
-            (ability_id, [self, self.players[(i + player_num) % 2], self.players[(i + player_num) % 2], virtual, None,
+            (ability_id, [self, self.players[(i + player_num) % 2], self.players[1 - (i + player_num) % 2], virtual, None,
                           self.card_location[(i + player_num) % 2][location_id], self.state_log[j]])) for ability_id in
             self.card_location[(i + player_num) % 2][location_id].trigger_ability] for location_id
                 in reversed(range(len(self.card_location[(i + player_num) % 2]) - 1))

@@ -432,13 +432,13 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         win_lose[1] = 1
     mylogger.info("mean_win_turn:{:.3f},{:.3f}".format(win_turns[0] / win_lose[0], win_turns[1] / win_lose[1]))
 
-    import itertools
-    if Player1.mulligan_policy.data_use_flg:
-        mylogger.info("mulligan_data:{}".format(set(list(itertools.compress(Player1.mulligan_policy.mulligan_data,
-                                                                            Player1.mulligan_policy.win_data)))))
-    if Player2.mulligan_policy.data_use_flg:
-        mylogger.info("mulligan_data:{}".format(set(list(itertools.compress(Player2.mulligan_policy.mulligan_data,
-                                                                            Player2.mulligan_policy.win_data)))))
+    #import itertools
+    #if Player1.mulligan_policy.data_use_flg:
+    #    mylogger.info("mulligan_data:{}".format(set(list(itertools.compress(Player1.mulligan_policy.mulligan_data,
+    #                                                                        Player1.mulligan_policy.win_data)))))
+    #if Player2.mulligan_policy.data_use_flg:
+    #    mylogger.info("mulligan_data:{}".format(set(list(itertools.compress(Player2.mulligan_policy.mulligan_data,
+    #                                                                        Player2.mulligan_policy.win_data)))))
     mylogger.info("deck_type:{}".format(deck_type))
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))

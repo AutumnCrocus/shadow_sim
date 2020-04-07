@@ -36,10 +36,10 @@ parser.add_argument('--batch_num', help='サンプルに対するバッチの数
 args = parser.parse_args()
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
 
-Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
-                                           'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
-                                           'life_data', 'pp_data', 'able_to_play', 'able_to_attack',
-                                           'able_to_creature_attack'))
+#Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
+#                                           'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
+#                                           'life_data', 'pp_data', 'able_to_play', 'able_to_attack',
+#                                           'able_to_creature_attack'))
 cpu_num = int(args.cpu_num)
 batch_num = int(args.batch_num) if args.batch_num is not None else None
 G = Game()
@@ -84,7 +84,8 @@ def preparation(episode_data):
                             'pp_data': data[0].pp_data,
                             'able_to_play': data[0].able_to_play,
                             'able_to_attack': data[0].able_to_attack,
-                            'able_to_creature_attack': data[0].able_to_creature_attack}
+                            'able_to_creature_attack': data[0].able_to_creature_attack,
+                            'deck_data': data[0].deck_data}
 
             after_state = {'hand_ids': data[2].hand_ids, 'hand_card_costs': data[2].hand_card_costs,
                            'follower_card_ids': data[2].follower_card_ids,
@@ -96,7 +97,8 @@ def preparation(episode_data):
                            'pp_data': data[2].pp_data,
                            'able_to_play': data[2].able_to_play,
                            'able_to_attack': data[2].able_to_attack,
-                           'able_to_creature_attack': data[2].able_to_creature_attack}
+                           'able_to_creature_attack': data[2].able_to_creature_attack,
+                           'deck_data':data[2].deck_data}
             action_probability = data[1]
             detailed_action_code = data[3]
 
@@ -154,9 +156,9 @@ def multi_train(data):
         pai = actions  # 45種類の抽象化した行動
         # loss.backward()
         loss[0].backward()
-        all_loss = float(loss[0].item())
-        MSE = float(loss[1].item())
-        CEE = float(loss[2].item())
+        all_loss += float(loss[0].item())
+        MSE += float(loss[1].item())
+        CEE += float(loss[2].item())
         optimizer.step()
         if (i+1) % (iteration_num//10) == 0:
             print("{}0% finished.".format((i+1) // (iteration_num//10)))
@@ -238,13 +240,13 @@ def run_main():
                             data[0]['follower_stats'], data[0]['follower_abilities'],
                             data[0]['able_to_evo'], data[0]['life_data'],
                             data[0]['pp_data'], data[0]['able_to_play'],
-                            data[0]['able_to_attack'], data[0]['able_to_creature_attack'])
+                            data[0]['able_to_attack'], data[0]['able_to_creature_attack'],data[0]['deck_data'])
             after_state = Detailed_State_data(data[2]['hand_ids'], data[2]['hand_card_costs'],
                             data[2]['follower_card_ids'], data[2]['amulet_card_ids'],
                             data[2]['follower_stats'], data[2]['follower_abilities'],
                             data[2]['able_to_evo'], data[2]['life_data'],
                             data[2]['pp_data'], data[2]['able_to_play'],
-                            data[2]['able_to_attack'], data[2]['able_to_creature_attack'])
+                            data[2]['able_to_attack'], data[2]['able_to_creature_attack'],data[2]['deck_data'])
             R.push(before_state,data[1], after_state, data[3], data[4])
 
         print("sample_size:{}".format(len(R.memory)))
@@ -258,7 +260,8 @@ def run_main():
         print("batch_size:{}".format(batch))
         if args.multi_train is not None:
             net.share_memory()
-            iter_data = [[net,R.sample(batch_size,all=True),batch,iteration//p_size]
+            all_data = R.sample(batch_size,all=True)
+            iter_data = [[net,all_data,batch,iteration//p_size]
                          for i in range(p_size)]
             pool = Pool(p_size)  # 最大プロセス数:8
             loss_data = pool.map(multi_train, iter_data)
@@ -271,8 +274,8 @@ def run_main():
 
             pool.close()  # add this.
             pool.terminate()  # add this.
-            print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
-                  .format(sum_of_loss / p_size, sum_of_MSE / p_size, sum_of_CEE / p_size))
+            #print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+            #      .format(sum_of_loss / p_size, sum_of_MSE / p_size, sum_of_CEE / p_size))
 
         else:
 
@@ -292,8 +295,8 @@ def run_main():
                 sum_of_MSE += float(loss[1].item())
                 sum_of_CEE += float(loss[2].item())
                 optimizer.step()
-            print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
-                  .format(sum_of_loss / iteration, sum_of_MSE / iteration, sum_of_CEE / iteration))
+        print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+              .format(sum_of_loss / iteration, sum_of_MSE / iteration, sum_of_CEE / iteration))
 
 
         t4 = datetime.datetime.now()
