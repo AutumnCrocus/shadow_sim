@@ -127,12 +127,13 @@ def multi_train(data):
     value_keys = list(all_states['values'].keys())
     action_code_keys = list(all_states['detailed_action_codes'].keys())
     memory_len = all_actions.size()[0]
-
+    batch_id_list = list(range(memory_len))
 
     #states, actions, rewards = memory
     for i in range(iteration_num):
         optimizer.zero_grad()
-        key = [random.randint(0, memory_len-1) for _ in range(batch_size)]
+        #key = [random.randint(0, memory_len-1) for _ in range(batch_size)]
+        key = random.sample(batch_id_list,k=batch_size)
         states = {}
         for dict_key in states_keys:
             if dict_key == 'values':
