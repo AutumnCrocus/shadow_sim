@@ -177,7 +177,10 @@ class Field:
         if len(self.state_log) == 0: return
         index = len(self.state_log)
         if not self.secret:
-            mylogger.info("current_state_log:{}".format([State_Code(cell[0]).name for cell in self.state_log]))
+            for i in range(2):
+                for card in self.card_location[(i+player_num)%2]:
+                    print("{:<20}:timestamp:{}".format(card.name,card.time_stamp))
+            mylogger.info("current_state_log:{}".format(["{}:{}".format(State_Code(cell[0]).name,cell[-1]) for cell in self.state_log]))
 
         [[
             (
@@ -190,14 +193,14 @@ class Field:
             (ability_id, [self, self.players[(i + player_num) % 2], self.players[1 - (i + player_num) % 2], virtual, None,
                           self.card_location[(i + player_num) % 2][location_id], self.state_log[j]])) for ability_id in
             self.card_location[(i + player_num) % 2][location_id].trigger_ability] for location_id
-                in reversed(range(len(self.card_location[(i + player_num) % 2]) - 1))
+                in reversed(range(len(self.card_location[(i + player_num) % 2])))
             if self.card_location[(i + player_num) % 2][location_id].time_stamp < self.state_log[j][-1]]
             )
 
             for i in range(2)]
+
         for j in reversed(range(index))]
         """
-
         for j in reversed(range(index)):
             target_state_log = self.state_log[j]
             for i in range(2):
@@ -211,7 +214,7 @@ class Field:
                 
                 side = self.card_location[side_id]
                 #location_id = len(side) - 1
-                initial_id = len(side) - 1
+                initial_id = len(side)
                 [[ability_list.appendleft(
                     (ability_id, [self, self.players[side_id], self.players[1 - side_id], virtual, None,
                                   side[location_id], target_state_log])) for ability_id in
@@ -232,10 +235,12 @@ class Field:
                 #
         """
         [self.state_log.popleft() for _ in range(index)]
+
+        #for _ in range(index):
+        #    self.state_log.popleft()
         """
-        for _ in range(index):
-            self.state_log.popleft()
-        """
+        if not virtual:
+            mylogger.info("trigger_ability:{}".format([cell[-2] for cell in ability_list]))
         [trigger_ability_dict[tmp_ability_pair[0]](tmp_ability_pair[1][0], tmp_ability_pair[1][1], tmp_ability_pair[1][2],
                 tmp_ability_pair[1][3], tmp_ability_pair[1][4], tmp_ability_pair[1][5],
                 state_log=tmp_ability_pair[1][6]) for tmp_ability_pair in ability_list]
@@ -245,7 +250,7 @@ class Field:
             ability(tmp_ability_pair[1][0], tmp_ability_pair[1][1], tmp_ability_pair[1][2],
                                                       tmp_ability_pair[1][3], tmp_ability_pair[1][4], tmp_ability_pair[1][5],
                                                       state_log=tmp_ability_pair[1][6])
-        """
+
 
         if not self.secret:
             mylogger.info("next_state_log:{}".format(self.state_log))
@@ -1486,14 +1491,14 @@ class Field:
                         lose += 1
                     else:
                         win += 1
-                elif player.life <= 0 or len(opponent.deck.deck) == 0:
+                elif opponent.life <= 0 or len(opponent.deck.deck) == 0:
                     if turn_player_num == 0:
                         win += 1
                     else:
                         lose += 1
                 else:
                     self.show_field()
-                    mylogger.info("{}".format(self.get_observable_data(player_num=player.player_num)))
+                    mylogger.info("{}\n{}".format("draw?",self.get_observable_data(player_num=player.player_num)))
                     assert False
             draw_cards(player, True, num=1)
             if turn_player_num == 1 and self.current_turn[turn_player_num] == 1:
@@ -1529,7 +1534,9 @@ class Field:
                 assert detailed_action_code['able_to_choice'][action_code] == 1,"{} {}\n{}\n{}".format(
                     single_action,action_code,detailed_action_code['able_to_choice'],
                     self.get_observable_data(player_num=player.player_num),player.show_hand(),self.show_field())
-                train_datas.append((state, action_code, next_state,detailed_action_code))
+
+                train_datas.append((state, action_code, next_state,detailed_action_code)) \
+                    if sum(detailed_action_code['able_to_choice']) > 1 else None
                 if end_flg:
                     break
 
@@ -1615,6 +1622,10 @@ class Field:
             else:
                 action_codes.append((0, 0, 0, 0, 0))
                 able_to_choice.append(0)
+
+        #[(Action_Code.PLAY_CARD.value, player.hand[play_id].card_id + 500 + 1000 * (Card_Category[player.hand[play_id].card_category].value - 1), 0, 0,
+        #  0) if play_id in able_to_play else (0, 0, 0, 0, 0) for play_id in range(9)]
+        #[1 if play_id in able_to_play else 0 for play_id in range(9)]
 
         follower_attack_codes = []
         player_attack_codes = []

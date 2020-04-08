@@ -370,7 +370,7 @@ class HumanPlayer(Player):
             deck.shuffle()
 
     def decide(self, player, opponent, field, virtual=False,dual=False):
-        os.system('clear')
+        #os.system('clear')
         field.reset_time_stamp()
 
         (ward_list, can_be_targeted, can_be_attacked, regal_targets) = field.get_situation(player, opponent)
@@ -411,6 +411,7 @@ class HumanPlayer(Player):
             return can_play, can_attack, field.check_game_end()
         else:
             action_num = int(tmp)
+        assert action_num in choices,"{} not in {}".format(action_num,choices)
         if action_num not in choices:
             print("invalid input!")
             return can_play, can_attack, field.check_game_end()
