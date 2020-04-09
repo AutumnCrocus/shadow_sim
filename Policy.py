@@ -2350,7 +2350,8 @@ class New_Node:
                                       self.field.remain_cost[self.player_num], self.field.cost[self.player_num]))
                         # self.field.players[self.player_num].show_hand()
                     print(
-                        "   " * layer_height + "ave_value:{} visit_num:{}".format(child.value / max(1, child.visit_num),
+                        "   " * layer_height + "ave_value:{} state_value:{} visit_num:{}".format(child.value / max(1, child.visit_num),
+                                                                                                 self.state_value,
                                                                                   child.visit_num))
                     #assert abs(child.value / max(1, child.visit_num)) <= 1.0,"{},{}".format(child.value,child.visit_num)
                     if not single:
@@ -3418,10 +3419,11 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
             self.last_node = self.current_node
             if not field.secret:
                 mylogger.info("generate new tree")
-                self.current_node.print_tree(single=True)
+                #self.current_node.print_tree(single=True)
             tmp_move = action
             if len(self.current_node.child_nodes) > 0:
                 next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
+                self.prev_node = self.current_node
             self.node_index = 0
             self.type = "root"
             if tmp_move[0] == Action_Code.TURN_END.value:
@@ -3432,7 +3434,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                         for child in self.prev_node.child_nodes:
                             mylogger.info("action:{} value:{}".format(self.prev_node.node_id_2_edge_action[id(child)],
                                                                       child.value/max(1,child.visit_num)))
-                self.prev_node = None
+
                 self.current_node = None
                 self.error_count = 0
             else:
@@ -3702,11 +3704,13 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
         return True
 
     def expand(self, node, player_num=0):
-        child_node_fields = []
-        for cell in node.child_nodes:
-            child_node_fields.append(cell.field)
+        child_node_fields = [cell.field for cell in node.child_nodes]
+        #child_node_fields = []
+        #for cell in node.child_nodes:
+        #    child_node_fields.append(cell.field)
         old_choices = node.children_moves[:]
         new_choices = node.children_moves[:]
+        """
         if (0,0,0) in node.edge_action_2_node_id:
             exist_flg = False
             for node_id in node.edge_action_2_node_id[(0,0,0)]:
@@ -3717,16 +3721,29 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                         exist_flg = True
                         break
                 if exist_flg:break
+        """
+        if (0, 0, 0) in node.edge_action_2_node_id and len(node.edge_action_2_node_id[(0,0,0)]) > 1:
+            #mylogger.info("node_ids:{}".format(node.edge_action_2_node_id[(0,0,0)]))
+            for target_node in node.edge_action_2_node_id[(0,0,0)]:
+                target_node_field = target_node.field
+                if True in (target_node_field.eq(cell.field) and target_node != cell
+                            for cell in node.edge_action_2_node_id[(0,0,0)]):
+                    old_choices.remove((0, 0, 0))
+                    new_choices.remove((0, 0, 0))
+                    break
         #assert len(new_choices) > 0, "non-choice-error"
         if len(new_choices) == 0:
-            return node
+            #assert len(node.child_nodes)>0,"this node has no child but forced to select best!"
+            return self.tree_policy(node,player_num=player_num)
+            #return node
         next_node, move, exist_flg = self.execute_single_action(node, new_choices, child_node_fields,
                                                                 player_num=player_num)
         if exist_flg:
             while exist_flg:
-                new_choices = list(set(node.children_moves) - set(node.child_actions))
+                new_choices.remove(move)
+                #new_choices = list(set(node.children_moves) - set(node.child_actions))
                 if len(new_choices) == 0:
-                    return self.best(node, player_num)[0]
+                    return self.tree_policy(node,player_num=player_num)#self.best(node, player_num)[0]
                 next_node, move, exist_flg = self.execute_single_action(node, new_choices, child_node_fields,
                                                                         player_num=player_num)
 
@@ -3863,7 +3880,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                     action_uct_values[action].append(100)
             else:
                 action_uct_values[action].append(child.value/child.visit_num)
-            action_2_node[action].append(children[i])
+            action_2_node[action].append(child)
         max_value = None
         max_value_action = None
         #if len(action_uct_values) == 0:
@@ -5358,8 +5375,8 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                             assert False
 
                         mylogger.info("{:<60}:{:.3%}".format(txt, pai[action_code_id]))
-
-            #self.prev_node.print_tree(single=True)
+            mylogger.info("current node data")
+            self.prev_node.print_tree(single=True)
         return action
 
     def uct_search(self, player, opponent, field,use_existed_node=False):
@@ -5377,15 +5394,18 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
     def default_policy(self, node, player_num=0):
         value = self.state_value(node, player_num)
-        if player_num != self.main_player_num:
-            value = -value
-        if node.parent_node.node_id_2_edge_action[id(node)][0] == Action_Code.TURN_END.value:
-            if len(node.parent_node.edge_action_2_node_id) > 1:
-                value = -1.0
+        #mylogger.info("value:{},node_player_num:{}".format(value,node.player_num))
+        #if node.parent_node.node_id_2_edge_action[id(node)][0] == Action_Code.TURN_END.value:
+        #    if len(node.parent_node.edge_action_2_node_id) > 1:
+        #        value += -1.0
+        #if player_num != self.main_player_num:
+        #    value = -value
+
         #assert abs(value) <= 1.0,"value:{}".format(value)
         return value
 
     def state_value(self, node, player_num):
+        node_player_num = node.player_num
         field = node.field
         if field.check_game_end():
             player = field.players[self.main_player_num]
@@ -5393,15 +5413,15 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         if node.state_value is not None:
             return node.state_value
 
-        states = self.get_data(field, player_num=player_num)
+        states = self.get_data(field, player_num=node_player_num)
 
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
-            ([field.get_detailed_action_code(field.players[player_num])])
+            ([field.get_detailed_action_code(field.players[node_player_num])])
         pai, value = self.net(states)
-        node.state_value = float(value[0])
+        node.state_value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
         node.pai = pai[0]
 
-        return float(value[0])
+        return float(value[0])*(2*int(self.main_player_num==node_player_num)-1)#float(value[0])
 
     def get_data(self,f,player_num = 0):
         tmp = Game_setting.get_data(f,player_num=player_num)
@@ -5410,32 +5430,101 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
         return states
 
+    def fully_expand(self, node, player_num=0):
+        return node.field.check_game_end()
+
+
+
+    def execute_single_action(self, node, new_choices, child_node_fields, player_num=0):
+        field = node.field
+        move = random.choice(new_choices)
+        next_field = Field_setting.Field(5)
+        next_field.set_data(field)
+        next_field.players[0].deck.shuffle()
+        next_field.players[1].deck.shuffle()
+        next_field.get_situation(next_field.players[player_num],
+                                 next_field.players[1 - player_num])
+        next_node = None
+        exist_flg = False
+        if move[0] == Action_Code.TURN_END.value:
+            next_field.end_of_turn(player_num, virtual=True)
+            opponent_player_num = 1 - player_num
+            opponent = next_field.players[opponent_player_num]
+            next_field.untap(opponent_player_num)
+            next_field.increment_cost(opponent_player_num)
+            next_field.start_of_turn(opponent_player_num, virtual=True)
+            next_field.turn_player_num = opponent_player_num
+            hand_len = len(opponent.hand)
+            while len(opponent.hand) > 0:
+                opponent.deck.append(opponent.hand.pop())
+            opponent.deck.shuffle()
+            opponent.draw(opponent.deck, num=hand_len + 1)
+            flg = next_field.check_game_end()
+            next_node = New_Node(field=next_field, player_num=1 - player_num, finite_state_flg=flg,
+                                 depth=node.depth + 1)
+            for child in node.child_nodes:
+                if node.node_id_2_edge_action[id(child)] == Action_Code.TURN_END.value:
+                    if child.field.eq(next_field):#and opponent.eq(child.field.players[1 - player_num]):
+                        if move not in node.action_counter:
+                            node.action_counter[move] = 0
+                        node.action_counter[move] += 1
+                        if node.action_counter[move] >= 5:
+                            node.children_moves.remove(move)
+                        exist_flg = True
+                        break
+
+        else:
+            next_field.players[player_num].execute_action(next_field, next_field.players[1 - player_num],
+                                                          action_code=move, virtual=True)
+            flg = next_field.check_game_end()
+            next_node = New_Node(field=next_field, player_num=player_num,
+                                 finite_state_flg=flg, depth=node.depth + 1)
+            for child_field in child_node_fields:
+                if child_field.eq(next_field) and \
+                        child_field.players[player_num].eq(next_field.players[player_num]):
+                    if move not in node.action_counter:
+                        node.action_counter[move] = 0
+                    node.action_counter[move] += 1
+                    if node.action_counter[move] >= 5:
+                        node.children_moves.remove(move)
+                    exist_flg = True
+                    break
+
+        return next_node, move, exist_flg
+
     def execute_best(self, node, player_num=0):
         children = node.child_nodes
         action_uct_values = {}
         action_2_node = {}
         for child in children:
+            tmp_value = 0
             action = node.node_id_2_edge_action[id(child)]
             if action not in action_uct_values:
                 action_uct_values[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
-            if action == (0,0,0) and len(node.edge_action_2_node_id) > 1:
-                action_uct_values[action].append(-100)
-                action_2_node[action].append(child)
-                continue
-
-            if child.finite_state_flg and child.field.check_game_end():
+                """
+                if action == (0,0,0) and len(node.edge_action_2_node_id) > 1:
+                    tmp_value -= 1
+                    #action_uct_values[action].append(-1)
+                    #action_2_node[action].append(child)
+                    #continue
+                """
+            elif child.finite_state_flg and child.field.check_game_end():
                 player = child.field.players[player_num]
                 if player.life <= 0 or player.lib_out_flg:
-                    action_uct_values[action].append(-100)
+                    tmp_value -= 1
+                    #action_uct_values[action].append(-1)
                 else:
-                    action_uct_values[action].append(100)
-            else:
-                action_uct_values[action].append(child.visit_num)
+                    tmp_value += 1
+                    #action_uct_values[action].append(1)
+            tmp_value += child.value / max(1, child.visit_num)
+
+            #action_uct_values[action].append(child.value / max(1, child.visit_num))
+            action_uct_values[action].append(tmp_value)
             action_2_node[action].append(child)
         #print(action_uct_values)
-        max_value = -1000
+        max_value = -2
         max_value_action = (0, 0, 0)
         for key in list(action_uct_values.keys()):
             sum_of_value = sum(action_uct_values[key])
@@ -5453,15 +5542,16 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         action_uct_values = {}
         action_2_node = {}
         for child in children:
+            value = 0
             action = node.node_id_2_edge_action[id(child)]
             if action not in action_uct_values:
                 action_uct_values[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
-            if action == (0,0,0) and len(node.edge_action_2_node_id) > 1:
-                value = -1
-            else:
-                value = self.uct(child, node, player_num=player_num)
+            #if action == (0,0,0) and len(node.edge_action_2_node_id) > 1:
+            #    value += -1
+            #else:
+            value += self.uct(child, node, player_num=player_num)
             action_uct_values[action].append(value)
             action_2_node[action].append(child)
         max_value = None

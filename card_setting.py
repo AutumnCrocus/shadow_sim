@@ -347,7 +347,7 @@ amulet_lastword_ability = {
    amulet_name_to_id["Staircase to Paradise"]: 19,
    amulet_name_to_id["Summon Pegasus"]: 20,
    amulet_name_to_id["Dual Flames"]: 21,
-   amulet_name_to_id["Golden Bell"]: 22
+   amulet_name_to_id["Golden Bell"]: 4
    }
 amulet_has_target = {
     amulet_name_to_id["Tribunal of Good and Evil"]: 1
