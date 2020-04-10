@@ -2916,27 +2916,6 @@ class Time_bounded_Information_Set_MCTSPolicy(Information_Set_MCTSPolicy):
 
 def default_state_value(field, player_num):
     return advanced_state_value(field,player_num)
-    """
-    if field.check_game_end():
-        if field.players[player_num].life <= 0 or field.players[player_num].lib_out_flg:
-            return 0
-        else:
-            return 1
-    power_sum = 0
-    for card_id in field.get_creature_location()[1 - player_num]:
-        power_sum += field.card_location[1 - player_num][card_id].power
-    if power_sum >= field.players[player_num].life and not field.check_ward()[player_num]:
-        return 0
-    cum_damage = (field.players[1 - player_num].max_life - field.players[1 - player_num].life) * 50
-    board_ad = (len(field.card_location[player_num]) - len(
-        field.card_location[1 - player_num])) * 50
-    hand_len = len(field.players[player_num].hand)
-    value = cum_damage + board_ad + hand_len + 250
-    max_value = 1509  # 1000+250+9+250
-
-    return value / max_value
-    """
-
 
 class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
     # デッキ公開制のときのみ
@@ -3636,72 +3615,6 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                         if len(node.children_moves) == len(list(node.edge_action_2_node_id.keys())):
                             return True
         return False
-        remain_actions = list(set(node.children_moves) - set(node.child_actions))
-        if remain_actions != []:
-            remain_num = len(remain_actions)
-            player = node.field.players[player_num]
-            for action in remain_actions:
-                if action[0] == Action_Code.TURN_END.value:
-                    check = action in node.edge_action_2_node_id
-                    if check:
-                        remain_num -= 1
-
-                if remain_num <= 0:
-                    return True
-                if action[0] == Action_Code.EVOLVE.value:
-                    evo_actions = list(filter(lambda cell: cell[0] == -1, node.child_actions))
-                    side = node.field.card_location[player_num]
-                    opponent_side = node.field.card_location[1 - player_num]
-                    for evo_action in evo_actions:
-                        if side[action[1]].eq(side[evo_action[1]]):
-                            if action[2] is None:
-                                # return True
-                                node.children_moves.remove(action)
-                                remain_num -= 1
-                                break
-                            else:
-                                if side[action[1]].evo_target == Target_Type.ENEMY_FOLLOWER.value:
-                                    if opponent_side[action[2]].eq(opponent_side[evo_action[2]]):
-                                        node.children_moves.remove(action)
-                                        remain_num -= 1
-                                        break
-
-                if remain_num <= 0:
-                    return True
-                if action[0] == Action_Code.PLAY_CARD.value:
-                    play_actions = list(filter(lambda cell: cell[0] == Action_Code.PLAY_CARD.value, node.child_actions))
-                    for play_action in play_actions:
-                        if player.hand[action[1]].eq(player.hand[play_action[1]]):
-                            # return True
-                            node.children_moves.remove(action)
-                            remain_num -= 1
-                            break
-                if remain_num <= 0:
-                    return True
-                if action[0] == Action_Code.ATTACK_TO_FOLLOWER.value:
-                    attack_actions = \
-                        list(filter(lambda cell: cell[0] == Action_Code.ATTACK_TO_FOLLOWER.value, node.child_actions))
-                    field = node.field
-                    side = field.card_location[player_num]
-                    opponent_side = field.card_location[1 - player_num]
-                    length = len(opponent_side)
-                    assert action[2] < length, "out-of-range(action):{},{}".format(action[2], length)
-                    for attack_action in attack_actions:
-                        assert attack_action[2] < length, "out-of-range(attack_action):{},{}".format(action[2], length)
-                        if side[action[1]].power == 0 and KeywordAbility.BANE.value not in side[action[1]].ability:
-                            # return True
-                            node.children_moves.remove(action)
-                            remain_num -= 1
-                            break
-                        if side[action[1]].eq(side[attack_action[1]]):
-                            if opponent_side[action[2]].eq(opponent_side[attack_action[2]]):
-                                node.children_moves.remove(action)
-                                remain_num -= 1
-                                break
-                if remain_num <= 0:
-                    return True
-            return False
-        return True
 
     def expand(self, node, player_num=0):
         child_node_fields = [cell.field for cell in node.child_nodes]
@@ -3734,7 +3647,9 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
         #assert len(new_choices) > 0, "non-choice-error"
         if len(new_choices) == 0:
             #assert len(node.child_nodes)>0,"this node has no child but forced to select best!"
-            return self.tree_policy(node,player_num=player_num)
+            return self.best(node,player_num=player_num)[0] if len(node.child_nodes)>0 else None
+            assert False,"this node has no child!"
+            #self.tree_policy(node,player_num=player_num)
             #return node
         next_node, move, exist_flg = self.execute_single_action(node, new_choices, child_node_fields,
                                                                 player_num=player_num)
@@ -3743,7 +3658,8 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                 new_choices.remove(move)
                 #new_choices = list(set(node.children_moves) - set(node.child_actions))
                 if len(new_choices) == 0:
-                    return self.tree_policy(node,player_num=player_num)#self.best(node, player_num)[0]
+                    return self.best(node, player_num=player_num)[0] if len(node.child_nodes) > 0 else None
+                    assert False, "this node has no child!"
                 next_node, move, exist_flg = self.execute_single_action(node, new_choices, child_node_fields,
                                                                         player_num=player_num)
 
@@ -4618,64 +4534,6 @@ class Cheating_MO_MCTSPolicy(Opponent_Modeling_MCTSPolicy):
         super().__init__()
         self.name = "Cheating_MO_MCTS(iteration={})Policy".format(iteration)
         self.iteration = iteration
-    """
-    def default_policy(self, node, player_num=0):
-        sum_of_value = 0
-        if node.finite_state_flg:
-            return self.state_value(node.field, player_num=self.main_player_num)
-        end_count = 0
-        current_field = Field_setting.Field(5)
-        opponent_player_num = 1 - self.main_player_num
-        t1 = None
-        for i in range(self.default_iteration):
-            current_field.set_data(node.field)
-            if self.main_player_num == player_num:
-                current_field.turn_player_num = player_num
-                self.simulate_playout(current_field, player_num=self.main_player_num)
-                if current_field.check_game_end():
-                    sum_of_value += self.state_value(current_field,self.main_player_num)
-                    end_count += 1
-                    if end_count >= 5:
-                        return sum_of_value / end_count
-                    continue
-                opponent = current_field.players[opponent_player_num]
-                current_field.turn_player_num = opponent_player_num
-                current_field.untap(opponent_player_num)
-                current_field.increment_cost(opponent_player_num)
-                current_field.start_of_turn(opponent_player_num, virtual=True)
-                opponent.draw(opponent.deck,1)
-            self.simulate_playout(current_field, player_num=1 - self.main_player_num)
-            sum_of_value += self.state_value(current_field, player_num=self.main_player_num)
-
-        return sum_of_value / self.default_iteration
-
-    def simulate_playout(self, current_field, player_num=0):
-        player = current_field.players[player_num]
-        opponent = current_field.players[1 - player_num]
-        current_field.get_regal_target_dict(player, opponent)
-
-        action_count = 0
-        while True:
-            (action_num, card_id, target_id) = self.play_out_policy.decide(player, opponent, current_field)
-
-            end_flg = player.execute_action(current_field, opponent,
-                                            action_code=(action_num, card_id, target_id), virtual=True)
-
-            if current_field.check_game_end() or end_flg:
-                break
-
-            current_field.get_regal_target_dict(player, opponent)
-            action_count += 1
-            if action_count > 100:
-                player.show_hand()
-                current_field.show_field()
-                assert False
-        if current_field.check_game_end():
-            return
-        current_field.end_of_turn(player_num, virtual=True)
-        if current_field.check_game_end():
-            return
-    """
     def expand(self, node, player_num=0):
         field = node.field
 
@@ -4718,61 +4576,7 @@ class Cheating_MO_ISMCTSPolicy(Opponent_Modeling_ISMCTSPolicy):
         super().__init__()
         self.name = "Cheating_MO_ISMCTS(iteration={},expand_only)Policy".format(iteration)
         self.iteration = iteration
-    """
-    def default_policy(self, node, player_num=0):
-        sum_of_value = 0
-        if node.finite_state_flg:
-            return self.state_value(node.field, player_num=self.main_player_num)
-        end_count = 0
-        current_field = Field_setting.Field(5)
-        opponent_player_num = 1 - self.main_player_num
-        for i in range(self.default_iteration):
-            current_field.set_data(node.field)
-            if self.main_player_num == player_num:
-                current_field.turn_player_num = player_num
-                self.simulate_playout(current_field, player_num=self.main_player_num)
-                if current_field.check_game_end():
-                    sum_of_value += self.state_value(current_field,self.main_player_num)
-                    end_count += 1
-                    if end_count >= 5:
-                        return sum_of_value / end_count
-                    continue
-                opponent = current_field.players[opponent_player_num]
-                current_field.turn_player_num = opponent_player_num
-                current_field.untap(opponent_player_num)
-                current_field.increment_cost(opponent_player_num)
-                current_field.start_of_turn(opponent_player_num, virtual=True)
-                opponent.draw(opponent.deck, 1)
-            self.simulate_playout(current_field, player_num=1 - self.main_player_num)
-            sum_of_value += self.state_value(current_field, player_num=self.main_player_num)
-        return sum_of_value / self.default_iteration
-    
-    def simulate_playout(self, current_field, player_num=0):
-        player = current_field.players[player_num]
-        opponent = current_field.players[1 - player_num]
-        current_field.get_regal_target_dict(player, opponent)
-        action_count = 0
-        while True:
-            (action_num, card_id, target_id) = self.play_out_policy.decide(player, opponent, current_field)
 
-            end_flg = player.execute_action(current_field, opponent,
-                                            action_code=(action_num, card_id, target_id), virtual=True)
-
-            if current_field.check_game_end() or end_flg:
-                break
-
-            current_field.get_regal_target_dict(player, opponent)
-            action_count += 1
-            if action_count > 100:
-                player.show_hand()
-                current_field.show_field()
-                assert False
-        if current_field.check_game_end():
-            return
-        current_field.end_of_turn(player_num, virtual=True)
-        if current_field.check_game_end():
-            return
-    """
     def execute_single_action(self, node, new_choices, child_node_fields, player_num=0):
         field = node.field
         move = random.choice(new_choices)
@@ -5503,13 +5307,9 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                 action_uct_values[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
-                """
-                if action == (0,0,0) and len(node.edge_action_2_node_id) > 1:
-                    tmp_value -= 1
-                    #action_uct_values[action].append(-1)
-                    #action_2_node[action].append(child)
-                    #continue
-                """
+                if action[0] == 0:
+                    tmp_value -= 2
+
             elif child.finite_state_flg and child.field.check_game_end():
                 player = child.field.players[player_num]
                 if player.life <= 0 or player.lib_out_flg:

@@ -179,7 +179,7 @@ class Field:
         if not self.secret:
             for i in range(2):
                 for card in self.card_location[(i+player_num)%2]:
-                    print("{:<20}:timestamp:{}".format(card.name,card.time_stamp))
+                    print("{:<30}:timestamp:{}".format(card.name,card.time_stamp))
             mylogger.info("current_state_log:{}".format(["{}:{}".format(State_Code(cell[0]).name,cell[-1]) for cell in self.state_log]))
 
         [[
@@ -1535,8 +1535,8 @@ class Field:
                     single_action,action_code,detailed_action_code['able_to_choice'],
                     self.get_observable_data(player_num=player.player_num),player.show_hand(),self.show_field())
 
-                train_datas.append((state, action_code, next_state,detailed_action_code)) \
-                    if sum(detailed_action_code['able_to_choice']) > 1 else None
+                train_datas.append((state, action_code, next_state,detailed_action_code)) #\
+                    #if sum(detailed_action_code['able_to_choice']) > 1 else None
                 if end_flg:
                     break
 

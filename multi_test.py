@@ -1,4 +1,4 @@
-from torch.multiprocessing import Pool, Process, set_start_method,cpu_count
+from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock
 
 try:
     set_start_method('spawn')
@@ -111,7 +111,7 @@ def preparation(episode_data):
     all_len = len(train_data[0])+len(train_data[1])
     tmp_x3 = (x2-x1).total_seconds()/all_len
     x3 = datetime.timedelta(seconds=tmp_x3)
-    print("finished:{:<4} {:<5}(len:{:<3}) time_per_move:{},{}".format(episode + 1,win_name,all_len,x3,x2-x1))
+    #print("finished:{:<4} {:<5}(len:{:<3}) time_per_move:{},{}".format(episode + 1,win_name,all_len,x3,x2-x1))
     result_data.append(int(reward[int(episode % 2)] > 0))
     return result_data
 
@@ -119,7 +119,7 @@ def preparation(episode_data):
 import itertools
 
 def multi_train(data):
-    net, memory, batch_size, iteration_num = data
+    net, memory, batch_size, iteration_num, p_num = data
     optimizer =  optim.Adam(net.parameters(), weight_decay=0.01)
     all_loss, MSE, CEE = 0, 0, 0
 
@@ -131,7 +131,8 @@ def multi_train(data):
     batch_id_list = list(range(memory_len))
 
     #states, actions, rewards = memory
-    for i in range(iteration_num):
+    info = f'#{p_num:>2} '
+    for i in tqdm(range(iteration_num),desc=info,position=p_num+1):
         optimizer.zero_grad()
         #key = [random.randint(0, memory_len-1) for _ in range(batch_size)]
         key = random.sample(batch_id_list,k=batch_size)
@@ -162,8 +163,10 @@ def multi_train(data):
         MSE += float(loss[1].item())
         CEE += float(loss[2].item())
         optimizer.step()
-        if (i+1) % (iteration_num//10) == 0:
-            print("{}0% finished.".format((i+1) // (iteration_num//10)))
+        #if (i+1) % (iteration_num//10) == 0:
+        #    #print("action:{}\n{}".format(actions[0],p[0]))
+        #    #print("value:{}\n{}".format(z[0],v[0]))
+        #    print("{}0% finished.".format((i+1) // (iteration_num//10)))
     return all_loss, MSE, CEE
 
 from test import *  # importの依存関係により必ず最初にimport
@@ -211,6 +214,7 @@ def run_main():
     #print(net)
     prev_net = copy.deepcopy(net)
     optimizer = optim.Adam(net.parameters(), weight_decay=0.01)
+
     LOG_PATH = "/log_{}_{}_{}_{}_{}_{}".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                              t1.second)
     writer = SummaryWriter(log_dir="./logs" + LOG_PATH)
@@ -231,7 +235,9 @@ def run_main():
         #memories = multi(episode_len,p1,p2)
         iter_data = [(i, p1, p2) for i in range(episode_len)]
         pool = Pool(p_size)  # 最大プロセス数:8
-        memory = pool.map(preparation, iter_data)
+        #memory = pool.map(preparation, iter_data)
+        memory = pool.imap(preparation, iter_data)
+        memory = list(tqdm(memory,total=episode_len))
         pool.close()  # add this.
         pool.terminate()  # add this.
         #[[state,state,...,reward],[],[],[],...]
@@ -267,10 +273,11 @@ def run_main():
         if args.multi_train is not None:
             net.share_memory()
             all_data = R.sample(batch_size,all=True)
-            iter_data = [[net,all_data,batch,iteration//p_size]
+            iter_data = [[net,all_data,batch,iteration//p_size,i]
                          for i in range(p_size)]
-            pool = Pool(p_size)  # 最大プロセス数:8
+            pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
             loss_data = pool.map(multi_train, iter_data)
+            print("\n" * p_size)
             #imap = pool.imap(multi_train, iter_data)
             #loss_data = list(tqdm(imap, total=p_size))
             #[(1,1,1),(),()]
