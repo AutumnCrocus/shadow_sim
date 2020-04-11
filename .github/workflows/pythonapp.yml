@@ -13,7 +13,6 @@ jobs:
   build:
     env:
       MODEL_NAME: Multi_Dual_2020_4_11_15_25_34_19%.pth
-      PLAYER_TYPE: "2"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -39,20 +38,20 @@ jobs:
 
     - name: Run Test0
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 ${PLAYER_TYPE} --decklist "0" --mode mirror --model_name $MODEL_NAME
+        python3 test.py --N  20 --playertype1 29 --playertype2 2 --decklist "0" --mode mirror --model_name $MODEL_NAME
     - name: Run Test1
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 ${PLAYER_TYPE} --decklist "1" --mode mirror --model_name $MODEL_NAME
+        python3 test.py --N  20 --playertype1 29 --playertype2 2 --decklist "1" --mode mirror --model_name $MODEL_NAME
     - name: Run Test4
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 ${PLAYER_TYPE} --decklist "4" --mode mirror --model_name $MODEL_NAME
+        python3 test.py --N  20 --playertype1 29 --playertype2 2 --decklist "4" --mode mirror --model_name $MODEL_NAME
     - name: Run Test5
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 ${PLAYER_TYPE} --decklist "5" --mode mirror --model_name $MODEL_NAME
+        python3 test.py --N  20 --playertype1 29 --playertype2 2 --decklist "5" --mode mirror --model_name $MODEL_NAME
     - name: Run Test10
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 ${PLAYER_TYPE} --decklist "10" --mode mirror --model_name $MODEL_NAME
+        python3 test.py --N  20 --playertype1 29 --playertype2 2 --decklist "10" --mode mirror --model_name $MODEL_NAME
     - name: Run Test13
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 ${PLAYER_TYPE} --decklist "13" --mode mirror --model_name $MODEL_NAME
+        python3 test.py --N  20 --playertype1 29 --playertype2 2 --decklist "13" --mode mirror --model_name $MODEL_NAME
 
