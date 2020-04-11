@@ -54,4 +54,3 @@ jobs:
     - name: Run Test13
       run: |
         python3 test.py --N  20 --playertype1 29 --playertype2 2 --decklist "13" --mode mirror --model_name $MODEL_NAME
-
