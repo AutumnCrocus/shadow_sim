@@ -11,7 +11,8 @@ on:
 
 jobs:
   build:
-
+    env:
+      MODEL_NAME: Multi_Dual_2020_4_11_15_25_34_19%.pth
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -53,5 +54,4 @@ jobs:
     - name: Run Test13
       run: |
         python3 test.py --N  20 --playertype1 29 --playertype2 13 --decklist "13" --mode mirror --model_name $MODEL_NAME
-      env:
-        MODEL_NAME: Multi_Dual_2020_4_11_15_25_34_19%.pth
+
