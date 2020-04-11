@@ -37,19 +37,19 @@ jobs:
 
     - name: Run Test0
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 12 --decklist "0" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
+        python3 test.py --N  20 --playertype1 29 --playertype2 13 --decklist "0" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
     - name: Run Test1
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 12 --decklist "1" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
+        python3 test.py --N  20 --playertype1 29 --playertype2 13 --decklist "1" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
     - name: Run Test4
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 12 --decklist "4" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
+        python3 test.py --N  20 --playertype1 29 --playertype2 13 --decklist "4" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
     - name: Run Test5
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 12 --decklist "5" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
+        python3 test.py --N  20 --playertype1 29 --playertype2 13 --decklist "5" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
     - name: Run Test10
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 12 --decklist "10" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
+        python3 test.py --N  20 --playertype1 29 --playertype2 13 --decklist "10" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
     - name: Run Test13
       run: |
-        python3 test.py --N  20 --playertype1 29 --playertype2 12 --decklist "13" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
+        python3 test.py --N  20 --playertype1 29 --playertype2 13 --decklist "13" --mode mirror --model_name Multi_Dual_2020_4_7_16_56_2_88%.pth
