@@ -215,9 +215,10 @@ def run_main():
     prev_net = copy.deepcopy(net)
     optimizer = optim.Adam(net.parameters(), weight_decay=0.01)
 
-    LOG_PATH = "/log_{}_{}_{}_{}_{}_{}".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+    LOG_PATH = "log_{}_{}_{}_{}_{}_{}/".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                              t1.second)
-    writer = SummaryWriter(log_dir="./logs" + LOG_PATH)
+    #writer = SummaryWriter(log_dir="./logs" + LOG_PATH)
+    writer = SummaryWriter(log_dir="./logs")
     for epoch in range(epoch_num):
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
@@ -308,9 +309,9 @@ def run_main():
                 sum_of_MSE += float(loss[1].item())
                 sum_of_CEE += float(loss[2].item())
                 optimizer.step()
-        writer.add_scalar("Over_All_Loss", sum_of_loss / iteration, epoch)
-        writer.add_scalar("MSE", sum_of_MSE / iteration, epoch)
-        writer.add_scalar("CEE", sum_of_CEE / iteration, epoch)
+        writer.add_scalar(LOG_PATH+"Over_All_Loss", sum_of_loss / iteration, epoch)
+        writer.add_scalar(LOG_PATH+"MSE", sum_of_MSE / iteration, epoch)
+        writer.add_scalar(LOG_PATH+"CEE", sum_of_CEE / iteration, epoch)
         print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
               .format(sum_of_loss / iteration, sum_of_MSE / iteration, sum_of_CEE / iteration))
 

@@ -15,7 +15,7 @@ class trigger_ability_001:
 def trigger_ability_001(field,player,opponent,virtual,target,itself,state_log=None):
     #mylogger.info("Ability:1")
     if itself.is_in_field == False: return
-    if state_log != None and state_log[0] == State_Code.SET.value and state_log[1][0] == opponent.player_num:
+    if state_log is not None and state_log[0] == State_Code.SET.value and state_log[1][0] == opponent.player_num:
         get_damage_to_player(opponent, virtual, num=1)
 """
 class trigger_ability_002:
@@ -241,7 +241,7 @@ def trigger_ability_010(field,player,opponent,virtual,target,itself,state_log=No
             if card_setting.creature_list[state_log[1][2]][-2][0] == LeaderClass.DRAGON.value and \
                     card_setting.creature_list[state_log[1][2]][0] <= 3:
                 get_damage_to_random_creature(field, opponent, virtual, num=2)
-                get_damage_to_player(player, virtual, num=1)
+                get_damage_to_player(opponent, virtual, num=1)
             elif not virtual:
                 mylogger.info("Class:{} Cost:{}".format(LeaderClass(card_setting.creature_list[state_log[1][2]][-2][0]),
                                                         card_setting.creature_list[state_log[1][2]][0]))

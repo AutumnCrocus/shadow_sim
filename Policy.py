@@ -2351,7 +2351,7 @@ class New_Node:
                         # self.field.players[self.player_num].show_hand()
                     print(
                         "   " * layer_height + "ave_value:{} state_value:{} visit_num:{}".format(child.value / max(1, child.visit_num),
-                                                                                                 self.state_value,
+                                                                                                 child.state_value,
                                                                                   child.visit_num))
                     #assert abs(child.value / max(1, child.visit_num)) <= 1.0,"{},{}".format(child.value,child.visit_num)
                     if not single:
@@ -3398,7 +3398,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
             self.last_node = self.current_node
             if not field.secret:
                 mylogger.info("generate new tree")
-                #self.current_node.print_tree(single=True)
+                self.current_node.print_tree(single=True)
             tmp_move = action
             if len(self.current_node.child_nodes) > 0:
                 next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
@@ -5190,6 +5190,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             current_field.get_regal_target_dict(current_field.players[player.player_num],
                                                  current_field.players[opponent.player_num])
             self.current_node = New_Node(field=current_field, player_num=player.player_num,root=True)
+            self.current_node.state_value = None
             self.state_value(self.current_node, player.player_num)
 
         action = super().uct_search(player, opponent, field, use_existed_node=True)
@@ -5222,10 +5223,13 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])])
         pai, value = self.net(states)
-        node.state_value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
+        value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
+        node.state_value = value
+        #mylogger.info("state_value:{:.3f} depth:{}".format(value,node.depth)) if node.depth < 2 else None
+        #assert len(node.child_nodes)==0,"{}".format(node.print_tree())
         node.pai = pai[0]
 
-        return float(value[0])*(2*int(self.main_player_num==node_player_num)-1)#float(value[0])
+        return value
 
     def get_data(self,f,player_num = 0):
         tmp = Game_setting.get_data(f,player_num=player_num)
@@ -5300,9 +5304,21 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         children = node.child_nodes
         action_uct_values = {}
         action_2_node = {}
+
+
         for child in children:
             tmp_value = 0
             action = node.node_id_2_edge_action[id(child)]
+            action_id = 0
+            if action[0] == Action_Code.PLAY_CARD.value:
+                action_id = 1 + action[1]
+            elif action[0] == Action_Code.ATTACK_TO_FOLLOWER.value:
+                action_id = 10 + action[1] * 5 + action[2]
+            elif action[0] == Action_Code.ATTACK_TO_PLAYER.value:
+                action_id = 35 + action[1]
+            elif action[0] == Action_Code.EVOLVE.value:
+                action_id = 40 + action[1]
+
             if action not in action_uct_values:
                 action_uct_values[action] = []
             if action not in action_2_node:
@@ -5319,6 +5335,8 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                     tmp_value += 1
                     #action_uct_values[action].append(1)
             tmp_value += child.value / max(1, child.visit_num)
+            probability = node.pai[action_id]
+            tmp_value = tmp_value * probability if tmp_value > 0 else tmp_value / probability
 
             #action_uct_values[action].append(child.value / max(1, child.visit_num))
             action_uct_values[action].append(tmp_value)
@@ -5383,7 +5401,10 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         exploitation_value = (2*int( player_num == self.main_player_num)-1)*(w / (n + epsilon))
         action_code = node.node_id_2_edge_action[id(child_node)]#(action_category,play_id,target)
         action_id = Action_Code.TURN_END.value
-        if action_code[0] == Action_Code.PLAY_CARD.value:
+        if action_code[0] == 0:
+            if len(node.child_actions) > 1:
+                return -np.inf
+        elif action_code[0] == Action_Code.PLAY_CARD.value:
             action_id = 1 + action_code[1]
         elif action_code[0] == Action_Code.ATTACK_TO_FOLLOWER.value:
             action_id = 10 + action_code[1]*5 + action_code[2]
