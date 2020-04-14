@@ -229,7 +229,8 @@ class New_Dual_ReplayMemory:
 
     def sample(self, batch_size,all=False):
         if all:
-            tmp = self.memory
+            #tmp = self.memory
+            tmp = random.sample(self.memory, len(self.memory))
         else:
             tmp = random.sample(self.memory, batch_size)
         states = [cell.state for cell in tmp]

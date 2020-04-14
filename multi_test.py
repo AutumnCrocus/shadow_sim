@@ -34,7 +34,9 @@ parser.add_argument('--epoch_interval', help="モデルの保存間隔")
 parser.add_argument('--fixed_deck_id', help="使用デッキidの固定")
 parser.add_argument('--cpu_num', help="使用CPU数",default=2 if torch.cuda.is_available() else 3)
 parser.add_argument('--batch_num', help='サンプルに対するバッチの数')
+parser.add_argument('--fixed_opponent', help='対戦相手を固定')
 args = parser.parse_args()
+
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
 
 #Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
@@ -44,13 +46,17 @@ deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
 cpu_num = int(args.cpu_num)
 batch_num = int(args.batch_num) if args.batch_num is not None else None
 G = Game()
-
+fixed_opponent = args.fixed_opponent
 def preparation(episode_data):
     episode = episode_data[0]
     #print("start:{}".format(episode + 1))
     f = Field(5)
     p1 = episode_data[1].get_copy(f)
     p2 = episode_data[2].get_copy(f)
+    #if random.random() < 0.05:
+    #    p1 = Player(9,True)
+    #if random.random() < 0.05:
+    #    p2 = Player(9, False)
     if deck_flg is None:
         deck_type1 = random.choice(list(key_2_tsv_name.keys()))
         deck_type2 = random.choice(list(key_2_tsv_name.keys()))
@@ -176,6 +182,7 @@ from Policy import *
 from Game_setting import Game
 
 def run_main():
+    print(args)
     p_size = cpu_num
     print("use cpu num:{}".format(p_size))
 
@@ -226,6 +233,14 @@ def run_main():
         p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net,cuda=cuda_flg))
         #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
+        #if fixed_opponent is not None:
+        #    if fixed_opponent == "Aggro":
+        #        p2 = Player(9, False, policy=AggroPolicy())
+        #    elif fixed_opponent == "OM":
+        #        p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
+        #    else:
+        #        p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
+        #else:
         p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net,cuda=cuda_flg))
         #p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
@@ -243,9 +258,10 @@ def run_main():
         pool.terminate()  # add this.
         #[[state,state,...,reward],[],[],[],...]
         win_num = sum([cell.pop(-1) for cell in memory])
-        print("win_rate:{:.3%}".format(win_num/episode_len))
-        memories = list(itertools.chain.from_iterable(memory))
 
+        memories = list(itertools.chain.from_iterable(memory))
+        follower_attack_num = 0
+        all_able_to_follower_attack = 0
         for data in memories:
             before_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
                             data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
@@ -259,8 +275,18 @@ def run_main():
                             data[2]['able_to_evo'], data[2]['life_data'],
                             data[2]['pp_data'], data[2]['able_to_play'],
                             data[2]['able_to_attack'], data[2]['able_to_creature_attack'],data[2]['deck_data'])
+            hit_flg = int(1 in data[3]['able_to_choice'][10:35])
+            all_able_to_follower_attack += hit_flg
+            follower_attack_num +=  hit_flg * int(data[1] >= 10 and data[1] <= 34)
             R.push(before_state,data[1], after_state, data[3], data[4])
+            if data[4] > 0 and data[1] >= 10 and data[1] <= 34:
+                R.push(before_state, data[1], after_state, data[3], data[4])
+                R.push(before_state, data[1], after_state, data[3], data[4])
+                R.push(before_state, data[1], after_state, data[3], data[4])
 
+
+        print("win_rate:{:.3%}".format(win_num/episode_len))
+        print("follower_attack_ratio:{:.3%}".format(follower_attack_num/all_able_to_follower_attack))
         print("sample_size:{}".format(len(R.memory)))
         net.train()
         prev_net = copy.deepcopy(net)

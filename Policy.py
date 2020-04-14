@@ -5192,6 +5192,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             self.current_node = New_Node(field=current_field, player_num=player.player_num,root=True)
             self.current_node.state_value = None
             self.state_value(self.current_node, player.player_num)
+            #assert type(self.current_node.pai) is not list
 
         action = super().uct_search(player, opponent, field, use_existed_node=True)
 
@@ -5199,14 +5200,6 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
     def default_policy(self, node, player_num=0):
         value = self.state_value(node, player_num)
-        #mylogger.info("value:{},node_player_num:{}".format(value,node.player_num))
-        #if node.parent_node.node_id_2_edge_action[id(node)][0] == Action_Code.TURN_END.value:
-        #    if len(node.parent_node.edge_action_2_node_id) > 1:
-        #        value += -1.0
-        #if player_num != self.main_player_num:
-        #    value = -value
-
-        #assert abs(value) <= 1.0,"value:{}".format(value)
         return value
 
     def state_value(self, node, player_num):
@@ -5336,7 +5329,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                     #action_uct_values[action].append(1)
             tmp_value += child.value / max(1, child.visit_num)
             probability = node.pai[action_id]
-            tmp_value = tmp_value * probability if tmp_value > 0 else tmp_value / probability
+            #tmp_value = tmp_value * probability if tmp_value > 0 else tmp_value / probability
 
             #action_uct_values[action].append(child.value / max(1, child.visit_num))
             action_uct_values[action].append(tmp_value)
@@ -5439,6 +5432,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         else:
             if origin_model is not None:
                 self.net = origin_model
+                self.net.eval()
             else:
                 assert False, "non-model error"
 
