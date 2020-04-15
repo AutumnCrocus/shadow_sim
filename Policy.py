@@ -5203,7 +5203,9 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         return value
 
     def state_value(self, node, player_num):
-        node_player_num = node.player_num
+
+        node_player_num = node.parent_node.player_num if node.parent_node is not None and node.player_num != node.parent_node.player_num\
+                            else node.player_num
         field = node.field
         if field.check_game_end():
             player = field.players[self.main_player_num]
@@ -5216,6 +5218,8 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])])
         pai, value = self.net(states)
+
+
         value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
         node.state_value = value
         #mylogger.info("state_value:{:.3f} depth:{}".format(value,node.depth)) if node.depth < 2 else None
@@ -5327,8 +5331,8 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                 else:
                     tmp_value += 1
                     #action_uct_values[action].append(1)
-            tmp_value += child.value / max(1, child.visit_num)
             probability = node.pai[action_id]
+            tmp_value += child.value / max(1, child.visit_num) + probability
             #tmp_value = tmp_value * probability if tmp_value > 0 else tmp_value / probability
 
             #action_uct_values[action].append(child.value / max(1, child.visit_num))

@@ -7,6 +7,7 @@ try:
     #print('fork')
 except RuntimeError:
     pass
+
 from test import *  # importの依存関係により必ず最初にimport
 from Field_setting import *
 from Player_setting import *
@@ -174,6 +175,55 @@ def multi_train(data):
         #    #print("value:{}\n{}".format(z[0],v[0]))
         #    print("{}0% finished.".format((i+1) // (iteration_num//10)))
     return all_loss, MSE, CEE
+
+
+def multi_eval(data):
+    net, memory, batch_size, iteration_num, p_num = data
+    all_loss, MSE, CEE = 0, 0, 0
+
+    all_states, all_actions, all_rewards = memory
+    states_keys = list(all_states.keys())
+    value_keys = list(all_states['values'].keys())
+    action_code_keys = list(all_states['detailed_action_codes'].keys())
+    memory_len = all_actions.size()[0]
+    batch_id_list = list(range(memory_len))
+
+    #states, actions, rewards = memory
+    info = f'#{p_num:>2} '
+    for i in tqdm(range(iteration_num),desc=info,position=p_num+1):
+        #key = [random.randint(0, memory_len-1) for _ in range(batch_size)]
+        key = random.sample(batch_id_list,k=batch_size)
+        states = {}
+        for dict_key in states_keys:
+            if dict_key == 'values':
+                states['values'] = {}
+                for sub_key in value_keys:
+                    states['values'][sub_key] = all_states['values'][sub_key][key]
+            elif dict_key == 'detailed_action_codes':
+                states['detailed_action_codes'] = {}
+                for sub_key in action_code_keys:
+                    states['detailed_action_codes'][sub_key] = \
+                        all_states['detailed_action_codes'][sub_key][key]
+            else:
+                states[dict_key] = all_states[dict_key][key]
+
+        actions = all_actions[key]
+        rewards = all_rewards[key]
+        states['target'] = {'actions': actions, 'rewards': rewards}
+
+        p, v, loss = net(states, target=True)
+        z = rewards
+        pai = actions  # 45種類の抽象化した行動
+        # loss.backward()
+        all_loss += float(loss[0].item())
+        MSE += float(loss[1].item())
+        CEE += float(loss[2].item())
+        #if (i+1) % (iteration_num//10) == 0:
+        #    #print("action:{}\n{}".format(actions[0],p[0]))
+        #    #print("value:{}\n{}".format(z[0],v[0]))
+        #    print("{}0% finished.".format((i+1) // (iteration_num//10)))
+    return all_loss, MSE, CEE
+
 
 from test import *  # importの依存関係により必ず最初にimport
 from Field_setting import *
