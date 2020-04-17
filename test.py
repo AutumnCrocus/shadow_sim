@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock
+if __name__ == "__main__":
+    try:
+        set_start_method('spawn')
+        print("spawn is run.")
+        #set_start_method('fork') GPU使用時CUDA initializationでerror
+        #print('fork')
+    except RuntimeError:
+        pass
 import sys
 import numpy as np
 import random
@@ -60,6 +69,8 @@ def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, d
     f.players[0].draw(f.players[0].deck, 3)
     f.players[1].draw(f.players[1].deck, 3)
     G = Game()
+    #virtual_flg=False
+    print("virtual:{}".format(virtual_flg))
     (w, l, lib, turn) = G.start(f, virtual_flg=virtual_flg)
     win += w
     lose += l
@@ -129,13 +140,12 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
     f.players[1].deck.set_leader_class(D2.leader_class.name)
     for card in D2.deck:
         f.players[1].deck.deck.append(card.get_copy())
-
+    G = Game()
     f.players[0].deck.shuffle()
     f.players[1].deck.shuffle()
     f.players[0].draw(f.players[0].deck, 3)
     f.players[1].draw(f.players[1].deck, 3)
     # f.evo_point = [1,2]
-    G = Game()
 
     if history_flg:
         (w, l, lib, turn, history) = G.start(f, virtual_flg=virtual_flg, history_flg=history_flg)
@@ -1136,15 +1146,17 @@ def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, pl
         mylogger.info("{}/{} complete".format((deck_id + 1), len(D)))
 
 
+
+
+
 def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=None, basic=False,deck_lists=None):
     mylogger.info("{} vs {}".format(Player_1.policy.name, Player_2.policy.name))
-    Player1 = Player_1.get_copy(None)
-    Player2 = Player_2.get_copy(None)
-    Player1.name = "Alice"
-    Player2.name = "Bob"
+
     if result_name is None:
         result_name = "{}_vs_{}_{}iteration(deck_list={}).tsv".format(Player_1.policy.name, Player_2.policy.name, iteration,deck_lists)
-    assert Player1 != Player2
+    #assert Player1 != Player2
+    #Player1.deck = None
+    #Player2.deck = None
     win = 0
     lose = 0
     lib_num = 0
@@ -1192,6 +1204,34 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
     # Turn_Players=[Player1,Player2]
     Results = {}
     mylogger.info("same_flg:{}".format(same_flg))
+    list_range = range(len(deck_list))
+    #print(list(itertools.product(list_range,list_range)))
+    """
+    Player1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name),
+                     mulligan=Min_cost_mulligan_policy())
+
+    Player2 = Player(9, True, policy=AggroPolicy(),
+                     mulligan=Min_cost_mulligan_policy())
+    """
+    Player1 = Player_1.get_copy(None)
+    Player1.name = "Alice"
+    Player2 = Player_2.get_copy(None)
+    Player2.name = "Bob"
+    """
+    iter_data = [(Player1,
+                   Player2,(i,j),(deck_lists[i],deck_lists[j]),iteration) for i,j in itertools.product(list_range,list_range)]
+    pool = Pool(3)  # 最大プロセス数:8
+    # memory = pool.map(preparation, iter_data)
+    result = pool.map(multi_battle, iter_data)
+    #result = list(tqdm(result, total=len(list_range)**2))
+    pool.close()  # add this.
+    pool.terminate()  # add this.
+    for data in result:
+        Results[data[0]] = data[1]
+    print(Results)
+    """
+    #assert  False
+
     for j in range(len(D)):
         l = 0
         if same_flg:
@@ -1223,6 +1263,7 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
             mylogger.info("win_rate:{:%} first_win_rate:{:%}".format(Results[(j,k)][0],Results[(j,k)][1]))
 
         mylogger.info("complete:{}/{}".format(j + 1, len(D)))
+
     # for key in list(Results.keys()):
     #    mylogger.info("({}):rate:{} first:{}".format(key,Results[key][0],Results[key][1]))
     with open("Battle_Result/" + result_name, "w") as f:
@@ -1623,10 +1664,17 @@ if __name__ == '__main__':
     model_name = None
     if args.model_name is not None:
         model_name = args.model_name
-        Players.append(
-            Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 28
-        Players.append(
-            Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy())) # 29
+        if args.model_name == "ini":
+            origin_model = Embedd_Network_model.New_Dual_Net(100)
+            Players.append(
+                Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=origin_model), mulligan=Min_cost_mulligan_policy()))  # 28
+            Players.append(
+                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=origin_model), mulligan=Min_cost_mulligan_policy())) # 29
+        else:
+            Players.append(
+                Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 28
+            Players.append(
+                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy())) # 29
 
     # assert False
     n = 100

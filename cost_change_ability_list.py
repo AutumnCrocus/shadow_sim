@@ -13,7 +13,7 @@ def cost_change_ability_001(itself,field,player):
 
 def cost_change_ability_002(itself,field,player):
     for card in field.card_location[player.player_num]:
-        if card.is_tapped==True and  card.trait.value==Trait.COMMANDER.value and card.origin_cost == 3:
+        if card.card_category=="Creature" and  card.trait.value==Trait.COMMANDER.value and card.origin_cost == 3:
             itself.cost = itself.origin_cost-1
         else:
             itself.cost = itself.origin_cost

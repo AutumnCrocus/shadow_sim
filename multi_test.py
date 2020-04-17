@@ -76,7 +76,11 @@ def preparation(episode_data):
     p1.field = f
     p2.field = f
     x1 = datetime.datetime.now()
+    #f.players[0].draw(f.players[0].deck, 3)
+    #f.players[1].draw(f.players[1].deck, 3)
+    #train_data, reward = G.start(f, virtual_flg=episode!=0)
     train_data, reward = G.start_for_dual(f, virtual_flg=True, target_player_num=episode % 2)
+
 
     result_data = []
     for i in range(2):
@@ -170,10 +174,25 @@ def multi_train(data):
         MSE += float(loss[1].item())
         CEE += float(loss[2].item())
         optimizer.step()
-        #if (i+1) % (iteration_num//10) == 0:
-        #    #print("action:{}\n{}".format(actions[0],p[0]))
-        #    #print("value:{}\n{}".format(z[0],v[0]))
-        #    print("{}0% finished.".format((i+1) // (iteration_num//10)))
+        if i == iteration_num-1:
+            values = states["values"]
+            action_codes = states['detailed_action_codes']
+            for j in range(5):
+                for key in states:
+                    if key in ["values","detailed_action_codes","target"]:
+                        continue
+                    print(key)
+                    print("{}".format(states[key][j]))
+                for key in values.keys():
+                    print("{}:{}".format(key,values[key][j]))
+                for key in action_codes.keys():
+                    print("{}:{}".format(key, action_codes[key][j]))
+                print("action_probability")
+                print("pai:{}".format(pai[j]))
+                print("p:{}".format(p[j][pai[j]]))
+                print("state_value_evaluation")
+                print("z:{}".format(z[j]))
+                print("v:{}".format(v[j]))
     return all_loss, MSE, CEE
 
 
@@ -329,10 +348,10 @@ def run_main():
             all_able_to_follower_attack += hit_flg
             follower_attack_num +=  hit_flg * int(data[1] >= 10 and data[1] <= 34)
             R.push(before_state,data[1], after_state, data[3], data[4])
-            if data[4] > 0 and data[1] >= 10 and data[1] <= 34:
-                R.push(before_state, data[1], after_state, data[3], data[4])
-                R.push(before_state, data[1], after_state, data[3], data[4])
-                R.push(before_state, data[1], after_state, data[3], data[4])
+            #if data[4] > 0 and data[1] >= 10 and data[1] <= 34:
+            #    R.push(before_state, data[1], after_state, data[3], data[4])
+            #    R.push(before_state, data[1], after_state, data[3], data[4])
+            #    R.push(before_state, data[1], after_state, data[3], data[4])
 
 
         print("win_rate:{:.3%}".format(win_num/episode_len))

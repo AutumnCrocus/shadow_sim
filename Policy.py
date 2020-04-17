@@ -2170,15 +2170,18 @@ class New_Node:
         end_flg = field.check_game_end()
 
         if not end_flg:
+            tmp = 0
             player = field.players[player_num]
+            opponent = field.players[1 - player_num]
             #player.sort_hand()
             field.update_hand_cost(player_num=player_num)
             (ward_list, _, can_be_attacked, regal_targets) = \
-                field.get_situation(player, field.players[1 - player_num])
+                field.get_situation(player, opponent)
 
             (_, _, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) = \
-                field.get_flag_and_choices(player, field.players[1 - player_num], regal_targets)
+                field.get_flag_and_choices(player, opponent, regal_targets)
             self.regal_targets = regal_targets
+
             if root and not field.secret:
                 mylogger.info("root player hand")
                 player.show_hand()
@@ -2204,15 +2207,29 @@ class New_Node:
             remain_able_to_evo = able_to_evo[:]
             location_id = 0
             side = field.card_location[player_num]
+            tmp = player_num
 
             while location_id < len(side):
                 if location_id in remain_able_to_creature_attack:
                     other_follower_ids = remain_able_to_creature_attack[:]
                     other_follower_ids.remove(location_id)
-                    if len(other_follower_ids) > 0:
-                        for other_id in other_follower_ids:
-                            if side[location_id].eq(side[other_id]):
-                                remain_able_to_creature_attack.remove(other_id)
+                    for other_id in other_follower_ids:
+                        """
+                        if other_id >= len(side):
+                            mylogger.info("node_player_num:{}".format(self.player_num))
+                            mylogger.info("node depth:{}".format(self.depth))
+                            player.show_hand()
+                            field.show_field()
+                            mylogger.info("node end")
+                            mylogger.info("side_id:{} side_len:{}".format(tmp,len(field.card_location[tmp])))
+                            print("other:{}".format(other_follower_ids))
+                            print("{} not in {}({}) len:{}"\
+                            .format(other_id,able_to_creature_attack,remain_able_to_creature_attack,len(side)
+                                    ))
+                            assert False
+                        """
+                        if side[location_id].eq(side[other_id]):
+                            remain_able_to_creature_attack.remove(other_id)
                 if location_id in remain_able_to_attack:
                     other_follower_ids = remain_able_to_attack[:]
                     other_follower_ids.remove(location_id)
@@ -2234,18 +2251,28 @@ class New_Node:
             remain_can_be_attacked = can_be_attacked[:]
             remain_ward_list = ward_list[:]
             side = field.card_location[1 - player_num]
+            side_id = 1- player_num
             location_id = 0
             while location_id < len(side):
                 if location_id in remain_can_be_attacked:
                     other_follower_ids = remain_can_be_attacked[:]
                     other_follower_ids.remove(location_id)
-                    if len(other_follower_ids) > 0:
-                        for other_id in other_follower_ids:
-                            if side[location_id].eq(side[other_id]):
-                                remain_can_be_attacked.remove(other_id)
-                            # elif side[location_id].name == side[other_id].name:
-                            #    mylogger.info("{}".format(side[location_id]))
-                            #    mylogger.info("{}".format(side[other_id]))
+                    for other_id in other_follower_ids:
+                        """
+                        if other_id >= len(side):
+                            mylogger.info("node_player_num:{}".format(self.player_num))
+                            mylogger.info("node depth:{}".format(self.depth))
+                            player.show_hand()
+                            field.show_field()
+                            mylogger.info("node end")
+                            mylogger.info("side_id:{} side_len:{}".format(tmp,len(field.card_location[tmp])))
+                            print("other:{}".format(other_follower_ids))
+                            print("{} not in {}({}) len:{}"\
+                            .format(other_id,can_be_attacked,remain_can_be_attacked,len(side)))
+                            assert False
+                        """
+                        if side[location_id].eq(side[other_id]):
+                            remain_can_be_attacked.remove(other_id)
                 if location_id in remain_ward_list:
                     other_follower_ids = remain_ward_list[:]
                     other_follower_ids.remove(location_id)
@@ -5114,6 +5141,7 @@ class Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
 class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
     def __init__(self,model_name = None,origin_model = None, cuda=False):
+
         super().__init__()
 
         from Embedd_Network_model import New_Dual_Net, Detailed_State_data_2_Tensor
@@ -5125,8 +5153,8 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             self.net = New_Dual_Net(100)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
-            self.model_name = 'model/{}'.format(model_name)
-            self.net.load_state_dict(torch.load(self.model_name))
+            self.model_name = model_name
+            self.net.load_state_dict(torch.load('model/{}'.format(model_name)))
             self.net.eval()
         else:
             if origin_model is not None:
@@ -5139,7 +5167,9 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         self.policy_type = 3
         self.cuda = cuda
 
+
     def decide(self, player, opponent, field):
+
         action = super().decide(player,opponent, field)
 
         if not field.secret and self.prev_node is not None:
@@ -5212,13 +5242,11 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             return 2*int(player.life > 0 and not player.lib_out_flg) - 1
         if node.state_value is not None:
             return node.state_value
-
         states = self.get_data(field, player_num=node_player_num)
 
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])])
         pai, value = self.net(states)
-
 
         value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
         node.state_value = value
@@ -5332,7 +5360,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                     tmp_value += 1
                     #action_uct_values[action].append(1)
             probability = node.pai[action_id]
-            tmp_value += child.value / max(1, child.visit_num) + probability
+            tmp_value += child.value / max(1, child.visit_num)# + probability
             #tmp_value = tmp_value * probability if tmp_value > 0 else tmp_value / probability
 
             #action_uct_values[action].append(child.value / max(1, child.visit_num))

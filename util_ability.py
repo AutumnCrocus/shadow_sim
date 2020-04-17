@@ -58,12 +58,24 @@ def get_damage_to_creature(field, opponent, virtual, target, num=0):
     elif target is not None:
         mylogger.info("player_num:{} can_be_targeted:{} field_len:{} target:{}".format(1 - opponent.player_num,
                                                                                        field.get_can_be_targeted(
-                                                                                           player_num=opponent.player_num),
+                                                                                           player_num=1-opponent.player_num),
                                                                                        len(
                                                                                            field.get_creature_location()[
                                                                                                opponent.player_num]),
                                                                                        target))
+        """
+        field.players[1-opponent.player_num].show_hand()
+        mylogger.info("opponent")
+        opponent.show_hand()
+        field.players[opponent.player_num].show_hand()
+        mylogger.info("end")
         field.show_field()
+        opponent.field.show_field()
+        """
+        mylogger.info("eq:{}".format(opponent.field.eq(field)))
+        mylogger.info("{}".format(opponent.field.get_observable_data(player_num=opponent.field.turn_player_num)))
+        mylogger.info("{}".format(field.get_observable_data(player_num=field.turn_player_num)))
+        mylogger.info("{}:{}".format(field.turn_player_num,opponent.field.turn_player_num))
         assert False
 
 

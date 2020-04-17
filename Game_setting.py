@@ -23,7 +23,7 @@ class Game:
         win, lose, lib_num = 0, 0, 0
         f.secret = bool(virtual_flg)
         self.mulligan(f.players[0], f.players[1], virtual=virtual_flg)
-        while (True):
+        while True:
             end_flg = False
 
             # (win,lose,lib_num,turn,end_flg)=self.play_turn(f,0,win,lose,lib_num,turn,virtual_flg)
@@ -90,7 +90,7 @@ class Game:
         #reward = 0.0
         accumulate_turn = 0
         while True:
-            (win, lose, end_flg, train_data) = f.play_turn_for_dual(0)
+            (win, lose, end_flg, train_data) = f.play_turn_for_dual(0,)
             train_datas[0].extend(train_data)
             #if target_player_num == 0:
             #    train_datas.extend(train_data)
