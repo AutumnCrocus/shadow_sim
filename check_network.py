@@ -4,8 +4,8 @@ from multi_test import *
 import torch
 import argparse
 print(args)
-net = New_Dual_Net(100)
-model_name = 'Multi_Dual_2020_4_15_12_34_32_12%.pth'
+net = New_Dual_Net(10)
+model_name = 'Multi_Dual_2020_4_23_0_58_12_47%_10nodes.pth'
 PATH = 'model/'+ model_name
 net.load_state_dict(torch.load(PATH))
 p_size = 3

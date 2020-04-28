@@ -245,7 +245,6 @@ class Player:
                 mylogger.info(
                     "able_to_creature_attack:{} can_be_attacked:{}".format(able_to_creature_attack, can_be_attacked))
             mylogger.info("regal_targets:{}".format(regal_targets))
-
         (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
         if action_num == Action_Code.ERROR.value:
             #self.policy.starting_node.print_node()

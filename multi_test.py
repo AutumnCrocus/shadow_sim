@@ -14,7 +14,7 @@ from Player_setting import *
 from Policy import *
 from Game_setting import Game
 from torch.utils.tensorboard import SummaryWriter
-
+from tqdm import tqdm
 from Embedd_Network_model import *
 import copy
 import datetime
@@ -36,6 +36,7 @@ parser.add_argument('--fixed_deck_id', help="使用デッキidの固定")
 parser.add_argument('--cpu_num', help="使用CPU数",default=2 if torch.cuda.is_available() else 3)
 parser.add_argument('--batch_num', help='サンプルに対するバッチの数')
 parser.add_argument('--fixed_opponent', help='対戦相手を固定')
+parser.add_argument('--node_num', help='node_num', default=100)
 args = parser.parse_args()
 
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
@@ -83,6 +84,8 @@ def preparation(episode_data):
 
 
     result_data = []
+    sum_of_choices = 0
+    sum_code = 0
     for i in range(2):
         for data in train_data[i]:
             # assert False,"{}".format(data[0])
@@ -113,8 +116,10 @@ def preparation(episode_data):
                            'deck_data':data[2].deck_data}
             action_probability = data[1]
             detailed_action_code = data[3]
-
+            sum_of_choices += sum(detailed_action_code['able_to_choice'])
+            sum_code += 1
             result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[i]))
+            #result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[1-i]))
 
     x2 = datetime.datetime.now()
 
@@ -123,9 +128,88 @@ def preparation(episode_data):
     tmp_x3 = (x2-x1).total_seconds()/all_len
     x3 = datetime.timedelta(seconds=tmp_x3)
     #print("finished:{:<4} {:<5}(len:{:<3}) time_per_move:{},{}".format(episode + 1,win_name,all_len,x3,x2-x1))
+    result_data.append((sum_of_choices,sum_code))
     result_data.append(int(reward[int(episode % 2)] > 0))
     return result_data
 
+def multi_preparation(episode_data):
+    partial_iteration = episode_data[-2]
+    p_num = episode_data[-1]
+    info = f'#{p_num:>2} '
+    all_result_data = []
+    battle_data = {"sum_of_choices":0, "sum_code":0, "win_num":0}
+    for episode in tqdm(range(partial_iteration),desc=info,position=p_num+1):
+        f = Field(5)
+        p1 = episode_data[0].get_copy(f)
+        p2 = episode_data[1].get_copy(f)
+        if deck_flg is None:
+            deck_type1 = random.choice(list(key_2_tsv_name.keys()))
+            deck_type2 = random.choice(list(key_2_tsv_name.keys()))
+        else:
+            deck_type1 = deck_flg
+            deck_type2 = deck_flg
+        d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
+        d1.set_leader_class(key_2_tsv_name[deck_type1][1])
+        d2 = tsv_to_deck(key_2_tsv_name[deck_type2][0])
+        d2.set_leader_class(key_2_tsv_name[deck_type2][1])
+        d1.shuffle()
+        d2.shuffle()
+        p1.deck = d1
+        p2.deck = d2
+        f.players = [p1, p2]
+        p1.field = f
+        p2.field = f
+        x1 = datetime.datetime.now()
+        #f.players[0].draw(f.players[0].deck, 3)
+        #f.players[1].draw(f.players[1].deck, 3)
+        #train_data, reward = G.start(f, virtual_flg=episode!=0)
+        train_data, reward = G.start_for_dual(f, virtual_flg=True, target_player_num=episode % 2)
+
+
+        result_data = []
+        sum_of_choices = 0
+        sum_code = 0
+        for i in range(2):
+            for data in train_data[i]:
+                # assert False,"{}".format(data[0])
+                before_state = {'hand_ids': data[0].hand_ids, 'hand_card_costs': data[0].hand_card_costs,
+                                'follower_card_ids': data[0].follower_card_ids,
+                                'amulet_card_ids': data[0].amulet_card_ids,
+                                'follower_stats': data[0].follower_stats,
+                                'follower_abilities': data[0].follower_abilities,
+                                'able_to_evo': data[0].able_to_evo,
+                                'life_data': data[0].life_data,
+                                'pp_data': data[0].pp_data,
+                                'able_to_play': data[0].able_to_play,
+                                'able_to_attack': data[0].able_to_attack,
+                                'able_to_creature_attack': data[0].able_to_creature_attack,
+                                'deck_data': data[0].deck_data}
+
+                after_state = {'hand_ids': data[2].hand_ids, 'hand_card_costs': data[2].hand_card_costs,
+                               'follower_card_ids': data[2].follower_card_ids,
+                               'amulet_card_ids': data[2].amulet_card_ids,
+                               'follower_stats': data[2].follower_stats,
+                               'follower_abilities': data[2].follower_abilities,
+                               'able_to_evo': data[2].able_to_evo,
+                               'life_data': data[2].life_data,
+                               'pp_data': data[2].pp_data,
+                               'able_to_play': data[2].able_to_play,
+                               'able_to_attack': data[2].able_to_attack,
+                               'able_to_creature_attack': data[2].able_to_creature_attack,
+                               'deck_data':data[2].deck_data}
+                action_probability = data[1]
+                detailed_action_code = data[3]
+                sum_of_choices += sum(detailed_action_code['able_to_choice'])
+                sum_code += 1
+                result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[i]))
+                #result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[1-i]))
+
+        battle_data["sum_of_choices"] += sum_of_choices
+        battle_data["sum_code"] += sum_code
+        battle_data["win_num"] += int(reward[int(episode % 2)] > 0)
+        all_result_data.append(result_data)
+    all_result_data.append(battle_data)
+    return all_result_data
 
 import itertools
 
@@ -173,26 +257,22 @@ def multi_train(data):
         all_loss += float(loss[0].item())
         MSE += float(loss[1].item())
         CEE += float(loss[2].item())
+
         optimizer.step()
-        if i == iteration_num-1:
-            values = states["values"]
-            action_codes = states['detailed_action_codes']
-            for j in range(5):
-                for key in states:
-                    if key in ["values","detailed_action_codes","target"]:
-                        continue
-                    print(key)
-                    print("{}".format(states[key][j]))
-                for key in values.keys():
-                    print("{}:{}".format(key,values[key][j]))
-                for key in action_codes.keys():
-                    print("{}:{}".format(key, action_codes[key][j]))
-                print("action_probability")
-                print("pai:{}".format(pai[j]))
-                print("p:{}".format(p[j][pai[j]]))
-                print("state_value_evaluation")
-                print("z:{}".format(z[j]))
-                print("v:{}".format(v[j]))
+        if i % iteration_num != iteration_num-1:
+            continue
+        values = states["values"]
+        action_codes = states['detailed_action_codes']
+        for j in range(5):
+            max_p = torch.max(p[j],dim=0)
+            print("#" * 10)
+            print("pai:{} p:{}".format(pai[j],p[j][pai[j]]))
+            print("max_output| p:{} id:{} len:{}".format(float(max_p.values), int(max_p.indices),sum(action_codes["able_to_choice"][j])))
+            print("z:{} v:{}".format(z[j], v[j]))
+            print("#" * 10)
+        print("")
+
+
     return all_loss, MSE, CEE
 
 
@@ -255,10 +335,11 @@ def run_main():
     p_size = cpu_num
     print("use cpu num:{}".format(p_size))
 
-
+    loss_history = []
 
     cuda_flg = args.cuda == "True"
-    net = New_Dual_Net(100)
+    node_num = int(args.node_num)
+    net = New_Dual_Net(node_num)
     if torch.cuda.is_available() and cuda_flg:
         net = net.cuda()
         print("cuda is available.")
@@ -302,15 +383,15 @@ def run_main():
         p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net,cuda=cuda_flg))
         #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
-        #if fixed_opponent is not None:
-        #    if fixed_opponent == "Aggro":
-        #        p2 = Player(9, False, policy=AggroPolicy())
-        #    elif fixed_opponent == "OM":
-        #        p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
-        #    else:
-        #        p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
-        #else:
-        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net,cuda=cuda_flg))
+        if fixed_opponent is not None:
+            if fixed_opponent == "Aggro":
+                p2 = Player(9, False, policy=AggroPolicy())
+            elif fixed_opponent == "OM":
+                p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
+            else:
+                p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
+        else:
+            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net,cuda=cuda_flg))
         #p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
 
@@ -318,20 +399,42 @@ def run_main():
         #cProfile.run("memories = multi(episode_len,p1,p2)",sort="tottime")
         #assert False
         #memories = multi(episode_len,p1,p2)
-        iter_data = [(i, p1, p2) for i in range(episode_len)]
+        #iter_data = [(i, p1, p2) for i in range(episode_len)]
+        iter_data = [(p1, p2,episode_len//p_size,i) for i in range(p_size)]
         pool = Pool(p_size)  # 最大プロセス数:8
+        memory = pool.map(multi_preparation, iter_data)
+        print("\n" * p_size)
+        pool.close()  # add this.
+        pool.terminate()  # add this.
+        battle_data = [cell.pop(-1) for cell in memory]
+        memories = []
+        [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(p_size)]
+
+        sum_of_choice = sum([cell["sum_of_choices"] for cell in battle_data])
+        sum_of_code = sum([cell["sum_code"] for cell in battle_data])
+        win_num = sum([cell["win_num"] for cell in battle_data])
+        memories = list(itertools.chain.from_iterable(memory))
+        memories = list(itertools.chain.from_iterable(memories))
+        follower_attack_num = 0
+        all_able_to_follower_attack = 0
+        """
         #memory = pool.map(preparation, iter_data)
         memory = pool.imap(preparation, iter_data)
         memory = list(tqdm(memory,total=episode_len))
         pool.close()  # add this.
         pool.terminate()  # add this.
         #[[state,state,...,reward],[],[],[],...]
-        win_num = sum([cell.pop(-1) for cell in memory])
 
+        win_num = sum([cell.pop(-1) for cell in memory])
+        tmp = [cell.pop(-1) for cell in memory]
+        sum_of_choice = sum([cell[0] for cell in tmp])
+        sum_of_code = sum([cell[1] for cell in tmp])
         memories = list(itertools.chain.from_iterable(memory))
         follower_attack_num = 0
         all_able_to_follower_attack = 0
+        """
         for data in memories:
+            #print(data[0])
             before_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
                             data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
                             data[0]['follower_stats'], data[0]['follower_abilities'],
@@ -355,6 +458,7 @@ def run_main():
 
 
         print("win_rate:{:.3%}".format(win_num/episode_len))
+        print("mean_of_num_of_choice:{:.3f}".format(sum_of_choice/sum_of_code))
         print("follower_attack_ratio:{:.3%}".format(follower_attack_num/all_able_to_follower_attack))
         print("sample_size:{}".format(len(R.memory)))
         net.train()
@@ -380,6 +484,11 @@ def run_main():
             sum_of_loss = sum(map(lambda data: data[0], loss_data))
             sum_of_MSE = sum(map(lambda data: data[1], loss_data))
             sum_of_CEE = sum(map(lambda data: data[2], loss_data))
+            all_states, all_actions, all_rewards = all_data
+            all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
+            p, v, loss = net(all_states, target=True)
+
+            print("loss:{:.3f} MSE:{:.3f} CEE:{:.3f}".format(loss[0].item(), loss[1].item(), loss[2].item()))
 
             pool.close()  # add this.
             pool.terminate()  # add this.
@@ -407,26 +516,34 @@ def run_main():
         writer.add_scalar(LOG_PATH+"Over_All_Loss", sum_of_loss / iteration, epoch)
         writer.add_scalar(LOG_PATH+"MSE", sum_of_MSE / iteration, epoch)
         writer.add_scalar(LOG_PATH+"CEE", sum_of_CEE / iteration, epoch)
+        writer.add_scalar(LOG_PATH + "WIN_RATE", win_num/episode_len, epoch)
         print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
               .format(sum_of_loss / iteration, sum_of_MSE / iteration, sum_of_CEE / iteration))
+        loss_history.append(sum_of_loss / iteration)
+
 
 
         t4 = datetime.datetime.now()
         print(t4-t3)
         if epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num:
-            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{:.0%}.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                                 t1.second, (epoch+1)/epoch_num)
+            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{:.0%}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+                                                                 t1.second, (epoch+1)/epoch_num,node_num)
             if torch.cuda.is_available() and cuda_flg:
                 PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{:.0%}_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                         t1.second, (epoch + 1) / epoch_num)
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
+        if len(loss_history) > 1:
+            UB = np.std(loss_history)/np.sqrt(epoch+1)
+            print("{:<2} std:{}".format(epoch,UB))
+            if UB < 1.0e-8:
+                break
 
     writer.close()
     print('Finished Training')
 
-    PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_all.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                         t1.second)
+    PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_all_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+                                                         t1.second,node_num)
     if torch.cuda.is_available() and cuda_flg:
         PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_all_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                              t1.second)

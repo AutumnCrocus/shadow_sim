@@ -1625,6 +1625,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', help='ニューラルネットワークモデルの名前')
     parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
     parser.add_argument('--cProfile')
+    parser.add_argument('--node_num',default=100)
     args = parser.parse_args()
     mylogger.info("args:{}".format(args))
     step_num = 100
@@ -1664,17 +1665,18 @@ if __name__ == '__main__':
     model_name = None
     if args.model_name is not None:
         model_name = args.model_name
+        node_num = int(args.node_num)
         if args.model_name == "ini":
             origin_model = Embedd_Network_model.New_Dual_Net(100)
             Players.append(
-                Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=origin_model), mulligan=Min_cost_mulligan_policy()))  # 28
+                Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=origin_model,node_num=node_num), mulligan=Min_cost_mulligan_policy()))  # 28
             Players.append(
-                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=origin_model), mulligan=Min_cost_mulligan_policy())) # 29
+                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=origin_model,node_num=node_num), mulligan=Min_cost_mulligan_policy())) # 29
         else:
             Players.append(
-                Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy()))  # 28
+                Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name,node_num=node_num), mulligan=Min_cost_mulligan_policy()))  # 28
             Players.append(
-                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name), mulligan=Min_cost_mulligan_policy())) # 29
+                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name,node_num=node_num), mulligan=Min_cost_mulligan_policy())) # 29
 
     # assert False
     n = 100

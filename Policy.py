@@ -2371,14 +2371,15 @@ class New_Node:
                         txt = "{}".format(action_name)
 
                     print("   " * layer_height + "action:{}".format(txt))
-                    if action_code[0] == Action_Code.TURN_END.value:
-                        print("   " * layer_height + "able_moves_num:{} pp/max_pp:{}/{}" \
-                              .format(len(self.child_actions), \
-                                      self.field.remain_cost[self.player_num], self.field.cost[self.player_num]))
-                        # self.field.players[self.player_num].show_hand()
+                    #if action_code[0] == Action_Code.TURN_END.value:
+                    #    print("   " * layer_height + "able_moves_num:{} pp/max_pp:{}/{}" \
+                    #          .format(len(self.child_actions), \
+                    #                  self.field.remain_cost[self.player_num], self.field.cost[self.player_num]))
+                    #    # self.field.players[self.player_num].show_hand()
+                    state_value = "{:.3f}".format(child.state_value) if child.state_value is not None else "None"
                     print(
-                        "   " * layer_height + "ave_value:{} state_value:{} visit_num:{}".format(child.value / max(1, child.visit_num),
-                                                                                                 child.state_value,
+                        "   " * layer_height + "ave_value:{:.3f} state_value:{} visit_num:{}".format(child.value / max(1, child.visit_num),
+                                                                                                 state_value,
                                                                                   child.visit_num))
                     #assert abs(child.value / max(1, child.visit_num)) <= 1.0,"{},{}".format(child.value,child.visit_num)
                     if not single:
@@ -5140,17 +5141,18 @@ class Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
 
 class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
-    def __init__(self,model_name = None,origin_model = None, cuda=False):
+    def __init__(self,model_name = None,origin_model = None, cuda=False,node_num=100,iteration=100):
 
         super().__init__()
-
+        self.iteration = iteration
         from Embedd_Network_model import New_Dual_Net, Detailed_State_data_2_Tensor
         self.net = None
         self.model_name = PATH
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
+            #short_name = short_name.split("/")[1]
             self.name = "N_DN_NR_OMISMCTS(model_name={})Policy".format(short_name)
-            self.net = New_Dual_Net(100)
+            self.net = New_Dual_Net(node_num)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
             self.model_name = model_name
@@ -5211,6 +5213,19 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                         mylogger.info("{:<60}:{:.3%}".format(txt, pai[action_code_id]))
             mylogger.info("current node data")
             self.prev_node.print_tree(single=True)
+            mylogger.info("state_detail")
+
+            states = self.get_data(field, player_num=self.prev_node.player_num)
+            states_keys = list(states.keys())
+            value_keys = list(states['values'].keys())
+            for dict_key in states_keys:
+                if dict_key == 'values':
+                    for sub_key in value_keys:
+                        print("{}:{}".format(sub_key,states['values'][sub_key][0]))
+                elif dict_key == 'detailed_action_codes':
+                    continue
+                else:
+                    print("{}:{}".format(dict_key,states[dict_key][0]))
         return action
 
     def uct_search(self, player, opponent, field,use_existed_node=False):
@@ -5448,7 +5463,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
 
 class Dual_NN_GreedyPolicy(New_GreedyPolicy):
-    def __init__(self, model_name=None, origin_model=None):
+    def __init__(self, model_name=None, origin_model=None, node_num=100):
         super().__init__()
         self.policy_type = 2
         from Embedd_Network_model import New_Dual_Net, Detailed_State_data_2_Tensor
@@ -5457,7 +5472,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
             self.name = "DN_Greedy(model_name={})Policy".format(short_name)
-            self.net = New_Dual_Net(100)
+            self.net = New_Dual_Net(node_num)
             self.model_name = 'model/{}'.format(model_name)
             self.net.load_state_dict(torch.load(self.model_name))
             self.net.eval()

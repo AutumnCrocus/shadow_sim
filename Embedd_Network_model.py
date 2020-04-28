@@ -13,7 +13,7 @@ import copy
 import random
 from my_enum import *
 import torch.optim as optim
-from pytorch_memlab import profile
+#from pytorch_memlab import profile
 import argparse
 # Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 Dual_State_value = namedtuple('Value', ('state', 'action', 'next_state', 'detailed_action_code','reward'))
@@ -70,6 +70,7 @@ class New_Dual_Net(nn.Module):
 
     #@profile
     def forward(self, states,target=False):
+
         values = states['values']
         hand_ids = states['hand_ids']
         follower_card_ids = states['follower_card_ids']
@@ -78,7 +79,6 @@ class New_Dual_Net(nn.Module):
         able_to_evo = states['able_to_evo']
         detailed_action_codes = states['detailed_action_codes']
         class_datas = values['class_datas']
-
         x1 = F.relu(self.lin1(values['life_datas']))
 
         pp_datas = F.relu(self.lin2(values['pp_datas']))
@@ -93,8 +93,10 @@ class New_Dual_Net(nn.Module):
         _, new_able_to_plays= torch.broadcast_tensors(hand_card_ids, new_able_to_plays)
         tmp_x2 = torch.cat([new_pp_datas, hand_card_costs, hand_card_ids, new_able_to_plays], dim=2)
         x2 = torch.sum(F.relu(self.lin4(tmp_x2)),dim=1)
+
         able_to_evos = self.emb5(able_to_evo)
         stats = F.relu(self.lin3(values['follower_stats']))
+
         abilities = torch.sum(self.emb4(follower_abilities),dim=2)
         follower_ids = self.emb2(follower_card_ids)
         x4 = torch.sum(self.emb3(amulet_card_ids),dim=1)
@@ -107,7 +109,9 @@ class New_Dual_Net(nn.Module):
         #x6 = torch.cat([x1,x2,x3,x4,x5],dim=1)
         x = self.fc0(x7)
         #x = self.fc0(x6)
+        #v_x = self.fc0(x7)
         x = F.relu(self.fc1(x))
+
         for i in range(19):
             x = self.layer[i](x)
 
@@ -115,8 +119,8 @@ class New_Dual_Net(nn.Module):
         play_card_ids = detailed_action_codes['play_card_ids']
         field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
-
-        tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids)
+        #tmp = self.action_value_net(v_x, action_categories, play_card_ids, field_card_ids)
+        tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values)
         h_p2 = tmp
 
         out_p = self.filtered_softmax(h_p2, able_to_choice)
@@ -127,6 +131,10 @@ class New_Dual_Net(nn.Module):
         if target:
             z = states['target']['rewards']
             pai = states['target']['actions']
+            #print("z:{}".format(z[-1]))
+            #print("h_v2:{}".format(h_v2[-1]))
+            #print("out_v:{}".format(out_v[-1]))
+            #print("weight:{}".format(self.fc3_v3.weight))
             return out_p, out_v, self.loss_fn(out_p, out_v, z, pai)
         else:
             return out_p, out_v
@@ -157,18 +165,31 @@ class Action_Value_Net(nn.Module):
         self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
         self.emb2 = nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
         self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
-        self.lin1 = nn.Linear(6 * mid_size, mid_size)
+        self.lin1 = nn.Linear(7 * mid_size, mid_size)
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
+        self.lin3 = nn.Linear(36,mid_size)
 
-    def forward(self, states, action_categories, play_card_ids, field_card_ids):
+    def forward(self, states, action_categories, play_card_ids, field_card_ids,values):
+        life_datas = values['life_datas']
+        pp_datas = values['pp_datas']
+        hand_card_costs = values['hand_card_costs']
+        stats = values['follower_stats'].view(-1,20)
+
         embed_action_categories = self.emb1(action_categories)
         embed_play_card_ids = self.emb2(play_card_ids)
         embed_field_card_ids = self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
         new_states = states.unsqueeze(1)
         _, new_states = torch.broadcast_tensors(embed_action_categories, new_states)
+        values_data = torch.cat([life_datas,pp_datas,hand_card_costs,stats],dim=1).unsqueeze(1)
+        #print("values_data:{}".format(values_data.size()))
+        new_values_data = self.lin3(values_data)
+        _, new_values_data = torch.broadcast_tensors(embed_action_categories, new_values_data)
+        #print("new:{}".format(new_values_data.size()))
+
         tmp = torch.cat([new_states,embed_action_categories, embed_play_card_ids,
-                         embed_field_card_ids], dim=2)
+                         embed_field_card_ids,new_values_data], dim=2)
+        #print("tmp:{}".format(tmp.size()))
         output = F.relu(self.lin1(tmp))
 
         output = F.relu(self.lin2(output))
@@ -185,9 +206,10 @@ class filtered_softmax(nn.Module):
         x = x * label
         max_x = x.max(dim=1,keepdim=True).values
         x = x-max_x
+        x = x * 1000
         x = torch.exp(x)
         x = x * label
-        sum_of_x = torch.sum(x, dim=1,keepdim=True)
+        sum_of_x = torch.sum(x, dim=1, keepdim=True)
         x = x / sum_of_x
 
         return x
@@ -353,18 +375,25 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
     data_len = len(datas)
     #print(type(datas))
     #print(type(datas[0]))
+    #hand_ids = torch.LongTensor([[0 for _ in range(9)] for _ in range(data_len)])
     hand_ids = torch.LongTensor([[datas[i].hand_ids[j] for j in range(9)] for i in range(data_len)])
+    #hand_card_costs = torch.Tensor([[0 for j in range(9)] for i in range(data_len)])
     hand_card_costs = torch.Tensor([[datas[i].hand_card_costs[j] for j in range(9)] for i in range(data_len)])
     follower_card_ids = torch.LongTensor([[datas[i].follower_card_ids[j] for j in range(10)] for i in range(data_len)])
+    #follower_card_ids = torch.LongTensor([[0 for _ in range(10)] for _ in range(data_len)])
     amulet_card_ids = torch.LongTensor([[datas[i].amulet_card_ids[j] for j in range(10)] for i in range(data_len)])
+    #amulet_card_ids = torch.LongTensor([[0 for _ in range(10)] for _ in range(data_len)])
     follower_abilities = torch.LongTensor([[[datas[i].follower_abilities[j][k] if k < len(
         datas[i].follower_abilities[j]) else 0 for k in range(1, 16)] for j in range(10)] for i in range(data_len)])
     follower_stats = torch.Tensor([[datas[i].follower_stats[j] for j in range(10)] for i in range(data_len)])
+    #follower_stats = torch.Tensor([[(0,0) for _ in range(10)] for _ in range(data_len)])
+    #able_to_evo = torch.LongTensor([[0 for _ in range(10)] for _ in range(data_len)])
     able_to_evo = torch.LongTensor(
         [[datas[i].able_to_evo[j] if j < len(datas[i].able_to_evo) else 0 for j in range(10)] for i in range(data_len)])
     able_to_play = torch.LongTensor(
         [[datas[i].able_to_play[j] if j < len(datas[i].able_to_play) else 0 for j in range(9)] for i in
          range(data_len)])
+    #able_to_play = torch.LongTensor([[0 for _ in range(9)] for _ in range(data_len)])
     able_to_attack = torch.LongTensor(
         [[datas[i].able_to_attack[j] if j < len(datas[i].able_to_attack) else 0 for j in range(5)] for i in
          range(data_len)])
