@@ -1,9 +1,9 @@
 import os
 os.environ["OMP_NUM_THREADS"] = "4"
 import torch
-import torchvision
-import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
+#import torchvision
+#import torchvision.transforms as transforms
+#import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
@@ -57,7 +57,7 @@ class New_Dual_Net(nn.Module):
         #self.bn_p1 = nn.BatchNorm1d(25)
         # 手札の枚数+自分の場のフォロワーの数*3＋ターン終了
         #self.fc3_p2 = nn.Linear(25, 25)
-        self.action_value_net = Action_Value_Net(mid_size=n_mid)
+        self.action_value_net = Action_Value_Net(self,mid_size=n_mid)
 
         self.fc3_v1 = nn.Linear(n_mid, 5)
         self.bn_v1 = nn.BatchNorm1d(5)
@@ -159,12 +159,12 @@ class Dual_ResNet(nn.Module):
 
 
 class Action_Value_Net(nn.Module):
-    def __init__(self,mid_size = 100):
+    def __init__(self,parent_net,mid_size = 100):
         super(Action_Value_Net, self).__init__()
         self.mid_size = mid_size
         self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
-        self.emb2 = nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
-        self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
+        self.emb2 = parent_net.emb1#nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
+        self.emb3 = parent_net.emb2#nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
         self.lin1 = nn.Linear(7 * mid_size, mid_size)
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
