@@ -39,8 +39,8 @@ class New_Dual_Net(nn.Module):
         self.lin5 = nn.Linear(6 * n_mid, n_mid)#自分の場のフォロワー連結
         self.lin6 = nn.Linear(4 * n_mid, n_mid)  # 相手の場のフォロワー連結
         self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
-        self.emb2 = nn.Embedding(1000, n_mid, padding_idx=0)  # フォロワー1000枚（空白含む）
-        self.emb3 = nn.Embedding(1000, n_mid, padding_idx=0)  # アミュレット1000枚（空白含む）
+        self.emb2 = self.emb1#nn.Embedding(1000, n_mid, padding_idx=0)  # フォロワー1000枚（空白含む）
+        self.emb3 = self.emb1#nn.Embedding(1000, n_mid, padding_idx=0)  # アミュレット1000枚（空白含む）
         self.emb4 = nn.Embedding(16, n_mid, padding_idx=0)  # キーワード能力15個と空白
         self.emb5 = nn.Embedding(6, n_mid, padding_idx=0)  # 進化可能最大五体と空白
         self.emb6 = nn.Embedding(10, n_mid, padding_idx=0)  # 手札最大9枚の位置と空白
@@ -327,10 +327,16 @@ def get_data(f,player_num=0):
                             if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Creature" else [] for i in range(5)]
 
-    amulet_card_ids = [f.card_location[player_num][i].card_id + 500
+    #amulet_card_ids = [f.card_location[player_num][i].card_id + 500
+    #                   if i < len(f.card_location[player_num]) and f.card_location[player_num][
+    #    i].card_category == "Amulet" else 0 for i in range(5)] \
+    #                  + [f.card_location[opponent_num][i].card_id + 500
+    #                     if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
+    #    i].card_category == "Amulet" else 0 for i in range(5)]
+    amulet_card_ids = [f.card_location[player_num][i].card_id + 2500
                        if i < len(f.card_location[player_num]) and f.card_location[player_num][
         i].card_category == "Amulet" else 0 for i in range(5)] \
-                      + [f.card_location[opponent_num][i].card_id + 500
+                      + [f.card_location[opponent_num][i].card_id + 2500
                          if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Amulet" else 0 for i in range(5)]
     """
