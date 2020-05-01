@@ -9,6 +9,5 @@ tqdm==4.32.2
 numba
 pandas
 torch==1.4.0
-torchvision==1.4.0
 matplotlib
 pytorch_memlab
