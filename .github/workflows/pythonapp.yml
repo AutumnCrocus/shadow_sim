@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     env:
-      MODEL_NAME: Multi_Dual_2020_4_15_16_8_18_25%.pth
+      MODEL_NAME: Multi_Dual_2020_4_28_11_56_7_all_100nodes.pth
       PLAYER_TYPE: 2
       MODE: background_demo
     runs-on: ubuntu-latest
