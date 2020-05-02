@@ -172,6 +172,9 @@ def multi_preparation(episode_data):
         for i in range(2):
             for data in train_data[i]:
                 # assert False,"{}".format(data[0])
+                detailed_action_code = data[3]
+                #if sum(detailed_action_code["able_to_choice"]) == 1:
+                #    continue
                 before_state = {'hand_ids': data[0].hand_ids, 'hand_card_costs': data[0].hand_card_costs,
                                 'follower_card_ids': data[0].follower_card_ids,
                                 'amulet_card_ids': data[0].amulet_card_ids,
@@ -198,7 +201,6 @@ def multi_preparation(episode_data):
                                'able_to_creature_attack': data[2].able_to_creature_attack,
                                'deck_data':data[2].deck_data}
                 action_probability = data[1]
-                detailed_action_code = data[3]
                 sum_of_choices += sum(detailed_action_code['able_to_choice'])
                 sum_code += 1
                 result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[i]))

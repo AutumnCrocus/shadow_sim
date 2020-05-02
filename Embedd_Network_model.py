@@ -39,8 +39,10 @@ class New_Dual_Net(nn.Module):
         self.lin5 = nn.Linear(6 * n_mid, n_mid)#自分の場のフォロワー連結
         self.lin6 = nn.Linear(4 * n_mid, n_mid)  # 相手の場のフォロワー連結
         self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
-        self.emb2 = self.emb1#nn.Embedding(1000, n_mid, padding_idx=0)  # フォロワー1000枚（空白含む）
-        self.emb3 = self.emb1#nn.Embedding(1000, n_mid, padding_idx=0)  # アミュレット1000枚（空白含む）
+        #self.emb2 = self.emb1
+        self.emb2 = nn.Embedding(1000, n_mid, padding_idx=0)  # フォロワー1000枚（空白含む）
+        #self.emb3 = self.emb1
+        self.emb3 = nn.Embedding(1000, n_mid, padding_idx=0)  # アミュレット1000枚（空白含む）
         self.emb4 = nn.Embedding(16, n_mid, padding_idx=0)  # キーワード能力15個と空白
         self.emb5 = nn.Embedding(6, n_mid, padding_idx=0)  # 進化可能最大五体と空白
         self.emb6 = nn.Embedding(10, n_mid, padding_idx=0)  # 手札最大9枚の位置と空白
@@ -98,8 +100,10 @@ class New_Dual_Net(nn.Module):
         stats = F.relu(self.lin3(values['follower_stats']))
 
         abilities = torch.sum(self.emb4(follower_abilities),dim=2)
-        follower_ids = self.emb2(follower_card_ids)
-        x4 = torch.sum(self.emb3(amulet_card_ids),dim=1)
+        #follower_ids = self.emb2(follower_card_ids)
+        follower_ids = self.emb1(follower_card_ids)
+        #x4 = torch.sum(self.emb3(amulet_card_ids),dim=1)
+        x4 = torch.sum(self.emb1(amulet_card_ids), dim=1)
         tmp_x3 = torch.cat([stats, abilities, follower_ids, able_to_evos],dim=2)
         x3 = torch.sum(F.relu(self.lin6(tmp_x3)),dim=1)
         x5 = self.emb9(class_datas).view(-1,2*self.n_mid)
@@ -120,7 +124,7 @@ class New_Dual_Net(nn.Module):
         field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
         #tmp = self.action_value_net(v_x, action_categories, play_card_ids, field_card_ids)
-        tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values)
+        tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,target=target)
         h_p2 = tmp
 
         out_p = self.filtered_softmax(h_p2, able_to_choice)
@@ -131,6 +135,7 @@ class New_Dual_Net(nn.Module):
         if target:
             z = states['target']['rewards']
             pai = states['target']['actions']
+            #print("h_p2[0]:{}".format(h_p2[0]))
             #print("z:{}".format(z[-1]))
             #print("h_v2:{}".format(h_v2[-1]))
             #print("out_v:{}".format(out_v[-1]))
@@ -163,14 +168,14 @@ class Action_Value_Net(nn.Module):
         super(Action_Value_Net, self).__init__()
         self.mid_size = mid_size
         self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
-        self.emb2 = parent_net.emb1#nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
-        self.emb3 = parent_net.emb2#nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
+        self.emb2 = nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
+        self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
         self.lin1 = nn.Linear(7 * mid_size, mid_size)
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
         self.lin3 = nn.Linear(36,mid_size)
-
-    def forward(self, states, action_categories, play_card_ids, field_card_ids,values):
+        self.lin4 = nn.Linear(mid_size, mid_size)
+    def forward(self, states, action_categories, play_card_ids, field_card_ids,values,target=False):
         life_datas = values['life_datas']
         pp_datas = values['pp_datas']
         hand_card_costs = values['hand_card_costs']
@@ -189,12 +194,19 @@ class Action_Value_Net(nn.Module):
 
         tmp = torch.cat([new_states,embed_action_categories, embed_play_card_ids,
                          embed_field_card_ids,new_values_data], dim=2)
+
+        #print("action_category:{}".format(embed_action_categories[0]))
+        #print("origin:{}".format(action_categories[0]))
         #print("tmp:{}".format(tmp.size()))
         output = F.relu(self.lin1(tmp))
-
+        output = F.relu(self.lin4(output))
+        #print("lin1:{}".format(self.lin1(tmp)[0]))
+        #print("lin2:{}".format(self.lin2(output)[0]))
         output = F.relu(self.lin2(output))
 
         output = torch.sum(output,dim=2)
+        #print("output:{}".format(output[0]))
+
         return output
 
 
@@ -333,10 +345,10 @@ def get_data(f,player_num=0):
     #                  + [f.card_location[opponent_num][i].card_id + 500
     #                     if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
     #    i].card_category == "Amulet" else 0 for i in range(5)]
-    amulet_card_ids = [f.card_location[player_num][i].card_id + 2500
+    amulet_card_ids = [f.card_location[player_num][i].card_id + 500
                        if i < len(f.card_location[player_num]) and f.card_location[player_num][
         i].card_category == "Amulet" else 0 for i in range(5)] \
-                      + [f.card_location[opponent_num][i].card_id + 2500
+                      + [f.card_location[opponent_num][i].card_id + 500
                          if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Amulet" else 0 for i in range(5)]
     """
