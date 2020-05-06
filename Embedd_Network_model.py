@@ -168,8 +168,8 @@ class Action_Value_Net(nn.Module):
         super(Action_Value_Net, self).__init__()
         self.mid_size = mid_size
         self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
-        self.emb2 = nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
-        self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
+        self.emb2 = parent_net.emb1#nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
+        #self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
         self.lin1 = nn.Linear(7 * mid_size, mid_size)
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
@@ -183,7 +183,7 @@ class Action_Value_Net(nn.Module):
 
         embed_action_categories = self.emb1(action_categories)
         embed_play_card_ids = self.emb2(play_card_ids)
-        embed_field_card_ids = self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
+        embed_field_card_ids = self.emb2(field_card_ids).view(-1,45,3*self.mid_size)#self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
         new_states = states.unsqueeze(1)
         _, new_states = torch.broadcast_tensors(embed_action_categories, new_states)
         values_data = torch.cat([life_datas,pp_datas,hand_card_costs,stats],dim=1).unsqueeze(1)
@@ -402,7 +402,7 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
     amulet_card_ids = torch.LongTensor([[datas[i].amulet_card_ids[j] for j in range(10)] for i in range(data_len)])
     #amulet_card_ids = torch.LongTensor([[0 for _ in range(10)] for _ in range(data_len)])
     follower_abilities = torch.LongTensor([[[datas[i].follower_abilities[j][k] if k < len(
-        datas[i].follower_abilities[j]) else 0 for k in range(1, 16)] for j in range(10)] for i in range(data_len)])
+        datas[i].follower_abilities[j]) else 0 for k in range(15)] for j in range(10)] for i in range(data_len)])
     follower_stats = torch.Tensor([[datas[i].follower_stats[j] for j in range(10)] for i in range(data_len)])
     #follower_stats = torch.Tensor([[(0,0) for _ in range(10)] for _ in range(data_len)])
     #able_to_evo = torch.LongTensor([[0 for _ in range(10)] for _ in range(data_len)])

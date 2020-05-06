@@ -5213,6 +5213,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                         mylogger.info("{:<60}:{:.3%}".format(txt, pai[action_code_id]))
             mylogger.info("current node data")
             self.prev_node.print_tree(single=True)
+            """
             mylogger.info("state_detail")
 
             states = self.get_data(field, player_num=self.prev_node.player_num)
@@ -5226,6 +5227,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                     continue
                 else:
                     print("{}:{}".format(dict_key,states[dict_key][0]))
+            """
         return action
 
     def uct_search(self, player, opponent, field,use_existed_node=False):
@@ -5248,13 +5250,14 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         return value
 
     def state_value(self, node, player_num):
+        #return super().state_value(node.field,player_num)
 
         node_player_num = node.parent_node.player_num if node.parent_node is not None and node.player_num != node.parent_node.player_num\
                             else node.player_num
         field = node.field
         if field.check_game_end():
             player = field.players[self.main_player_num]
-            return 2*int(player.life > 0 and not player.lib_out_flg) - 1
+            return int(player.life > 0 and not player.lib_out_flg)#return 2*int(player.life > 0 and not player.lib_out_flg) - 1
         if node.state_value is not None:
             return node.state_value
         states = self.get_data(field, player_num=node_player_num)
@@ -5262,14 +5265,15 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])])
         pai, value = self.net(states)
-
-        value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
+        value = (2*float(value[0]) + 2)/2
+        #value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
         node.state_value = value
         #mylogger.info("state_value:{:.3f} depth:{}".format(value,node.depth)) if node.depth < 2 else None
         #assert len(node.child_nodes)==0,"{}".format(node.print_tree())
         node.pai = pai[0]
 
         return value
+
 
     def get_data(self,f,player_num = 0):
         tmp = Game_setting.get_data(f,player_num=player_num)
@@ -5460,6 +5464,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         child_node.uct = value
 
         return value
+
 
 
 class Dual_NN_GreedyPolicy(New_GreedyPolicy):

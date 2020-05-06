@@ -389,6 +389,8 @@ def run_main():
             if fixed_opponent == "Aggro":
                 p2 = Player(9, False, policy=AggroPolicy())
             elif fixed_opponent == "OM":
+                p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
+                p1.name = "Alice"
                 p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
             else:
                 p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
