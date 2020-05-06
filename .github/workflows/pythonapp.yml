@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     env:
-      MODEL_NAME: separate_embedding_all_100nodes.pth
+      MODEL_NAME: Multi_Dual_2020_5_5_17_37_38_55%_100nodes.pth
       PLAYER_TYPE: 2
       MODE: background_demo
     runs-on: ubuntu-latest
