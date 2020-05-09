@@ -13,7 +13,7 @@ jobs:
   build:
     env:
       MODEL_NAME:  	Multi_Dual_2020_5_8_0_16_44_16%_100nodes.pth
-      PLAYER_TYPE: 2
+      PLAYER_TYPE: 12
       MODE: background_demo
       PLAYER1: 13
     runs-on: ubuntu-latest
