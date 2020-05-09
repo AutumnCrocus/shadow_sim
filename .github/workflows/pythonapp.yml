@@ -15,7 +15,8 @@ jobs:
       MODEL_NAME:  	Multi_Dual_2020_5_8_0_16_44_16%_100nodes.pth
       PLAYER_TYPE: 12
       MODE: background_demo
-      PLAYER1: 13
+      PLAYER1: 2
+      N: 20 
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -40,19 +41,19 @@ jobs:
         pip install -r requirements.txt
     - name: Run Test0
       run: |
-        python3 test.py --N  100 --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 0  --decktype2 0 --mode $MODE --model_name $MODEL_NAME
+        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 0  --decktype2 0 --mode $MODE --model_name $MODEL_NAME
     - name: Run Test1
       run: |
-        python3 test.py --N  100 --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 1  --decktype2 1 --mode $MODE --model_name $MODEL_NAME
+        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 1  --decktype2 1 --mode $MODE --model_name $MODEL_NAME
     - name: Run Test4
       run: |
-        python3 test.py --N  100 --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 4  --decktype2 4 --mode $MODE --model_name $MODEL_NAME
+        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 4  --decktype2 4 --mode $MODE --model_name $MODEL_NAME
     - name: Run Test5
       run: |
-        python3 test.py --N  100 --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 5  --decktype2 5 --mode $MODE --model_name $MODEL_NAME
+        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 5  --decktype2 5 --mode $MODE --model_name $MODEL_NAME
     - name: Run Test10
       run: |
-        python3 test.py --N  100 --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 10  --decktype2 10 --mode $MODE --model_name $MODEL_NAME
+        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 10  --decktype2 10 --mode $MODE --model_name $MODEL_NAME
     - name: Run Test13
       run: |
-        python3 test.py --N  100 --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 13  --decktype2 13 --mode $MODE --model_name $MODEL_NAME
+        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 13  --decktype2 13 --mode $MODE --model_name $MODEL_NAME
