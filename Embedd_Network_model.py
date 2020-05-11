@@ -174,7 +174,8 @@ class Action_Value_Net(nn.Module):
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
         self.lin3 = nn.Linear(36,mid_size)
-        self.lin4 = nn.Linear(mid_size, mid_size)
+        layer = [Dual_ResNet(mid_size, mid_size) for _ in range(10)]
+        self.lin4 = nn.ModuleList(layer)
     def forward(self, states, action_categories, play_card_ids, field_card_ids,values,target=False):
         life_datas = values['life_datas']
         pp_datas = values['pp_datas']
@@ -199,7 +200,8 @@ class Action_Value_Net(nn.Module):
         #print("origin:{}".format(action_categories[0]))
         #print("tmp:{}".format(tmp.size()))
         output = F.relu(self.lin1(tmp))
-        output = F.relu(self.lin4(output))
+        for i in range(10):
+            output = F.relu(self.lin4[i](output))
         #print("lin1:{}".format(self.lin1(tmp)[0]))
         #print("lin2:{}".format(self.lin2(output)[0]))
         output = F.relu(self.lin2(output))

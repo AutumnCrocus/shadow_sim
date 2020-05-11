@@ -1,4 +1,4 @@
-from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock
+from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support
 
 try:
     set_start_method('spawn')
@@ -37,9 +37,12 @@ parser.add_argument('--cpu_num', help="使用CPU数",default=2 if torch.cuda.is_
 parser.add_argument('--batch_num', help='サンプルに対するバッチの数')
 parser.add_argument('--fixed_opponent', help='対戦相手を固定')
 parser.add_argument('--node_num', help='node_num', default=100)
+parser.add_argument('--weight_decay', help='weight_decay', default=1e-2)
 args = parser.parse_args()
 
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
+weight_decay = float(args.weight_decay)
+
 
 #Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
 #                                           'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
@@ -137,7 +140,7 @@ def multi_preparation(episode_data):
     p_num = episode_data[-1]
     info = f'#{p_num:>2} '
     all_result_data = []
-    battle_data = {"sum_of_choices":0, "sum_code":0, "win_num":0}
+    battle_data = {"sum_of_choices":0, "sum_code":0, "win_num":0,"end_turn":0}
     for episode in tqdm(range(partial_iteration),desc=info,position=p_num+1):
         f = Field(5)
         p1 = episode_data[0].get_copy(f)
@@ -169,6 +172,7 @@ def multi_preparation(episode_data):
         result_data = []
         sum_of_choices = 0
         sum_code = 0
+        end_turn = 0
         for i in range(2):
             for data in train_data[i]:
                 # assert False,"{}".format(data[0])
@@ -204,11 +208,14 @@ def multi_preparation(episode_data):
                 sum_of_choices += sum(detailed_action_code['able_to_choice'])
                 sum_code += 1
                 result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[i]))
+                #print("life_data:{}".format(data[2].life_data))
+                end_turn = data[2].life_data[0][-1]
                 #result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[1-i]))
 
         battle_data["sum_of_choices"] += sum_of_choices
         battle_data["sum_code"] += sum_code
         battle_data["win_num"] += int(reward[int(episode % 2)] > 0)
+        battle_data["end_turn"] += end_turn
         all_result_data.append(result_data)
     all_result_data.append(battle_data)
     return all_result_data
@@ -217,7 +224,7 @@ import itertools
 
 def multi_train(data):
     net, memory, batch_size, iteration_num, p_num = data
-    optimizer =  optim.Adam(net.parameters(), weight_decay=0.01)
+    optimizer =  optim.Adam(net.parameters(), weight_decay=weight_decay)
     all_loss, MSE, CEE = 0, 0, 0
 
     all_states, all_actions, all_rewards = memory
@@ -261,8 +268,8 @@ def multi_train(data):
         CEE += float(loss[2].item())
 
         optimizer.step()
-        if i % iteration_num != iteration_num-1:
-            continue
+        #if i % iteration_num != iteration_num-1:
+        continue
         values = states["values"]
         action_codes = states['detailed_action_codes']
         for j in range(5):
@@ -272,7 +279,7 @@ def multi_train(data):
             print("max_output| p:{} id:{} len:{}".format(float(max_p.values), int(max_p.indices),sum(action_codes["able_to_choice"][j])))
             print("z:{} v:{}".format(z[j], v[j]))
             print("#" * 10)
-        print("")
+        #print("")
 
 
     return all_loss, MSE, CEE
@@ -336,6 +343,7 @@ def run_main():
     print(args)
     p_size = cpu_num
     print("use cpu num:{}".format(p_size))
+    print("w_d:{}".format(weight_decay))
 
     loss_history = []
 
@@ -372,7 +380,7 @@ def run_main():
     print(t1)
     #print(net)
     prev_net = copy.deepcopy(net)
-    optimizer = optim.Adam(net.parameters(), weight_decay=0.01)
+    optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
 
     LOG_PATH = "log_{}_{}_{}_{}_{}_{}/".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                              t1.second)
@@ -382,21 +390,23 @@ def run_main():
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
-        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net,cuda=cuda_flg))
+        #p1 = Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=net))
+        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg))
         #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
         if fixed_opponent is not None:
             if fixed_opponent == "Aggro":
                 p2 = Player(9, False, policy=AggroPolicy())
             elif fixed_opponent == "OM":
-                p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
-                p1.name = "Alice"
+                #p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
+                #p1.name = "Alice"
                 p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
             else:
                 p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
         else:
-            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net,cuda=cuda_flg))
-        #p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
+            #p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
+            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg))
+        #p2 = Player(9, False, policy=RandomPolicy(), mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
 
         #import cProfile
@@ -405,7 +415,8 @@ def run_main():
         #memories = multi(episode_len,p1,p2)
         #iter_data = [(i, p1, p2) for i in range(episode_len)]
         iter_data = [(p1, p2,episode_len//p_size,i) for i in range(p_size)]
-        pool = Pool(p_size)  # 最大プロセス数:8
+        freeze_support()
+        pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_preparation, iter_data)
         print("\n" * p_size)
         pool.close()  # add this.
@@ -417,26 +428,11 @@ def run_main():
         sum_of_choice = sum([cell["sum_of_choices"] for cell in battle_data])
         sum_of_code = sum([cell["sum_code"] for cell in battle_data])
         win_num = sum([cell["win_num"] for cell in battle_data])
+        sum_end_turn = sum([cell["end_turn"] for cell in battle_data])
         memories = list(itertools.chain.from_iterable(memory))
         memories = list(itertools.chain.from_iterable(memories))
         follower_attack_num = 0
         all_able_to_follower_attack = 0
-        """
-        #memory = pool.map(preparation, iter_data)
-        memory = pool.imap(preparation, iter_data)
-        memory = list(tqdm(memory,total=episode_len))
-        pool.close()  # add this.
-        pool.terminate()  # add this.
-        #[[state,state,...,reward],[],[],[],...]
-
-        win_num = sum([cell.pop(-1) for cell in memory])
-        tmp = [cell.pop(-1) for cell in memory]
-        sum_of_choice = sum([cell[0] for cell in tmp])
-        sum_of_code = sum([cell[1] for cell in tmp])
-        memories = list(itertools.chain.from_iterable(memory))
-        follower_attack_num = 0
-        all_able_to_follower_attack = 0
-        """
         for data in memories:
             #print(data[0])
             before_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
@@ -455,15 +451,12 @@ def run_main():
             all_able_to_follower_attack += hit_flg
             follower_attack_num +=  hit_flg * int(data[1] >= 10 and data[1] <= 34)
             R.push(before_state,data[1], after_state, data[3], data[4])
-            #if data[4] > 0 and data[1] >= 10 and data[1] <= 34:
-            #    R.push(before_state, data[1], after_state, data[3], data[4])
-            #    R.push(before_state, data[1], after_state, data[3], data[4])
-            #    R.push(before_state, data[1], after_state, data[3], data[4])
 
 
         print("win_rate:{:.3%}".format(win_num/episode_len))
         print("mean_of_num_of_choice:{:.3f}".format(sum_of_choice/sum_of_code))
         print("follower_attack_ratio:{:.3%}".format(follower_attack_num/all_able_to_follower_attack))
+        print("mean end_turn:{:.3f}".format(sum_end_turn/episode_len))
         print("sample_size:{}".format(len(R.memory)))
         net.train()
         prev_net = copy.deepcopy(net)
@@ -479,6 +472,7 @@ def run_main():
             all_data = R.sample(batch_size,all=True)
             iter_data = [[net,all_data,batch,iteration//p_size,i]
                          for i in range(p_size)]
+            freeze_support()
             pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
             loss_data = pool.map(multi_train, iter_data)
             print("\n" * p_size)
@@ -537,10 +531,10 @@ def run_main():
                                                                         t1.second, (epoch + 1) / epoch_num)
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
-        if len(loss_history) > 1:
-            UB = np.std(loss_history)/np.sqrt(epoch+1)
+        if len(loss_history) > epoch_interval-1:
+            UB = np.std(loss_history[-epoch_interval:-1])/np.sqrt(2*epoch+1)
             print("{:<2} std:{}".format(epoch,UB))
-            if UB < 1.0e-8:
+            if UB < 1.0e-4:
                 break
 
     writer.close()

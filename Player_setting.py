@@ -193,7 +193,7 @@ class Player:
             return
         else:
             assert field.remain_cost[self.player_num] - self.hand[card_id].cost >= 0, "minus-pp error:{} < {}"\
-                .format(field.remain_cost[self.player_num],self.hand[card_id.cost])
+                .format(field.remain_cost[self.player_num],self.hand[card_id].cost)
             field.remain_cost[self.player_num] -= self.hand[card_id].cost
 
 

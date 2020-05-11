@@ -5250,29 +5250,43 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         return value
 
     def state_value(self, node, player_num):
-        #return super().state_value(node.field,player_num)
+        if node.state_value is not None:
+            return node.state_value
+        #fixed_value  = super().state_value(node.field,player_num)
+        #node.state_value = fixed_value
+        #return fixed_value
 
         node_player_num = node.parent_node.player_num if node.parent_node is not None and node.player_num != node.parent_node.player_num\
                             else node.player_num
         field = node.field
+        player = field.players[self.main_player_num]
         if field.check_game_end():
-            player = field.players[self.main_player_num]
+
             return int(player.life > 0 and not player.lib_out_flg)#return 2*int(player.life > 0 and not player.lib_out_flg) - 1
-        if node.state_value is not None:
-            return node.state_value
+
         states = self.get_data(field, player_num=node_player_num)
 
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])])
         pai, value = self.net(states)
-        value = (2*float(value[0]) + 2)/2
+        out_value = (float(value[0]) + 1)/2
+        if node_player_num != self.main_player_num:
+            out_value = 1 - out_value
+        if False: #and abs(fixed_value-out_value)>0.45:
+            print("#"*20)
+            mylogger.info("node.player:{}".format(node_player_num))
+            mylogger.info("fixed:{:.3f} NN:{:.3f}(raw:{:.3f})".format(fixed_value,out_value,float(value[0])))
+            field.players[node_player_num].show_hand()
+            field.show_field()
+            print("#" * 20)
+        node.state_value = out_value
         #value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
-        node.state_value = value
+        #node.state_value = value
         #mylogger.info("state_value:{:.3f} depth:{}".format(value,node.depth)) if node.depth < 2 else None
         #assert len(node.child_nodes)==0,"{}".format(node.print_tree())
         node.pai = pai[0]
 
-        return value
+        return out_value
 
 
     def get_data(self,f,player_num = 0):
