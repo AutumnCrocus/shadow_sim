@@ -532,9 +532,9 @@ def run_main():
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
         if len(loss_history) > epoch_interval-1:
-            UB = np.std(loss_history[-epoch_interval:-1])/np.sqrt(2*epoch+1)
+            UB = np.std(loss_history[-epoch_interval:-1])/(np.sqrt(2*epoch) + 1)
             print("{:<2} std:{}".format(epoch,UB))
-            if UB < 1.0e-4:
+            if UB < 1.0e-3:
                 break
 
     writer.close()
