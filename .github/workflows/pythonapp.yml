@@ -12,11 +12,11 @@ on:
 jobs:
   build:
     env:
-      MODEL_NAME:  	100_nodes_39_layers_64_episodes_1e-1wd.pth
+      MODEL_NAME: Multi_Dual_2020_5_12_0_14_22_62%_100nodes.pth
       PLAYER_TYPE: 2
       MODE: background_demo
       PLAYER1: 29
-      N: 20 
+      N: 50
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
