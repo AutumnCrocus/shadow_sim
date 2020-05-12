@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     env:
-      MODEL_NAME: Multi_Dual_2020_5_12_0_14_22_62%_100nodes.pth
+      MODEL_NAME: Multi_Dual_2020_5_12_17_23_57_16%_100nodes.pth
       PLAYER_TYPE: 2
       MODE: background_demo
       PLAYER1: 29
