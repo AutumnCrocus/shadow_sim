@@ -34,16 +34,22 @@ class New_Dual_Net(nn.Module):
         self.lin2 = nn.Linear(2, n_mid)#最大PP,残りPP
         #self.lin3 = nn.Linear(9, n_mid)#最大手札枚数
         #self.lin3 = nn.Linear(2,n_mid)#フォロワーの攻撃力,体力
-        self.lin3 = nn.Linear(2,n_mid)#フォロワーの攻撃力,体力
+        self.lin3 = nn.Linear(5,n_mid)#フォロワーの攻撃力,体力,フォロワーであるか,フォロワーに攻撃可能、プレイヤーに攻撃可能
         self.lin4 = nn.Linear(3 * n_mid + 1, n_mid)#手札連結
-        self.lin5 = nn.Linear(6 * n_mid, n_mid)#自分の場のフォロワー連結
-        self.lin6 = nn.Linear(4 * n_mid, n_mid)  # 相手の場のフォロワー連結
+        #self.lin5 = nn.Linear(6 * n_mid, n_mid)#自分の場のフォロワー連結
+        #self.lin6 = nn.Linear(4 * n_mid, n_mid)  # 相手の場のフォロワー連結
+        self.field_layer1 = nn.Linear(9 * n_mid//2, n_mid)
+        self.field_layer2 = nn.Linear(10*n_mid,n_mid)
+        self.deck_layer = nn.Linear(40*n_mid,n_mid)
+        self.hand_card_layer = nn.Linear(9*n_mid,n_mid)
+        self.amulet_layer = nn.Linear(10*n_mid,n_mid)
         self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
         #self.emb2 = self.emb1
         self.emb2 = nn.Embedding(1000, n_mid, padding_idx=0)  # フォロワー1000枚（空白含む）
         #self.emb3 = self.emb1
         self.emb3 = nn.Embedding(1000, n_mid, padding_idx=0)  # アミュレット1000枚（空白含む）
-        self.emb4 = nn.Embedding(16, n_mid, padding_idx=0)  # キーワード能力15個と空白
+        #self.emb4 = nn.Embedding(16, n_mid, padding_idx=0)  # キーワード能力15個と空白
+        self.emb4 = nn.Embedding(16, n_mid//10, padding_idx=0)
         self.emb5 = nn.Embedding(6, n_mid, padding_idx=0)  # 進化可能最大五体と空白
         self.emb6 = nn.Embedding(10, n_mid, padding_idx=0)  # 手札最大9枚の位置と空白
         self.emb7 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
@@ -91,40 +97,43 @@ class New_Dual_Net(nn.Module):
         #pp_datas = self.mish(self.lin2(values['pp_datas']))
 
 
-        able_to_plays = torch.sum(self.emb6(values['able_to_play']),dim=1)
+        #able_to_plays = torch.sum(self.emb6(values['able_to_play']),dim=1)
+        able_to_plays =self.emb6(values['able_to_play']).view(-1,9,self.n_mid)
         hand_card_ids = self.emb1(hand_ids)
         hand_card_costs = values['hand_card_costs'].unsqueeze(-1)
         new_pp_datas = pp_datas.unsqueeze(1)
         _, new_pp_datas = torch.broadcast_tensors(hand_card_ids, new_pp_datas)
-        new_able_to_plays = able_to_plays.unsqueeze(1)
-        _, new_able_to_plays= torch.broadcast_tensors(hand_card_ids, new_able_to_plays)
-        tmp_x2 = torch.cat([new_pp_datas, hand_card_costs, hand_card_ids, new_able_to_plays], dim=2)
-
-        #x2 = torch.sum(F.relu(self.lin4(tmp_x2)),dim=1)
-        #x2 = torch.sum(self.lin4(tmp_x2), dim=1)
-        x2 = torch.tanh(torch.sum(torch.tanh(self.lin4(tmp_x2)), dim=1)/10)
-        #print("x2.max:{}".format(x2[0].max(dim=0)))
-        #print("x2.min:{}".format(x2[0].min(dim=0)))
+        #new_able_to_plays = able_to_plays.unsqueeze(1)
+        #print("sizes:{},{}".format(hand_card_ids.size(), new_able_to_plays.size()))
+        #_, new_able_to_plays= torch.broadcast_tensors(hand_card_ids, new_able_to_plays)
+        #tmp_x2 = torch.cat([new_pp_datas, hand_card_costs, hand_card_ids, new_able_to_plays], dim=2)
+        tmp_x2 = torch.cat([new_pp_datas, hand_card_costs, hand_card_ids, able_to_plays], dim=2)
+        x2 = torch.tanh(self.lin4(tmp_x2)).view(-1,9*self.n_mid)
+        x2 = torch.tanh(self.hand_card_layer(x2))
 
         able_to_evos = self.emb5(able_to_evo)
         stats = torch.tanh(self.lin3(values['follower_stats']))
-        #stats = F.relu(self.lin3(values['follower_stats']))
-        #stats = self.mish(self.lin3(values['follower_stats']))
 
-        abilities = torch.sum(self.emb4(follower_abilities),dim=2)
+        abilities = self.emb4(follower_abilities).view(-1,10,3*self.n_mid//2)#torch.sum(self.emb4(follower_abilities),dim=2)
+
         #follower_ids = self.emb2(follower_card_ids)
         follower_ids = self.emb1(follower_card_ids)
         #x4 = torch.sum(self.emb3(amulet_card_ids),dim=1)
-        x4 = torch.sum(self.emb1(amulet_card_ids), dim=1)
+        #x4 = torch.sum(self.emb1(amulet_card_ids), dim=1)
+        x4 = self.emb1(amulet_card_ids).view(-1,10*self.n_mid)
+        x4 = torch.tanh(self.amulet_layer(x4))
         tmp_x3 = torch.cat([stats, abilities, follower_ids, able_to_evos],dim=2)
-
-        x3 = torch.tanh(torch.sum(torch.tanh(self.lin6(tmp_x3)), dim=1))
-        #x3 = torch.sum(F.relu(self.lin6(tmp_x3)),dim=1)
-        #x3 = torch.sum(self.lin6(tmp_x3), dim=1)
+        x3 = torch.tanh(self.field_layer1(tmp_x3).view(-1,10*self.n_mid))
+        x3 = torch.tanh(self.field_layer2(x3))
 
         x5 = self.emb9(class_datas).view(-1,2*self.n_mid)
         deck_datas = states['deck_datas']
-        x6 = torch.sum(self.emb1(deck_datas),dim=1)
+        #x6 = torch.sum(self.emb1(deck_datas),dim=1)
+        x6 = self.emb1(deck_datas).view(-1,40*self.n_mid)
+        #print("x6:{}".format(x6.size()))
+        x6 = torch.tanh(self.deck_layer(x6))
+        #print("new_x6:{}".format(x6.size()))
+        #print(x1.size(),x2.size())
         x7 = torch.cat([x1,x2,x3,x4,x5,x6],dim=1)
 
         x = self.fc0(x7)
@@ -202,7 +211,8 @@ class Action_Value_Net(nn.Module):
         self.lin1 = nn.Linear(7 * mid_size, mid_size)
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
-        self.lin3 = nn.Linear(36,mid_size)
+        #self.lin3 = nn.Linear(36,mid_size)
+        self.lin3 = nn.Linear(66, mid_size)
         layer = [Dual_ResNet(mid_size, mid_size) for _ in range(10)]
         self.lin4 = nn.ModuleList(layer)
         #self.mish = Mish()
@@ -211,7 +221,9 @@ class Action_Value_Net(nn.Module):
         life_datas = values['life_datas']
         pp_datas = values['pp_datas']
         hand_card_costs = values['hand_card_costs']
-        stats = values['follower_stats'].view(-1,20)
+        #print(values['follower_stats'])
+        stats = values['follower_stats'].view(-1,50)
+        #print(stats)
 
         embed_action_categories = self.emb1(action_categories)
         embed_play_card_ids = self.emb2(play_card_ids)
@@ -240,11 +252,9 @@ class Action_Value_Net(nn.Module):
             #output = self.mish(self.lin4[i](output))
         #print("lin1:{}".format(self.lin1(tmp)[0]))
         #print("lin2:{}".format(self.lin2(output)[0]))
-        output = F.relu(self.lin2(output))
+        output = F.relu(self.lin2(output)).view(-1,45)
         #output = self.mish(self.lin2(output))
-
-        output = torch.sum(output,dim=2)
-        #print("output:{}".format(output[0]))
+        #output = torch.sum(output,dim=2)
 
         return output
 
@@ -378,17 +388,19 @@ def get_data(f,player_num=0):
                         + [f.card_location[opponent_num][i].card_id + 500
                            if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Creature" else 0 for i in range(5)]
+    follower_stats = [[f.card_location[player_num][i].power, f.card_location[player_num][i].get_current_toughness(),
+                       1, int(f.card_location[player_num][i].can_attack_to_follower()), int(f.card_location[player_num][i].can_attack_to_player())]
+                      if i < len(f.card_location[player_num]) and f.card_location[player_num][
+        i].card_category == "Creature" else [0, 0, 0, 0, 0] for i in range(5)] \
+                     + [[f.card_location[opponent_num][i].power, f.card_location[opponent_num][i].get_current_toughness(),
+                         1, 1, 1]
+                        if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
+        i].card_category == "Creature" else [0, 0, 0, 0, 0] for i in range(5)]
+    """
     follower_stats = [[f.card_location[player_num][i].power/100, f.card_location[player_num][i].get_current_toughness()/100]
                       if i < len(f.card_location[player_num]) and f.card_location[player_num][
         i].card_category == "Creature" else [0, 0] for i in range(5)] \
                      + [[f.card_location[opponent_num][i].power/100, f.card_location[opponent_num][i].get_current_toughness()/100]
-                        if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
-        i].card_category == "Creature" else [0, 0] for i in range(5)]
-    """
-    follower_stats = [[f.card_location[player_num][i].power, f.card_location[player_num][i].get_current_toughness()]
-                      if i < len(f.card_location[player_num]) and f.card_location[player_num][
-        i].card_category == "Creature" else [0, 0] for i in range(5)] \
-                     + [[f.card_location[opponent_num][i].power, f.card_location[opponent_num][i].get_current_toughness()]
                         if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Creature" else [0, 0] for i in range(5)]
     """
@@ -432,14 +444,15 @@ def get_data(f,player_num=0):
             follower_abilities.append([])
             amulet_card_ids.append(0)
     """
-    #life_data = [player.life, opponent.life,len(player.hand),len(opponent.hand) ,f.current_turn[player_num]]
-    life_data = [player.life/20, opponent.life/20, len(player.hand)/9, len(opponent.hand)/9, f.current_turn[player_num]/100]
-    #pp_data = [f.cost[player_num],f.remain_cost[player_num]]
-    pp_data = [f.cost[player_num]/10, f.remain_cost[player_num]/10]
     able_to_play = f.get_able_to_play(player)
     able_to_play = [cell+1 for cell in able_to_play]
     able_to_attack = f.get_able_to_attack(player)
     able_to_creature_attack = f.get_able_to_creature_attack(player)
+    #life_data = [player.life, opponent.life,len(player.hand),len(opponent.hand) ,f.current_turn[player_num]]
+    life_data = [player.life/20, opponent.life/20, len(player.hand)/9, len(opponent.hand)/9,f.current_turn[player_num]/100]
+    #pp_data = [f.cost[player_num],f.remain_cost[player_num]]
+    pp_data = [f.cost[player_num]/10, f.remain_cost[player_num]/10]
+
     class_data = [player.deck.leader_class.value,
                     opponent.deck.leader_class.value]
     life_data = (life_data, class_data)
@@ -536,7 +549,8 @@ key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"]
                   6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
                   9: ["SpellBoost-Rune.tsv", "RUNE"], 10: ["Dimension_Shift_Rune.tsv", "RUNE"],
                   11: ["PtP_Forest.tsv", "FOREST"], 12: ["Mid_Shadow.tsv", "SHADOW"],
-                  13: ["Neutral_Blood.tsv", "BLOOD"]}
+                  13: ["Neutral_Blood.tsv", "BLOOD"],
+                  -2: ["Sword_Basic.tsv", "SWORD"]}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')

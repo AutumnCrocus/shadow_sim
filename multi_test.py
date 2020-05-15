@@ -63,8 +63,10 @@ def preparation(episode_data):
     #if random.random() < 0.05:
     #    p2 = Player(9, False)
     if deck_flg is None:
-        deck_type1 = random.choice(list(key_2_tsv_name.keys()))
-        deck_type2 = random.choice(list(key_2_tsv_name.keys()))
+        deck_type1 = random.randint(0,13)
+        deck_type2  = random.randint(0,13)
+        #deck_type1 = random.choice(list(key_2_tsv_name.keys()))
+        #deck_type2 = random.choice(list(key_2_tsv_name.keys()))
     else:
         deck_type1 = deck_flg
         deck_type2 = deck_flg
@@ -146,8 +148,10 @@ def multi_preparation(episode_data):
         p1 = episode_data[0].get_copy(f)
         p2 = episode_data[1].get_copy(f)
         if deck_flg is None:
-            deck_type1 = random.choice(list(key_2_tsv_name.keys()))
-            deck_type2 = random.choice(list(key_2_tsv_name.keys()))
+            deck_type1 = random.randint(0, 13)
+            deck_type2 = random.randint(0, 13)
+            #deck_type1 = random.choice(list(key_2_tsv_name.keys()))
+            #deck_type2 = random.choice(list(key_2_tsv_name.keys()))
         else:
             deck_type1 = deck_flg
             deck_type2 = deck_flg
@@ -233,12 +237,13 @@ def multi_train(data):
     action_code_keys = list(all_states['detailed_action_codes'].keys())
     memory_len = all_actions.size()[0]
     batch_id_list = list(range(memory_len))
-
-    #states, actions, rewards = memory
+    all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
     info = f'#{p_num:>2} '
     for i in tqdm(range(iteration_num),desc=info,position=p_num+1):
         optimizer.zero_grad()
+        #states = all_states
         #key = [random.randint(0, memory_len-1) for _ in range(batch_size)]
+        """
         key = random.sample(batch_id_list,k=batch_size)
         states = {}
         for dict_key in states_keys:
@@ -257,10 +262,11 @@ def multi_train(data):
         actions = all_actions[key]
         rewards = all_rewards[key]
         states['target'] = {'actions': actions, 'rewards': rewards}
+        """
 
-        p, v, loss = net(states, target=True)
-        z = rewards
-        pai = actions  # 45種類の抽象化した行動
+        p, v, loss = net(all_states, target=True)
+        z = all_rewards
+        pai = all_actions  # 45種類の抽象化した行動
         # loss.backward()
         loss[0].backward()
         all_loss += float(loss[0].item())
@@ -268,10 +274,11 @@ def multi_train(data):
         CEE += float(loss[2].item())
 
         optimizer.step()
-        #if i % iteration_num != iteration_num-1:
-        continue
-        values = states["values"]
-        action_codes = states['detailed_action_codes']
+        """
+        if i % iteration_num != iteration_num-1:
+            continue
+        values = all_states["values"]
+        action_codes = all_states['detailed_action_codes']
         for j in range(5):
             max_p = torch.max(p[j],dim=0)
             print("#" * 10)
@@ -279,6 +286,7 @@ def multi_train(data):
             print("max_output| p:{} id:{} len:{}".format(float(max_p.values), int(max_p.indices),sum(action_codes["able_to_choice"][j])))
             print("z:{} v:{}".format(z[j], v[j]))
             print("#" * 10)
+        """
         #print("")
 
 
@@ -456,7 +464,7 @@ def run_main():
         print("win_rate:{:.3%}".format(win_num/episode_len))
         print("mean_of_num_of_choice:{:.3f}".format(sum_of_choice/sum_of_code))
         print("follower_attack_ratio:{:.3%}".format(follower_attack_num/all_able_to_follower_attack))
-        print("mean end_turn:{:.3f}".format(sum_end_turn/episode_len))
+        print("mean end_turn:{:.3f}".format(sum_end_turn/episode_len*100))
         print("sample_size:{}".format(len(R.memory)))
         net.train()
         prev_net = copy.deepcopy(net)
