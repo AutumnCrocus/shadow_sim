@@ -13,7 +13,7 @@ jobs:
   build:
     env:
       MODEL_NAME: Multi_Dual_2020_5_14_15_52_47_23%_100nodes.pth
-      PLAYER_TYPE: 2
+      PLAYER_TYPE: 13
       MODE: background_demo
       PLAYER1: 29
       N: 50
