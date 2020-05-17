@@ -5168,6 +5168,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         self.state_convertor = Detailed_State_data_2_Tensor
         self.policy_type = 3
         self.cuda = cuda
+        self.iteration = 200
 
 
     def decide(self, player, opponent, field):
@@ -5361,49 +5362,33 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
     def execute_best(self, node, player_num=0):
         children = node.child_nodes
         action_uct_values = {}
+        action_uct_counts = {}
         action_2_node = {}
 
 
         for child in children:
-            tmp_value = 0
-            action = node.node_id_2_edge_action[id(child)]
-            action_id = 0
-            if action[0] == Action_Code.PLAY_CARD.value:
-                action_id = 1 + action[1]
-            elif action[0] == Action_Code.ATTACK_TO_FOLLOWER.value:
-                action_id = 10 + action[1] * 5 + action[2]
-            elif action[0] == Action_Code.ATTACK_TO_PLAYER.value:
-                action_id = 35 + action[1]
-            elif action[0] == Action_Code.EVOLVE.value:
-                action_id = 40 + action[1]
+            #tmp_value = 0
 
+            action = node.node_id_2_edge_action[id(child)]
             if action not in action_uct_values:
                 action_uct_values[action] = []
+                action_uct_counts[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
-                if action[0] == 0:
-                    tmp_value -= 2
 
-            elif child.finite_state_flg and child.field.check_game_end():
-                player = child.field.players[player_num]
-                if player.life <= 0 or player.lib_out_flg:
-                    tmp_value -= 1
-                    #action_uct_values[action].append(-1)
-                else:
-                    tmp_value += 1
-                    #action_uct_values[action].append(1)
-            probability = node.pai[action_id]
-            tmp_value += child.value / max(1, child.visit_num)# + probability
-            #tmp_value = tmp_value * probability if tmp_value > 0 else tmp_value / probability
-
-            #action_uct_values[action].append(child.value / max(1, child.visit_num))
+            tmp_value = child.value / max(1, child.visit_num) +\
+                        np.sqrt(child.visit_num / max(1, node.visit_num) +1e-4)
+            if action[0] == 0:
+                tmp_value /= 2
             action_uct_values[action].append(tmp_value)
+            action_uct_counts[action].append(child.visit_num)
             action_2_node[action].append(child)
-        #print(action_uct_values)
+        #mylogger.info("action_uct_values")
+        #[mylogger.info("{}:{}".format(key,action_uct_values[key])) for key in list(action_uct_values.keys())]
         max_value = -2
         max_value_action = (0, 0, 0)
         for key in list(action_uct_values.keys()):
-            sum_of_value = sum(action_uct_values[key])
+            sum_of_value = sum(action_uct_values[key])/len(action_uct_values[key])
             if max_value < sum_of_value:
                 max_value = sum_of_value
                 max_value_action = key
@@ -5418,16 +5403,12 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         action_uct_values = {}
         action_2_node = {}
         for child in children:
-            value = 0
             action = node.node_id_2_edge_action[id(child)]
             if action not in action_uct_values:
                 action_uct_values[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
-            #if action == (0,0,0) and len(node.edge_action_2_node_id) > 1:
-            #    value += -1
-            #else:
-            value += self.uct(child, node, player_num=player_num)
+            value = self.uct(child, node, player_num=player_num)
             action_uct_values[action].append(value)
             action_2_node[action].append(child)
         max_value = None
@@ -5461,7 +5442,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         action_id = Action_Code.TURN_END.value
         if action_code[0] == 0:
             if len(node.child_actions) > 1:
-                return -np.inf
+                return -1
         elif action_code[0] == Action_Code.PLAY_CARD.value:
             action_id = 1 + action_code[1]
         elif action_code[0] == Action_Code.ATTACK_TO_FOLLOWER.value:

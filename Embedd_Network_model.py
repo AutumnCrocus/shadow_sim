@@ -291,11 +291,12 @@ class Dual_Loss(nn.Module):
 
     def __init__(self):
         super(Dual_Loss, self).__init__()
-        self.cross_entropy =  nn.CrossEntropyLoss()
 
     def forward(self, p, v, z, pai):
         #l = (z − v)^2 − πlog p + c||θ||2
         #paiはスカラー値
+        #print("p:{}".format(p[0:10]))
+        #print("z:{}".format(z[0:10]))
         loss = torch.sum(
             torch.pow((z - v),2),
             dim=1)
