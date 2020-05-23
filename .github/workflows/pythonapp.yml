@@ -12,8 +12,8 @@ on:
 jobs:
   build:
     env:
-      MODEL_NAME: Multi_Dual_2020_5_17_16_23_16_all_100nodes.pth
-      PLAYER_TYPE: 13
+      MODEL_NAME: Multi_Dual_2020_5_21_16_40_20_all_100nodes.pth
+      PLAYER_TYPE: 2
       MODE: background_demo
       PLAYER1: 29
       N: 40
