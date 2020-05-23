@@ -2214,20 +2214,8 @@ class New_Node:
                     other_follower_ids = remain_able_to_creature_attack[:]
                     other_follower_ids.remove(location_id)
                     for other_id in other_follower_ids:
-                        """
-                        if other_id >= len(side):
-                            mylogger.info("node_player_num:{}".format(self.player_num))
-                            mylogger.info("node depth:{}".format(self.depth))
-                            player.show_hand()
-                            field.show_field()
-                            mylogger.info("node end")
-                            mylogger.info("side_id:{} side_len:{}".format(tmp,len(field.card_location[tmp])))
-                            print("other:{}".format(other_follower_ids))
-                            print("{} not in {}({}) len:{}"\
-                            .format(other_id,able_to_creature_attack,remain_able_to_creature_attack,len(side)
-                                    ))
-                            assert False
-                        """
+                        #assert location_id < len(side) and other_id < len(side),\
+                        #    "player_num:{} location_id:{},other_id:{}\n{}".format(player_num,location_id,other_id,field.show_field())
                         if side[location_id].eq(side[other_id]):
                             remain_able_to_creature_attack.remove(other_id)
                 if location_id in remain_able_to_attack:
@@ -2258,19 +2246,9 @@ class New_Node:
                     other_follower_ids = remain_can_be_attacked[:]
                     other_follower_ids.remove(location_id)
                     for other_id in other_follower_ids:
-                        """
-                        if other_id >= len(side):
-                            mylogger.info("node_player_num:{}".format(self.player_num))
-                            mylogger.info("node depth:{}".format(self.depth))
-                            player.show_hand()
-                            field.show_field()
-                            mylogger.info("node end")
-                            mylogger.info("side_id:{} side_len:{}".format(tmp,len(field.card_location[tmp])))
-                            print("other:{}".format(other_follower_ids))
-                            print("{} not in {}({}) len:{}"\
-                            .format(other_id,can_be_attacked,remain_can_be_attacked,len(side)))
-                            assert False
-                        """
+                        #assert location_id < len(side) and other_id < len(side),\
+                        #    "player_num:{} location_id:{},other_id:{}\n{}".format(player_num,location_id,other_id,field.show_field())
+
                         if side[location_id].eq(side[other_id]):
                             remain_can_be_attacked.remove(other_id)
                 if location_id in remain_ward_list:
@@ -2315,6 +2293,8 @@ class New_Node:
 
             if can_evo:
                 for evo_id in able_to_evo:
+                    #assert evo_id < len(field.card_location[player_num]), \
+                    #    "player_num:{} evo_id:{}\n{}".format(player_num, evo_id, field.show_field())
                     evo_creature = field.card_location[player_num][evo_id]
                     if evo_creature.evo_target is None:
                         children_moves.append((Action_Code.EVOLVE.value, evo_id, None))
@@ -2398,7 +2378,7 @@ class Information_Set_MCTSPolicy():
         self.current_node = None
         self.prev_node = None
         self.node_index = 0
-        self.policy_type = 4
+        self.policy_type = 3
         self.name = "ISMCTS(n={})Policy".format(iteration)
         self.type = "root"
         self.iteration = iteration
@@ -2953,6 +2933,7 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
         self.main_player_num = 0
         self.play_out_policy = AggroPolicy()
         self.iteration = iteration
+        self.policy_type = 3
 
     def state_value(self, field, player_num):
         return default_state_value(field,player_num)

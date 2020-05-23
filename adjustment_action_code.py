@@ -6,6 +6,7 @@ mylogger = get_module_logger(__name__)
 
 
 def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
+    #mylogger.info("check")
     assert sim_field.eq(field),"diff field!"
     player = field.players[player_num]
     opponent = field.players[1-player_num]
@@ -24,18 +25,24 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
                 error_flg = False
                 break
         if player.hand[card_id].cost > field.remain_cost[player_num]:
-            if player.hand[card_id].have_accelerate and player.hand[card_id].active_accelerate_code[1] > field.remain_cost[player_num]:
-                mylogger.info("over pp error:{},{}".format(player.hand[card_id].active_accelerate_code[1],field.remain_cost[player_num]))
-                mylogger.info("prev_card_id:{}, card_id:{}".format(prev_card_id,card_id))
-                mylogger.info("real:{}".format(field.remain_cost))
-                mylogger.info(player.hand[card_id].active_accelerate_code)
-                mylogger.info(player.hand[card_id].have_accelerate)
-                player.show_hand()
+            if player.hand[card_id].have_accelerate:
+                if player.hand[card_id].active_accelerate_code[1] > field.remain_cost[player_num]:
+                    mylogger.info("over pp error:{},{}".format(player.hand[card_id].active_accelerate_code[1],field.remain_cost[player_num]))
+                    mylogger.info("prev_card_id:{}, card_id:{}".format(prev_card_id,card_id))
+                    mylogger.info("real:{}".format(field.remain_cost))
+                    mylogger.info(player.hand[card_id].active_accelerate_code)
+                    mylogger.info(player.hand[card_id].have_accelerate)
+                    player.show_hand()
 
-                mylogger.info("sim:{}".format(sim_field.remain_cost))
-                mylogger.info(sim_player.hand[prev_card_id].active_accelerate_code)
-                mylogger.info(sim_player.hand[prev_card_id].have_accelerate)
-                sim_player.show_hand()
+                    mylogger.info("sim:{}".format(sim_field.remain_cost))
+                    mylogger.info(sim_player.hand[prev_card_id].active_accelerate_code)
+                    mylogger.info(sim_player.hand[prev_card_id].have_accelerate)
+                    sim_player.show_hand()
+            else:
+                error_flg = True
+                mylogger.info("over pp error:{}>{}".format(player.hand[card_id].cost,
+                                                           field.remain_cost[player_num]))
+                mylogger.info("{}".format(player.hand[card_id]))
 
 
     elif msg == Action_Code.ATTACK_TO_FOLLOWER.value:
@@ -91,8 +98,8 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
         mylogger.info("{}".format(Action_Code(msg).name))
         assert False,"{}".format(Action_Code(msg).name)
 
-    if target_id is not None and \
-            not (action_num == Action_Code.ATTACK_TO_PLAYER.value or action_num == Action_Code.ATTACK_TO_FOLLOWER.value):
+    #if target_id is not None and \
+    if not (action_num == Action_Code.ATTACK_TO_PLAYER.value or action_num == Action_Code.ATTACK_TO_FOLLOWER.value):
         target_type = None
         targeted_card = None
         real_card = None
@@ -101,7 +108,16 @@ def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
         if action_num == Action_Code.EVOLVE.value:
             target_type = sim_field.card_location[player_num][prev_card_id].current_target
         if target_type is not None:
-            if target_type == Target_Type.ENEMY_FOLLOWER.value or target_type == Target_Type.ENEMY_CARD.value:
+            if prev_target_id is None:
+                card = player.hand[card_id] if action_num == Action_Code.PLAY_CARD.value else\
+                    field.card_location[player_num][card_id]
+                regal_target = field.get_regal_targets(card, target_type=int(action_num == Action_Code.PLAY_CARD.value),
+                                                       player_num=player_num, human=False)
+                if len(regal_target) == 0:
+                    return action_num, card_id, None
+
+
+            elif target_type == Target_Type.ENEMY_FOLLOWER.value or target_type == Target_Type.ENEMY_CARD.value:
                 targeted_card = sim_field.card_location[opponent_num][prev_target_id]
                 for i, real_card in enumerate(field.card_location[opponent_num]):
                     if real_card.eq(targeted_card):

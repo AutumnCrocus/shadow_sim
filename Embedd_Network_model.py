@@ -29,13 +29,12 @@ Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follo
 class New_Dual_Net(nn.Module):
     def __init__(self,n_mid):
         super(New_Dual_Net, self).__init__()
-        #self.li1 = nn.Linear(32,n_mid)#手札(9)+盤面10枚(20)+両方の体力(2)＋ターン(1) = 32
-        self.lin1 = nn.Linear(5,n_mid)#お互いの体力、手札枚数、経過ターン
-        self.lin2 = nn.Linear(2, n_mid)#最大PP,残りPP
+        self.life_layer = nn.Linear(5,n_mid)#お互いの体力、手札枚数、経過ターン
+        self.pp_layer = nn.Linear(2, n_mid)#最大PP,残りPP
         #self.lin3 = nn.Linear(9, n_mid)#最大手札枚数
         #self.lin3 = nn.Linear(2,n_mid)#フォロワーの攻撃力,体力
-        self.lin3 = nn.Linear(5,n_mid)#フォロワーの攻撃力,体力,フォロワーであるか,フォロワーに攻撃可能、プレイヤーに攻撃可能
-        self.lin4 = nn.Linear(3 * n_mid + 1, n_mid)#手札連結
+        self.follower_layer = nn.Linear(5,n_mid)#フォロワーの攻撃力,体力,フォロワーであるか,フォロワーに攻撃可能、プレイヤーに攻撃可能
+        self.hand_convert_layer = nn.Linear(3 * n_mid + 1, n_mid)#手札連結
         #self.lin5 = nn.Linear(6 * n_mid, n_mid)#自分の場のフォロワー連結
         #self.lin6 = nn.Linear(4 * n_mid, n_mid)  # 相手の場のフォロワー連結
         self.field_layer1 = nn.Linear(9 * n_mid//2, n_mid)
@@ -56,7 +55,7 @@ class New_Dual_Net(nn.Module):
         self.emb8 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
         self.emb9 = nn.Embedding(9, n_mid, padding_idx=0)#両プレイヤーのリーダークラス
         #self.fc0 = nn.Linear(6*n_mid,n_mid)
-        self.fc0 = nn.Linear(7*n_mid,n_mid)
+        self.fc0 = nn.Linear(7*n_mid, n_mid)
         self.fc1 = nn.Linear(n_mid, n_mid)
         layer = [Dual_ResNet(n_mid, n_mid) for _ in range(19)]
         self.layer = nn.ModuleList(layer)
@@ -79,7 +78,6 @@ class New_Dual_Net(nn.Module):
 
     #@profile
     def forward(self, states,target=False):
-
         values = states['values']
         hand_ids = states['hand_ids']
         follower_card_ids = states['follower_card_ids']
@@ -88,64 +86,73 @@ class New_Dual_Net(nn.Module):
         able_to_evo = states['able_to_evo']
         detailed_action_codes = states['detailed_action_codes']
         class_datas = values['class_datas']
-        x1 = self.lin1(values['life_datas'])
-        x1 = F.relu(x1)
-        #life_datas=values['life_datas']
-        #x1 = self.mish(self.lin1(life_datas))
+        x1 = self.life_layer(values['life_datas'])
+        x1 = torch.relu(x1)
 
-        pp_datas = F.relu(self.lin2(values['pp_datas']))
+        pp_datas = torch.relu(self.pp_layer(values['pp_datas']))
         #pp_datas = self.mish(self.lin2(values['pp_datas']))
 
 
         #able_to_plays = torch.sum(self.emb6(values['able_to_play']),dim=1)
         able_to_plays =self.emb6(values['able_to_play']).view(-1,9,self.n_mid)
+        able_to_plays = torch.relu(able_to_plays)
         hand_card_ids = self.emb1(hand_ids)
+        hand_card_ids = torch.relu(hand_card_ids)
         hand_card_costs = values['hand_card_costs'].unsqueeze(-1)
         new_pp_datas = pp_datas.unsqueeze(1)
         _, new_pp_datas = torch.broadcast_tensors(hand_card_ids, new_pp_datas)
-        #new_able_to_plays = able_to_plays.unsqueeze(1)
-        #print("sizes:{},{}".format(hand_card_ids.size(), new_able_to_plays.size()))
-        #_, new_able_to_plays= torch.broadcast_tensors(hand_card_ids, new_able_to_plays)
-        #tmp_x2 = torch.cat([new_pp_datas, hand_card_costs, hand_card_ids, new_able_to_plays], dim=2)
         tmp_x2 = torch.cat([new_pp_datas, hand_card_costs, hand_card_ids, able_to_plays], dim=2)
-        x2 = torch.tanh(self.lin4(tmp_x2)).view(-1,9*self.n_mid)
-        x2 = torch.tanh(self.hand_card_layer(x2))
+        x2 = torch.relu(self.hand_convert_layer(tmp_x2).view(-1,9*self.n_mid))
+        x2 = torch.relu(self.hand_card_layer(x2))
 
         able_to_evos = self.emb5(able_to_evo)
-        stats = torch.tanh(self.lin3(values['follower_stats']))
+        able_to_evos = torch.relu(able_to_evos)
+        #stats = torch.tanh(self.lin3(values['follower_stats']))
+        stats = torch.relu(self.follower_layer(values['follower_stats']))
 
-        abilities = self.emb4(follower_abilities).view(-1,10,3*self.n_mid//2)#torch.sum(self.emb4(follower_abilities),dim=2)
-
+        abilities = self.emb4(follower_abilities).view(-1,10,3*self.n_mid//2)
+        abilities = torch.relu(abilities)
         #follower_ids = self.emb2(follower_card_ids)
         follower_ids = self.emb1(follower_card_ids)
+        follower_ids = torch.relu(follower_ids)
         #x4 = torch.sum(self.emb3(amulet_card_ids),dim=1)
         #x4 = torch.sum(self.emb1(amulet_card_ids), dim=1)
         x4 = self.emb1(amulet_card_ids).view(-1,10*self.n_mid)
-        x4 = torch.tanh(self.amulet_layer(x4))
+        x4 = torch.relu(x4)
+        x4 = torch.relu(self.amulet_layer(x4))
+        #x4 = self.emb1(amulet_card_ids).view(-1,10*self.n_mid)
+        #x4 = torch.tanh(self.amulet_layer(x4))
         tmp_x3 = torch.cat([stats, abilities, follower_ids, able_to_evos],dim=2)
-        x3 = torch.tanh(self.field_layer1(tmp_x3).view(-1,10*self.n_mid))
-        x3 = torch.tanh(self.field_layer2(x3))
+        x3 = torch.relu(self.field_layer1(tmp_x3).view(-1,10*self.n_mid))
+        x3 = torch.relu(self.field_layer2(x3))
 
-        x5 = self.emb9(class_datas).view(-1,2*self.n_mid)
+        x5 = torch.relu(self.emb9(class_datas).view(-1, 2 * self.n_mid))
+        #x5 = self.emb9(class_datas).view(-1,2*self.n_mid)
         deck_datas = states['deck_datas']
         #x6 = torch.sum(self.emb1(deck_datas),dim=1)
         x6 = self.emb1(deck_datas).view(-1,40*self.n_mid)
-        #print("x6:{}".format(x6.size()))
-        x6 = torch.tanh(self.deck_layer(x6))
-        #print("new_x6:{}".format(x6.size()))
-        #print(x1.size(),x2.size())
-        x7 = torch.cat([x1,x2,x3,x4,x5,x6],dim=1)
+        x6 = torch.relu(self.deck_layer(x6))
 
-        x = self.fc0(x7)
+        x7 = torch.cat([x1,x2,x3,x4,x5,x6],dim=1)
+        x = torch.relu(self.fc0(x7))
+        #if target:
+        #    print("initial")
+        #    print(x[0:10])
+        #x = self.fc0(x7)
         #x = self.mish(self.fc0(x7))
 
         #x = self.mish(self.fc1(x))
         #x = F.relu(self.fc1(x))
-        x = torch.tanh(self.fc1(x))
-
-        for i in range(19):
-            x = self.layer[i](x)
-
+        #x = torch.tanh(self.fc1(x))
+        x = torch.relu(self.fc1(x))
+        #print("x:{}".format(x[0:10]))
+        #for i in range(19):
+        #    x = self.layer[i](x)
+        #    #if target and (i==0 or i==18):
+        #    #    print("x{}:{}".format(i,x[0:10]))
+        #if target:
+        #    print("x7:",x7[0:3])
+        #    print("x",x[0:3])
         action_categories = detailed_action_codes['action_categories']
         play_card_ids = detailed_action_codes['play_card_ids']
         field_card_ids = detailed_action_codes['field_card_ids']
@@ -156,31 +163,24 @@ class New_Dual_Net(nn.Module):
 
         out_p = self.filtered_softmax(h_p2, able_to_choice)
 
-        h_v1 = F.relu(self.bn_v1(self.fc3_v1(x)))
+        h_v1 = torch.relu(self.fc3_v1(x))
+        #h_v1 = torch.sigmoid(self.bn_v1(self.fc3_v1(x)))
         #h_v1 = self.mish(self.bn_v1(self.fc3_v1(x)))
 
-        h_v2 = F.relu(self.fc3_v2(h_v1))
+        h_v2 = torch.relu(self.fc3_v2(h_v1))
         #h_v2 = self.mish(self.fc3_v2(h_v1))
 
         out_v = torch.tanh(self.fc3_v3(h_v2))
+        #print("out_v:",out_v)
+
 
         if target:
-            #nan_check = torch.isnan(x7)
-            #if True in nan_check:
-            #    print("x1:{}".format(x1[0]))
-            #    print("x2:{}".format(x2[0]))
-            #    print("x3:{}".format(x3[0]))
-            #    print("x4:{}".format(x4[0]))
-            #    print("x5:{}".format(x5[0]))
-            #    print("x6:{}".format(x6[0]))
-            #    assert False
             z = states['target']['rewards']
             pai = states['target']['actions']
-            #print("h_p2[0]:{}".format(h_p2[0]))
-            #print("z:{}".format(z[-1]))
-            #print("h_v2:{}".format(h_v2[-1]))
-            #print("out_v:{}".format(out_v[-1]))
-            #print("weight:{}".format(self.fc3_v3.weight))
+
+            #print("z:", z[0:3])
+            #print("v:{}".format(out_v[0:3]))
+
             return out_p, out_v, self.loss_fn(out_p, out_v, z, pai)
         else:
             return out_p, out_v
@@ -195,6 +195,7 @@ class Dual_ResNet(nn.Module):
 
     def forward(self, x):
         h1 = F.relu(self.fc1(x))
+        #h2 = F.relu(self.fc2(h1))
         h2 = F.relu(self.fc2(h1) + x)
         #h1 = self.mish(self.fc1(x))
         #h2 = self.mish(self.fc2(h1) + x)
@@ -226,13 +227,19 @@ class Action_Value_Net(nn.Module):
         #print(stats)
 
         embed_action_categories = self.emb1(action_categories)
+        embed_action_categories = torch.relu(embed_action_categories)
+
         embed_play_card_ids = self.emb2(play_card_ids)
+        embed_play_card_ids = torch.relu(embed_play_card_ids)
+
         embed_field_card_ids = self.emb2(field_card_ids).view(-1,45,3*self.mid_size)#self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
+        embed_field_card_ids = torch.relu(embed_field_card_ids)
+
         new_states = states.unsqueeze(1)
         _, new_states = torch.broadcast_tensors(embed_action_categories, new_states)
         values_data = torch.cat([life_datas,pp_datas,hand_card_costs,stats],dim=1).unsqueeze(1)
         #print("values_data:{}".format(values_data.size()))
-        new_values_data = self.lin3(values_data)
+        new_values_data = torch.relu(self.lin3(values_data))
         #new_values_data = self.mish(self.lin3(values_data))
 
         _, new_values_data = torch.broadcast_tensors(embed_action_categories, new_values_data)
@@ -245,14 +252,14 @@ class Action_Value_Net(nn.Module):
         #print("origin:{}".format(action_categories[0]))
         #print("tmp:{}".format(tmp.size()))
 
-        output = F.relu(self.lin1(tmp))
+        output = torch.relu(self.lin1(tmp))
         #output = self.mish(self.lin1(tmp))
         for i in range(10):
-            output = F.relu(self.lin4[i](output))
+            output = torch.relu(self.lin4[i](output))
             #output = self.mish(self.lin4[i](output))
         #print("lin1:{}".format(self.lin1(tmp)[0]))
         #print("lin2:{}".format(self.lin2(output)[0]))
-        output = F.relu(self.lin2(output)).view(-1,45)
+        output = torch.relu(self.lin2(output)).view(-1,45)
         #output = self.mish(self.lin2(output))
         #output = torch.sum(output,dim=2)
 
@@ -323,21 +330,24 @@ class New_Dual_ReplayMemory:
         self.memory[self.index] = Dual_State_value(state, action, next_state, detailed_action_code, reward)
         self.index = (self.index + 1) % self.capacity
 
-    def sample(self, batch_size,all=False):
+    def sample(self, batch_size,all=False,cuda=False):
         if all:
             #tmp = self.memory
             tmp = random.sample(self.memory, len(self.memory))
         else:
             tmp = random.sample(self.memory, batch_size)
         states = [cell.state for cell in tmp]
-        states = Detailed_State_data_2_Tensor(states)
+        states = Detailed_State_data_2_Tensor(states,cuda=cuda)
         actions = [cell.action for cell in tmp]
         actions = torch.LongTensor(actions)#torch.stack(actions, dim=0)
         rewards = [[cell.reward] for cell in tmp]
         rewards = torch.FloatTensor(rewards)
         detailed_action_codes = [cell.detailed_action_code for cell in tmp]
-        detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes)
+        detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes,cuda=cuda)
         states['detailed_action_codes'] = detailed_action_codes
+        if cuda:
+            actions = actions.cuda()
+            rewards = rewards.cuda()
 
         return states, actions, rewards
 
@@ -515,6 +525,13 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
            'follower_abilities': follower_abilities,
            'able_to_evo': able_to_evo,
            'deck_datas':deck_datas}
+    if cuda:
+        for key in list(ans.keys()):
+            if key == "values":
+                for sub_key in list(ans["values"].keys()):
+                    ans["values"][sub_key] = ans["values"][sub_key].cuda()
+            else:
+                ans[key] = ans[key].cuda()
     return ans
 
 
@@ -533,6 +550,10 @@ def Detailed_action_code_2_Tensor(action_codes, cuda = False):
                          'play_card_ids': tensor_play_card_ids_in_action,
                          'field_card_ids': tensor_field_card_ids_in_action,
                          'able_to_choice': able_to_choice}
+    if cuda:
+        for key in list(action_codes_dict.keys()):
+            action_codes_dict[key] = action_codes_dict[key].cuda()
+
     return action_codes_dict
 
 

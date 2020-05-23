@@ -38,6 +38,8 @@ parser.add_argument('--batch_num', help='サンプルに対するバッチの数
 parser.add_argument('--fixed_opponent', help='対戦相手を固定')
 parser.add_argument('--node_num', help='node_num', default=100)
 parser.add_argument('--weight_decay', help='weight_decay', default=1e-2)
+parser.add_argument('--check', help='check score')
+parser.add_argument('--model_name', help='model_name', default=None)
 args = parser.parse_args()
 
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
@@ -52,16 +54,18 @@ cpu_num = int(args.cpu_num)
 batch_num = int(args.batch_num) if args.batch_num is not None else None
 G = Game()
 fixed_opponent = args.fixed_opponent
+cuda_flg = args.cuda is not None
 def preparation(episode_data):
     episode = episode_data[0]
-    #print("start:{}".format(episode + 1))
     f = Field(5)
-    p1 = episode_data[1].get_copy(f)
-    p2 = episode_data[2].get_copy(f)
-    #if random.random() < 0.05:
-    #    p1 = Player(9,True)
-    #if random.random() < 0.05:
-    #    p2 = Player(9, False)
+    # p1 = episode_data[0].get_copy(f)
+    # p2 = episode_data[1].get_copy(f)
+    p1 = episode_data[episode % 2].get_copy(f)
+    p2 = episode_data[1 - (episode % 2)].get_copy(f)
+    p1.is_first = True
+    p2.is_first = False
+    p1.player_num = 0
+    p2.player_num = 1
     if deck_flg is None:
         deck_type1 = random.randint(0,13)
         deck_type2  = random.randint(0,13)
@@ -144,9 +148,16 @@ def multi_preparation(episode_data):
     all_result_data = []
     battle_data = {"sum_of_choices":0, "sum_code":0, "win_num":0,"end_turn":0}
     for episode in tqdm(range(partial_iteration),desc=info,position=p_num+1):
+        #f = Field(5)
+        #p1 = episode_data[0].get_copy(f)
+        #p2 = episode_data[1].get_copy(f)
         f = Field(5)
-        p1 = episode_data[0].get_copy(f)
-        p2 = episode_data[1].get_copy(f)
+        p1 = episode_data[episode%2].get_copy(f)
+        p2 = episode_data[1-(episode%2)].get_copy(f)
+        p1.is_first = True
+        p2.is_first = False
+        p1.player_num = 0
+        p2.player_num = 1
         if deck_flg is None:
             deck_type1 = random.randint(0, 13)
             deck_type2 = random.randint(0, 13)
@@ -225,6 +236,52 @@ def multi_preparation(episode_data):
     return all_result_data
 
 import itertools
+def multi_battle(episode_data):
+    partial_iteration = episode_data[-2]
+    p_num = episode_data[-1]
+    info = f'#{p_num:>2} '
+    win_num = 0
+    first_num = [0,0]
+    for episode in tqdm(range(partial_iteration),desc=info,position=p_num+1):
+        f = Field(5)
+        #p1 = episode_data[0].get_copy(f)
+        #p2 = episode_data[1].get_copy(f)
+        p1 = episode_data[episode%2].get_copy(f)
+        p2 = episode_data[1-(episode%2)].get_copy(f)
+        p1.is_first = True
+        p2.is_first = False
+        p1.player_num = 0
+        p2.player_num = 1
+        if deck_flg is None:
+            deck_type1 = random.randint(0, 13)
+            deck_type2 = random.randint(0, 13)
+            #deck_type1 = random.choice(list(key_2_tsv_name.keys()))
+            #deck_type2 = random.choice(list(key_2_tsv_name.keys()))
+        else:
+            deck_type1 = deck_flg
+            deck_type2 = deck_flg
+        d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
+        d1.set_leader_class(key_2_tsv_name[deck_type1][1])
+        d2 = tsv_to_deck(key_2_tsv_name[deck_type2][0])
+        d2.set_leader_class(key_2_tsv_name[deck_type2][1])
+        d1.shuffle()
+        d2.shuffle()
+        p1.deck = d1
+        p2.deck = d2
+        f.players = [p1, p2]
+        p1.field = f
+        p2.field = f
+        x1 = datetime.datetime.now()
+        f.players[0].draw(f.players[0].deck, 3)
+        f.players[1].draw(f.players[1].deck, 3)
+        win, lose, _, _ = G.start(f, virtual_flg=True)
+        reward = [win,lose]
+        #train_data, reward = G.start_for_dual(f, virtual_flg=True, target_player_num=episode % 2)
+        win_num += int(reward[int(episode % 2)] > 0)
+        first_num[episode%2] += int(reward[0] > 0)
+    return win_num,first_num
+
+import itertools
 
 def multi_train(data):
     net, memory, batch_size, iteration_num, p_num = data
@@ -241,9 +298,9 @@ def multi_train(data):
     info = f'#{p_num:>2} '
     for i in tqdm(range(iteration_num),desc=info,position=p_num+1):
         optimizer.zero_grad()
-        #states = all_states
+        states = all_states
         #key = [random.randint(0, memory_len-1) for _ in range(batch_size)]
-        """
+
         key = random.sample(batch_id_list,k=batch_size)
         states = {}
         for dict_key in states_keys:
@@ -262,9 +319,9 @@ def multi_train(data):
         actions = all_actions[key]
         rewards = all_rewards[key]
         states['target'] = {'actions': actions, 'rewards': rewards}
-        """
 
-        p, v, loss = net(all_states, target=True)
+
+        p, v, loss = net(states, target=True)
         z = all_rewards
         pai = all_actions  # 45種類の抽象化した行動
         # loss.backward()
@@ -395,11 +452,17 @@ def run_main():
     #writer = SummaryWriter(log_dir="./logs" + LOG_PATH)
     writer = SummaryWriter(log_dir="./logs")
     for epoch in range(epoch_num):
+        net.cpu()
+        prev_net.cpu()
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
         #p1 = Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=net))
-        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+        if False:# epoch < 5:
+            p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
+            #p1 = Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy())
+        else:
+            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
                     ,mulligan=Min_cost_mulligan_policy())
         #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
@@ -413,8 +476,9 @@ def run_main():
             else:
                 p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
         else:
-            if epoch == 0:
-                p2 = Player(9, False, policy=RandomPolicy(),mulligan=Min_cost_mulligan_policy())
+            if False: #epoch < 5:
+                p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
+                #p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy())
             else:
                 p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg)
                             ,mulligan=Min_cost_mulligan_policy())
@@ -426,6 +490,7 @@ def run_main():
         #assert False
         #memories = multi(episode_len,p1,p2)
         #iter_data = [(i, p1, p2) for i in range(episode_len)]
+        #p_size = 5 if epoch < 5 else cpu_num
         iter_data = [(p1, p2,episode_len//p_size,i) for i in range(p_size)]
         freeze_support()
         pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
@@ -445,6 +510,7 @@ def run_main():
         memories = list(itertools.chain.from_iterable(memories))
         follower_attack_num = 0
         all_able_to_follower_attack = 0
+
         for data in memories:
             #print(data[0])
             before_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
@@ -467,7 +533,7 @@ def run_main():
 
         print("win_rate:{:.3%}".format(win_num/episode_len))
         print("mean_of_num_of_choice:{:.3f}".format(sum_of_choice/sum_of_code))
-        print("follower_attack_ratio:{:.3%}".format(follower_attack_num/all_able_to_follower_attack))
+        print("follower_attack_ratio:{:.3%}".format(follower_attack_num/max(1,all_able_to_follower_attack)))
         print("mean end_turn:{:.3f}".format(sum_end_turn/episode_len*100))
         print("sample_size:{}".format(len(R.memory)))
         net.train()
@@ -480,8 +546,11 @@ def run_main():
         batch = len(R.memory) // batch_num if batch_num is not None else batch_size
         print("batch_size:{}".format(batch))
         if args.multi_train is not None:
+            p_size = cpu_num
+            if cuda_flg:
+                net = net.cuda()
             net.share_memory()
-            all_data = R.sample(batch_size,all=True)
+            all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
             iter_data = [[net,all_data,batch,iteration//p_size,i]
                          for i in range(p_size)]
             freeze_support()
@@ -506,23 +575,54 @@ def run_main():
             #      .format(sum_of_loss / p_size, sum_of_MSE / p_size, sum_of_CEE / p_size))
 
         else:
-
+            if cuda_flg:
+                net = net.cuda()
+            optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
+            #all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
+            #all_states, all_actions, all_rewards = all_data
+            #print("rewards:{}".format(rewards))
+            #states_keys = list(all_states.keys())
+            #value_keys = list(all_states['values'].keys())
+            #action_code_keys = list(all_states['detailed_action_codes'].keys())
+            #memory_len = all_actions.size()[0]
+            #batch_id_list = list(range(memory_len))
+            #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
             for i in tqdm(range(iteration)):
-            #for i in range(iteration):
-                #print("\ni:{}\n".format(i))
-
-                states, actions, rewards = R.sample(batch)
-                #optimizer.zero_grad()
+                data = R.sample(batch, cuda=cuda_flg)
+                states, actions, rewards = data
+                """
+                #key = random.sample(batch_id_list, k=batch)
+                key = [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
+                states = {}
+                for dict_key in states_keys:
+                    if dict_key == 'values':
+                        states['values'] = {}
+                        for sub_key in value_keys:
+                            states['values'][sub_key] = all_states['values'][sub_key][key]
+                    elif dict_key == 'detailed_action_codes':
+                        states['detailed_action_codes'] = {}
+                        for sub_key in action_code_keys:
+                            states['detailed_action_codes'][sub_key] = \
+                                all_states['detailed_action_codes'][sub_key][key]
+                    else:
+                        states[dict_key] = all_states[dict_key][key]
+                
+                actions = all_actions[key]
+                rewards = all_rewards[key]
+                """
                 states['target'] = {'actions': actions, 'rewards': rewards}
-                p, v, loss = net(states, target=True)
-                z = rewards
-                pai = actions  # 45種類の抽象化した行動
                 optimizer.zero_grad()
+                p, v, loss = net(states, target=True)
                 loss[0].backward()
                 sum_of_loss += float(loss[0].item())
                 sum_of_MSE += float(loss[1].item())
                 sum_of_CEE += float(loss[2].item())
                 optimizer.step()
+                if i % 50 == 49:
+                    print(v)
+                    print(rewards)
+
+
         writer.add_scalar(LOG_PATH+"Over_All_Loss", sum_of_loss / iteration, epoch)
         writer.add_scalar(LOG_PATH+"MSE", sum_of_MSE / iteration, epoch)
         writer.add_scalar(LOG_PATH+"CEE", sum_of_CEE / iteration, epoch)
@@ -563,8 +663,70 @@ def run_main():
     print(t2)
     print(t2-t1)
 
+def check_score():
+    print(args)
+    p_size = cpu_num
+    print("use cpu num:{}".format(p_size))
+
+    loss_history = []
+
+    cuda_flg = args.cuda == "True"
+    node_num = int(args.node_num)
+    net = New_Dual_Net(node_num)
+    model_name = args.model_name
+    PATH = 'model/' + model_name
+    net.load_state_dict(torch.load(PATH))
+    if torch.cuda.is_available() and cuda_flg:
+        net = net.cuda()
+        print("cuda is available.")
+    #net.zero_grad()
+    deck_sampling_type = False
+    if args.deck is not None:
+        deck_sampling_type = True
+    G = Game()
+    episode_len = 100
+    if args.episode_num is not None:
+        episode_len = int(args.episode_num)
+    net.cpu()
+    t3 = datetime.datetime.now()
+    p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+                , mulligan=Min_cost_mulligan_policy())
+    p1.name = "Alice"
+    if fixed_opponent is not None:
+        if fixed_opponent == "Aggro":
+            p2 = Player(9, False, policy=AggroPolicy())
+        elif fixed_opponent == "OM":
+            # p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
+            # p1.name = "Alice"
+            p2 = Player(9, False, policy=Opponent_Modeling_MCTSPolicy())
+        else:
+            p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
+    else:
+        if False:  # epoch < 5:
+            p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
+            # p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy())
+        else:
+            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+                        , mulligan=Min_cost_mulligan_policy())
+    # p2 = Player(9, False, policy=RandomPolicy(), mulligan=Min_cost_mulligan_policy())
+    p2.name = "Bob"
+    iter_data = [(p1, p2, episode_len // p_size, i) for i in range(p_size)]
+    freeze_support()
+    pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+    memory = pool.map(multi_battle, iter_data)
+    print("\n" * p_size)
+    pool.close()  # add this.
+    pool.terminate()  # add this.
+    memory = list(memory)
+    win_rate = sum([cell[0] for cell in memory])/episode_len
+    first_win_rate = [2*sum([cell[1][0] for cell in memory])/episode_len,
+                      2 * sum([cell[1][1] for cell in memory]) / episode_len]
+    print("win_rate:{:.3%},first_win_rate:{:.3%} {:.3%}".format(win_rate,first_win_rate[0],first_win_rate[1]))
 
 if __name__ == "__main__":
-    run_main()
+    if args.check is not None:
+        check_score()
+    else:
+        run_main()
 
 

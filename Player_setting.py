@@ -192,8 +192,13 @@ class Player:
             field.play_as_other_card(self.hand, card_id, self.player_num, virtual=virtual, target=target)
             return
         else:
-            assert field.remain_cost[self.player_num] - self.hand[card_id].cost >= 0, "minus-pp error:{} < {}"\
-                .format(field.remain_cost[self.player_num],self.hand[card_id].cost)
+            if field.remain_cost[self.player_num] - self.hand[card_id].cost < 0:
+                mylogger.info("{}".format(self.hand[card_id]))
+                mylogger.info("minus-pp error:{} < {}"\
+                    .format(field.remain_cost[self.player_num],self.hand[card_id].cost))
+                raise AssertionError
+            #assert field.remain_cost[self.player_num] - self.hand[card_id].cost >= 0, "minus-pp error:{} < {}"\
+            #    .format(field.remain_cost[self.player_num],self.hand[card_id].cost)
             field.remain_cost[self.player_num] -= self.hand[card_id].cost
 
 
@@ -246,6 +251,7 @@ class Player:
                     "able_to_creature_attack:{} can_be_attacked:{}".format(able_to_creature_attack, can_be_attacked))
             mylogger.info("regal_targets:{}".format(regal_targets))
         (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
+        #mylogger.info("{},{}".format(action_num,self.policy.policy_type))
         if action_num == Action_Code.ERROR.value:
             #self.policy.starting_node.print_node()
             #assert False
@@ -258,9 +264,10 @@ class Player:
                 self.policy.current_node.print_tree(single=True)
                 assert False
             self.policy.current_node = None
-            return self.decide(player, opponent, field, virtual,dual)
+            return self.decide(player, opponent, field, virtual=virtual,dual=dual)
 
         elif action_num != Action_Code.TURN_END.value and self.policy.policy_type == 3:
+            #mylogger.info("adjust")
             sim_field = self.policy.prev_node.field
 
             action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,

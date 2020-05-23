@@ -47,11 +47,6 @@ class Game:
             state_values = np.array(state_values)
             return win, lose, lib_num, turn, [turns,state_values]
 
-        #if f.players[0].mulligan_policy.data_use_flg:
-        #    f.players[0].mulligan_policy.append_win_data(bool(win))
-        #if f.players[1].mulligan_policy.data_use_flg:
-        #    f.players[1].mulligan_policy.append_win_data(bool(lose))
-
         return win, lose, lib_num, turn
 
     def start_for_train_data(self, f, virtual_flg=False,target_player_num=0):
