@@ -17,6 +17,11 @@ jobs:
       MODE: background_demo
       PLAYER1: 29
       N: 40
+      DECK_ID: "{{item}}"
+      -loop:
+        1
+        2
+        3
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -39,12 +44,6 @@ jobs:
     - name: pip_lib
       run: |
         pip install -r requirements.txt
-    - name: Run Test11
-      run: |
-        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 11 --decktype2 11 --mode $MODE --model_name $MODEL_NAME1
-    - name: Run Test12
-      run: |
-        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 12 --decktype2 12 --mode $MODE --model_name $MODEL_NAME
-    - name: Run Test13
-      run: |
-        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 13  --decktype2 13 --mode $MODE --model_name $MODEL_NAME
+    - name: Run Test
+      run: | 
+       python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 11 --decktype2 11 --mode $MODE --model_name $MODEL_NAME
