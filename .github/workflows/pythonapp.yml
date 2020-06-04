@@ -12,8 +12,8 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_5_21_16_40_20_all_100nodes.pth
-      PLAYER_TYPE: 13
+      MODEL_NAME: Multi_Dual_2020_6_3_17_45_12_6%_cuda.pth
+      PLAYER_TYPE: 2
       MODE: mirror
       PLAYER1: 29
       N: 100
