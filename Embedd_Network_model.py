@@ -57,8 +57,9 @@ class New_Dual_Net(nn.Module):
         #self.fc0 = nn.Linear(6*n_mid,n_mid)
         self.fc0 = nn.Linear(7*n_mid, n_mid)
         self.fc1 = nn.Linear(n_mid, n_mid)
-        layer = [Dual_ResNet(n_mid, n_mid) for _ in range(19)]
+        layer = [Dual_ResNet(n_mid, n_mid) for _ in range(1)]
         self.layer = nn.ModuleList(layer)
+        self.layer_len = len(self.layer)
 
         #self.fc3_p1 = nn.Linear(n_mid, 25)
         #self.bn_p1 = nn.BatchNorm1d(25)
@@ -146,8 +147,8 @@ class New_Dual_Net(nn.Module):
         #x = torch.tanh(self.fc1(x))
         x = torch.relu(self.fc1(x))
         #print("x:{}".format(x[0:10]))
-        #for i in range(19):
-        #    x = self.layer[i](x)
+        for i in range(self.layer_len):
+            x = self.layer[i](x)
         #    #if target and (i==0 or i==18):
         #    #    print("x{}:{}".format(i,x[0:10]))
         #if target:

@@ -3427,7 +3427,7 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                 self.error_count = 0
             else:
                 self.prev_node = self.last_node
-                self.current_node = next_node
+                self.current_node = None
 
             return tmp_move  # action
         else:
