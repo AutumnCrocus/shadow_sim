@@ -16,9 +16,9 @@ jobs:
       PLAYER_TYPE: 2
       MODE: mirror
       PLAYER1: 29
-      N: 80
+      N: 100
       DECK_ID: 5
-      DECK_LIST: "0,1,4,5,10,13"  
+      DECK_LIST: "10,13"  
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
