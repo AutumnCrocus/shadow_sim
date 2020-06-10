@@ -14,11 +14,11 @@ jobs:
     env:
       MODEL_NAME: Multi_Dual_2020_6_4_20_54_3_19%_cuda.pth
       PLAYER_TYPE: 13
-      MODE: mirror
+      MODE: demo
       PLAYER1: 29
-      N: 100
+      N: 1
       DECK_ID: 5
-      DECK_LIST: "2"  
+      DECK_LIST: "4"  
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -44,4 +44,5 @@ jobs:
     
     - name: Run Test     
       run: | 
-       python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME
+        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decktype1 0 --decktype2 0 --mode $MODE --model_name $MODEL_NAME
+        %python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME
