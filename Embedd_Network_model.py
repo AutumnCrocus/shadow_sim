@@ -57,7 +57,7 @@ class New_Dual_Net(nn.Module):
         #self.fc0 = nn.Linear(6*n_mid,n_mid)
         self.fc0 = nn.Linear(7*n_mid, n_mid)
         self.fc1 = nn.Linear(n_mid, n_mid)
-        layer = [Dual_ResNet(n_mid, n_mid) for _ in range(1)]
+        layer = [Dual_ResNet(n_mid, n_mid) for _ in range(20)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
 
@@ -88,54 +88,54 @@ class New_Dual_Net(nn.Module):
         detailed_action_codes = states['detailed_action_codes']
         class_datas = values['class_datas']
         x1 = self.life_layer(values['life_datas'])
-        x1 = torch.relu(x1)
+        x1 = torch.sigmoid(x1)
 
-        pp_datas = torch.relu(self.pp_layer(values['pp_datas']))
+        pp_datas = torch.sigmoid(self.pp_layer(values['pp_datas']))
         #pp_datas = self.mish(self.lin2(values['pp_datas']))
 
 
         #able_to_plays = torch.sum(self.emb6(values['able_to_play']),dim=1)
         able_to_plays =self.emb6(values['able_to_play']).view(-1,9,self.n_mid)
-        able_to_plays = torch.relu(able_to_plays)
+        able_to_plays = torch.sigmoid(able_to_plays)
         hand_card_ids = self.emb1(hand_ids)
-        hand_card_ids = torch.relu(hand_card_ids)
+        #hand_card_ids = torch.relu(hand_card_ids)
         hand_card_costs = values['hand_card_costs'].unsqueeze(-1)
         new_pp_datas = pp_datas.unsqueeze(1)
         _, new_pp_datas = torch.broadcast_tensors(hand_card_ids, new_pp_datas)
         tmp_x2 = torch.cat([new_pp_datas, hand_card_costs, hand_card_ids, able_to_plays], dim=2)
-        x2 = torch.relu(self.hand_convert_layer(tmp_x2).view(-1,9*self.n_mid))
-        x2 = torch.relu(self.hand_card_layer(x2))
+        x2 = torch.sigmoid(self.hand_convert_layer(tmp_x2).view(-1,9*self.n_mid))
+        x2 = torch.sigmoid(self.hand_card_layer(x2))
 
         able_to_evos = self.emb5(able_to_evo)
-        able_to_evos = torch.relu(able_to_evos)
+        #able_to_evos = torch.relu(able_to_evos)
         #stats = torch.tanh(self.lin3(values['follower_stats']))
-        stats = torch.relu(self.follower_layer(values['follower_stats']))
+        stats = torch.sigmoid(self.follower_layer(values['follower_stats']))
 
         abilities = self.emb4(follower_abilities).view(-1,10,3*self.n_mid//2)
-        abilities = torch.relu(abilities)
+        #abilities = torch.relu(abilities)
         #follower_ids = self.emb2(follower_card_ids)
         follower_ids = self.emb1(follower_card_ids)
-        follower_ids = torch.relu(follower_ids)
+        #follower_ids = torch.relu(follower_ids)
         #x4 = torch.sum(self.emb3(amulet_card_ids),dim=1)
         #x4 = torch.sum(self.emb1(amulet_card_ids), dim=1)
         x4 = self.emb1(amulet_card_ids).view(-1,10*self.n_mid)
-        x4 = torch.relu(x4)
-        x4 = torch.relu(self.amulet_layer(x4))
+        x4 = torch.sigmoid(x4)
+        x4 = torch.sigmoid(self.amulet_layer(x4))
         #x4 = self.emb1(amulet_card_ids).view(-1,10*self.n_mid)
         #x4 = torch.tanh(self.amulet_layer(x4))
         tmp_x3 = torch.cat([stats, abilities, follower_ids, able_to_evos],dim=2)
-        x3 = torch.relu(self.field_layer1(tmp_x3).view(-1,10*self.n_mid))
-        x3 = torch.relu(self.field_layer2(x3))
+        x3 = torch.sigmoid(self.field_layer1(tmp_x3).view(-1,10*self.n_mid))
+        x3 = torch.sigmoid(self.field_layer2(x3))
 
-        x5 = torch.relu(self.emb9(class_datas).view(-1, 2 * self.n_mid))
+        x5 = torch.sigmoid(self.emb9(class_datas).view(-1, 2 * self.n_mid))
         #x5 = self.emb9(class_datas).view(-1,2*self.n_mid)
         deck_datas = states['deck_datas']
         #x6 = torch.sum(self.emb1(deck_datas),dim=1)
         x6 = self.emb1(deck_datas).view(-1,40*self.n_mid)
-        x6 = torch.relu(self.deck_layer(x6))
+        x6 = torch.sigmoid(self.deck_layer(x6))
 
         x7 = torch.cat([x1,x2,x3,x4,x5,x6],dim=1)
-        x = torch.relu(self.fc0(x7))
+        x = torch.sigmoid(self.fc0(x7))
         #if target:
         #    print("initial")
         #    print(x[0:10])
@@ -145,7 +145,7 @@ class New_Dual_Net(nn.Module):
         #x = self.mish(self.fc1(x))
         #x = F.relu(self.fc1(x))
         #x = torch.tanh(self.fc1(x))
-        x = torch.relu(self.fc1(x))
+        x = torch.sigmoid(self.fc1(x))
         #print("x:{}".format(x[0:10]))
         for i in range(self.layer_len):
             x = self.layer[i](x)
@@ -159,16 +159,16 @@ class New_Dual_Net(nn.Module):
         field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
         #tmp = self.action_value_net(v_x, action_categories, play_card_ids, field_card_ids)
-        tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,target=target)
+        tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
         h_p2 = tmp
 
         out_p = self.filtered_softmax(h_p2, able_to_choice)
 
-        h_v1 = torch.relu(self.fc3_v1(x))
+        h_v1 = torch.sigmoid(self.fc3_v1(x))
         #h_v1 = torch.sigmoid(self.bn_v1(self.fc3_v1(x)))
         #h_v1 = self.mish(self.bn_v1(self.fc3_v1(x)))
 
-        h_v2 = torch.relu(self.fc3_v2(h_v1))
+        h_v2 = torch.sigmoid(self.fc3_v2(h_v1))
         #h_v2 = self.mish(self.fc3_v2(h_v1))
 
         out_v = torch.tanh(self.fc3_v3(h_v2))
@@ -176,6 +176,8 @@ class New_Dual_Net(nn.Module):
 
 
         if target:
+            #print("out_p:{}".format(out_p[0]))
+            #print("h_p2:{}".format(h_p2[0]))
             z = states['target']['rewards']
             pai = states['target']['actions']
 
@@ -195,9 +197,9 @@ class Dual_ResNet(nn.Module):
         #self.mish = Mish()
 
     def forward(self, x):
-        h1 = F.relu(self.fc1(x))
+        h1 = torch.sigmoid(self.fc1(x))
         #h2 = F.relu(self.fc2(h1))
-        h2 = F.relu(self.fc2(h1) + x)
+        h2 = torch.sigmoid(self.fc2(h1) + x)
         #h1 = self.mish(self.fc1(x))
         #h2 = self.mish(self.fc2(h1) + x)
         return h2
@@ -219,22 +221,24 @@ class Action_Value_Net(nn.Module):
         self.lin4 = nn.ModuleList(layer)
         #self.mish = Mish()
 
-    def forward(self, states, action_categories, play_card_ids, field_card_ids,values,target=False):
+    def forward(self, states, action_categories, play_card_ids, field_card_ids,values,label,target=False):
         life_datas = values['life_datas']
         pp_datas = values['pp_datas']
         hand_card_costs = values['hand_card_costs']
         #print(values['follower_stats'])
         stats = values['follower_stats'].view(-1,50)
         #print(stats)
+        #assert False
+        #print(stats)
 
         embed_action_categories = self.emb1(action_categories)
-        embed_action_categories = torch.relu(embed_action_categories)
+        #embed_action_categories = torch.relu(embed_action_categories)
 
         embed_play_card_ids = self.emb2(play_card_ids)
-        embed_play_card_ids = torch.relu(embed_play_card_ids)
+        #embed_play_card_ids = torch.relu(embed_play_card_ids)
 
         embed_field_card_ids = self.emb2(field_card_ids).view(-1,45,3*self.mid_size)#self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
-        embed_field_card_ids = torch.relu(embed_field_card_ids)
+        #embed_field_card_ids = torch.relu(embed_field_card_ids)
 
         new_states = states.unsqueeze(1)
         _, new_states = torch.broadcast_tensors(embed_action_categories, new_states)
@@ -253,14 +257,16 @@ class Action_Value_Net(nn.Module):
         #print("origin:{}".format(action_categories[0]))
         #print("tmp:{}".format(tmp.size()))
 
-        output = torch.relu(self.lin1(tmp))
+        output = torch.sigmoid(self.lin1(tmp))
         #output = self.mish(self.lin1(tmp))
-        for i in range(10):
-            output = torch.relu(self.lin4[i](output))
+        #for i in range(10):
+        #    output = torch.relu(self.lin4[i](output))
             #output = self.mish(self.lin4[i](output))
         #print("lin1:{}".format(self.lin1(tmp)[0]))
         #print("lin2:{}".format(self.lin2(output)[0]))
-        output = torch.relu(self.lin2(output)).view(-1,45)
+        output = torch.sigmoid(self.lin2(output)).view(-1,45)#torch.relu(self.lin2(output)).view(-1,45)
+        output = output * label
+        #print(action_categories,output)
         #output = self.mish(self.lin2(output))
         #output = torch.sum(output,dim=2)
 
@@ -272,15 +278,15 @@ class filtered_softmax(nn.Module):
         super(filtered_softmax, self).__init__()
 
     def forward(self, x, label):
-        x = x * label
+        #x = x * label
         max_x = x.max(dim=1,keepdim=True).values
         x = x-max_x
-        x = x * 1000
+        #x = x
         x = torch.exp(x)
         x = x * label
         sum_of_x = torch.sum(x, dim=1, keepdim=True)
         x = x / sum_of_x
-
+        #print(x)
         return x
 
 class Mish(nn.Module):
@@ -376,7 +382,7 @@ def get_data(f,player_num=0):
     hand_ids = [((Card_Category[card.card_category].value-1)*1000+
                                 card.card_id+500)for card in player.hand]
     #hand_card_costs = [card.cost for card in player.hand]
-    hand_card_costs = [card.cost/100 for card in player.hand]
+    hand_card_costs = [card.cost/10 for card in player.hand]
     """
     for j in range(len(player.hand),9):
         hand_ids.append(0)
@@ -400,11 +406,11 @@ def get_data(f,player_num=0):
                         + [f.card_location[opponent_num][i].card_id + 500
                            if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Creature" else 0 for i in range(5)]
-    follower_stats = [[f.card_location[player_num][i].power, f.card_location[player_num][i].get_current_toughness(),
+    follower_stats = [[f.card_location[player_num][i].power/10, f.card_location[player_num][i].get_current_toughness()/10,
                        1, int(f.card_location[player_num][i].can_attack_to_follower()), int(f.card_location[player_num][i].can_attack_to_player())]
                       if i < len(f.card_location[player_num]) and f.card_location[player_num][
         i].card_category == "Creature" else [0, 0, 0, 0, 0] for i in range(5)] \
-                     + [[f.card_location[opponent_num][i].power, f.card_location[opponent_num][i].get_current_toughness(),
+                     + [[f.card_location[opponent_num][i].power/10, f.card_location[opponent_num][i].get_current_toughness()/10,
                          1, 1, 1]
                         if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Creature" else [0, 0, 0, 0, 0] for i in range(5)]
@@ -461,7 +467,7 @@ def get_data(f,player_num=0):
     able_to_attack = f.get_able_to_attack(player)
     able_to_creature_attack = f.get_able_to_creature_attack(player)
     #life_data = [player.life, opponent.life,len(player.hand),len(opponent.hand) ,f.current_turn[player_num]]
-    life_data = [player.life/20, opponent.life/20, len(player.hand)/9, len(opponent.hand)/9,f.current_turn[player_num]/100]
+    life_data = [player.life/20, opponent.life/20, len(player.hand)/9, len(opponent.hand)/9,f.current_turn[player_num]/10]
     #pp_data = [f.cost[player_num],f.remain_cost[player_num]]
     pp_data = [f.cost[player_num]/10, f.remain_cost[player_num]/10]
 
