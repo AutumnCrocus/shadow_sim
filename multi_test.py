@@ -462,14 +462,14 @@ def run_main():
         if False:# epoch < 5:
             p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
             #p1 = Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy())
-        else:
-            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
-                    ,mulligan=Min_cost_mulligan_policy())
-        #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
+        #else:
+        #    p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+        #            ,mulligan=Min_cost_mulligan_policy())
+        p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
-        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
-                    ,mulligan=Min_cost_mulligan_policy())
-        #p2 = Player(9, False, policy=RandomPolicy(), mulligan=Min_cost_mulligan_policy())
+        #p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+        #            ,mulligan=Min_cost_mulligan_policy())
+        p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
 
         #import cProfile
