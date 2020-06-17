@@ -12,7 +12,7 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_6_16_1_8_50_2%_cuda.pth
+      MODEL_NAME: Multi_Dual_2020_6_17_14_47_57_6%_cuda.pth
       PLAYER_TYPE: 2
       MODE: mirror
       PLAYER1: 29
