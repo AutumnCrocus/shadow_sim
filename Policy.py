@@ -5254,13 +5254,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         out_value = (float(value[0]) + 1)/2
         if node_player_num != self.main_player_num:
             out_value = 1 - out_value
-        if False: #and abs(fixed_value-out_value)>0.45:
-            print("#"*20)
-            mylogger.info("node.player:{}".format(node_player_num))
-            mylogger.info("fixed:{:.3f} NN:{:.3f}(raw:{:.3f})".format(fixed_value,out_value,float(value[0])))
-            field.players[node_player_num].show_hand()
-            field.show_field()
-            print("#" * 20)
+        #print(node.depth,id(node),out_value)
         node.state_value = out_value
         #value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
         #node.state_value = value

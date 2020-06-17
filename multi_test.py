@@ -224,9 +224,9 @@ def multi_preparation(episode_data):
                 action_probability = data[1]
                 sum_of_choices += sum(detailed_action_code['able_to_choice'])
                 sum_code += 1
-                current_turn = int(data[0].life_data[0][-1] * 100)
-                discount_rate = GAMMA**(end_turn-current_turn)
-                discounted_reward = reward[i] * discount_rate
+                #current_turn = int(data[0].life_data[0][-1] * 100)
+                #discount_rate = GAMMA**(end_turn-current_turn)
+                discounted_reward = reward[i]# * discount_rate
                 result_data.append((before_state, action_probability, after_state, detailed_action_code,discounted_reward))#, reward[i]))
                 #print("life_data:{}".format(data[2].life_data))
                 #end_turn = data[2].life_data[0][-1]
@@ -454,6 +454,8 @@ def run_main():
     th = 0.55
     for epoch in range(epoch_num):
         net.cpu()
+        #net.class_eye.cpu()
+        #et.ability_eye.cpu()
         prev_net.cpu()
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
@@ -463,13 +465,13 @@ def run_main():
             p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
             #p1 = Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy())
         #else:
-        #    p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
-        #            ,mulligan=Min_cost_mulligan_policy())
-        p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
+        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+                    ,mulligan=Min_cost_mulligan_policy())
+        #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
-        #p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
-        #            ,mulligan=Min_cost_mulligan_policy())
-        p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
+        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+                    ,mulligan=Min_cost_mulligan_policy())
+        #p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
 
         #import cProfile
@@ -571,6 +573,8 @@ def run_main():
         else:
             if cuda_flg:
                 net = net.cuda()
+                #net.class_eye.to("cuda:0")
+                #net.ability_eye.to("cuda:0")
             optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
             all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
             all_states, all_actions, all_rewards = all_data
@@ -596,22 +600,30 @@ def run_main():
                     if dict_key == 'values':
                         states['values'] = {}
                         for sub_key in value_keys:
-                            states['values'][sub_key] = all_states['values'][sub_key][key]
+                            states['values'][sub_key] = torch.clone(all_states['values'][sub_key][key])
+                            #states['values'][sub_key].grad=None
                     elif dict_key == 'detailed_action_codes':
                         states['detailed_action_codes'] = {}
                         for sub_key in action_code_keys:
                             states['detailed_action_codes'][sub_key] = \
-                                all_states['detailed_action_codes'][sub_key][key]
+                                torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                            #states['detailed_action_codes'][sub_key].grad=None
                     else:
-                        states[dict_key] = all_states[dict_key][key]
+                        states[dict_key] = torch.clone(all_states[dict_key][key])
+                        #states[dict_key].grad=None
                 
                 actions = all_actions[key]
                 rewards = all_rewards[key]
 
                 states['target'] = {'actions': actions, 'rewards': rewards}
+                net.zero_grad()
                 optimizer.zero_grad()
                 p, v, loss = net(states, target=True)
                 loss[0].backward()
+                #print(net.life_layer.weight.grad)
+                #print(loss[0].grad)
+                #loss[1].backward()
+                #loss[2].backward()
                 optimizer.step()
                 #sum_of_loss += float(loss[0].item())
                 #sum_of_MSE += float(loss[1].item())
@@ -651,7 +663,7 @@ def run_main():
                 train_MSE += float(loss[1].item())
                 train_CEE += float(loss[2].item())
             #writer.add_scalar(LOG_PATH + "WIN_RATE", win_num / episode_len, epoch)
-
+            print(train_MSE,separate_num)
             train_objective_loss /= separate_num
             train_MSE /= separate_num
             train_CEE /= separate_num
@@ -684,17 +696,34 @@ def run_main():
                 states['target'] = {'actions': actions, 'rewards': rewards}
                 del loss
                 torch.cuda.empty_cache()
-                p, _, loss = net(states, target=True)
+                p, v, loss = net(states, target=True)
 
                 test_objective_loss += float(loss[0].item())
-                test_MSE = +float(loss[1].item())
+                test_MSE += float(loss[1].item())
                 test_CEE += float(loss[2].item())
             print("")
-            for batch_id in range(5):
+            for batch_id in range(2):
+                print("states:{}".format(batch_id))
+                """
+                for dict_key in states_keys:
+                    if dict_key == 'values':
+                        for sub_key in value_keys:
+                            print(sub_key)
+                            print(states['values'][sub_key][batch_id])
+                    elif dict_key == 'detailed_action_codes':
+                        for sub_key in action_code_keys:
+                            print(sub_key)
+                            print(states['detailed_action_codes'][sub_key][batch_id])
+                    else:
+                        print(dict_key)
+                        print(states[dict_key][batch_id])
+                """
                 print("p:{}".format(p[batch_id]))
                 print("pi:{}".format(actions[batch_id]))
-            del p
+                print("v:{} z:{}".format(v[batch_id],rewards[batch_id]))
+            del p,v
             del actions
+            print(test_MSE,separate_num)
             test_objective_loss /= separate_num
             test_MSE /= separate_num
             test_CEE /= separate_num
@@ -723,6 +752,7 @@ def run_main():
 
         net.cpu()
         prev_net.cpu()
+
         p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg)
                     ,mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
@@ -730,15 +760,15 @@ def run_main():
                     ,mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
         test_episode_len = 20 if deck_flg is None else 100 // p_size#2*episode_len
-        """
-        iter_data = [(p1, p2,test_episode_len//p_size,i) for i in range(p_size)]
-        freeze_support()
-        pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
-        memory = pool.map(multi_preparation, iter_data)
-        print("\n" * p_size)
-        pool.close()  # add this.
-        pool.terminate()  # add this.
-        """
+        
+        #iter_data = [(p1, p2,test_episode_len//p_size,i) for i in range(p_size)]
+        #freeze_support()
+        #pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+        #memory = pool.map(multi_preparation, iter_data)
+        #print("\n" * p_size)
+        #pool.close()  # add this.
+        #pool.terminate()  # add this.
+        
         deck_pairs = ((d,d) for d in (0,1,4,10,13)) if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
         iter_data = [(p1, p2, test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
         freeze_support()
@@ -765,7 +795,9 @@ def run_main():
 
         #battle_data = [cell.pop(-1) for cell in memory]
         #win_num = sum([cell["win_num"] for cell in battle_data])
+
         win_flg = False
+        #WR=1.0
         if WR < th:
             net = prev_net
             th = max(0.5,th*0.95)
@@ -774,7 +806,7 @@ def run_main():
             th = 0.55
             win_flg = True
             print("new_model win! WR:{:.1%}".format(WR))
-        writer.add_scalar(LOG_PATH + 'WR', WR, epoch)
+        #writer.add_scalar(LOG_PATH + 'WR', WR, epoch)
 
 
 
@@ -783,7 +815,7 @@ def run_main():
 
         t4 = datetime.datetime.now()
         print(t4-t3)
-        if win_flg:#epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num:
+        if epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num:
             PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{:.0%}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                  t1.second, (epoch+1)/epoch_num,node_num)
             if torch.cuda.is_available() and cuda_flg:

@@ -57,7 +57,10 @@ class New_Dual_Net(nn.Module):
         #self.fc0 = nn.Linear(6*n_mid,n_mid)
         self.fc0 = nn.Linear(7*n_mid, n_mid)
         self.fc1 = nn.Linear(n_mid, n_mid)
-        layer = [Dual_ResNet(n_mid, n_mid) for _ in range(20)]
+
+        self.small_layer = nn.Linear(n_mid,n_mid//10)
+        self.big_layer = nn.Linear(n_mid//10, n_mid)
+        layer = [Dual_ResNet(n_mid//10, n_mid//10) for _ in range(0)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
 
@@ -76,9 +79,20 @@ class New_Dual_Net(nn.Module):
         self.filtered_softmax = filtered_softmax()
         self.n_mid = n_mid
         self.mish = Mish()
+        self.direct_layer = nn.Linear(n_mid, n_mid)
+        self.final_layer = nn.Linear(n_mid,1)
+        self.value_layer = nn.Linear(5+15,1)
+        self.concat_layer = nn.Linear(n_mid+26,n_mid)
+        self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
+
+        self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
+
+
+
 
     #@profile
     def forward(self, states,target=False):
+
         values = states['values']
         hand_ids = states['hand_ids']
         follower_card_ids = states['follower_card_ids']
@@ -86,10 +100,72 @@ class New_Dual_Net(nn.Module):
         follower_abilities = states['follower_abilities']
         able_to_evo = states['able_to_evo']
         detailed_action_codes = states['detailed_action_codes']
+        action_categories = detailed_action_codes['action_categories']
+        play_card_ids = detailed_action_codes['play_card_ids']
+        field_card_ids = detailed_action_codes['field_card_ids']
+        able_to_choice = detailed_action_codes['able_to_choice']
         class_datas = values['class_datas']
-        x1 = self.life_layer(values['life_datas'])
-        x1 = torch.sigmoid(x1)
 
+        #x1 = self.life_layer(values['life_datas'])
+        #x_1 = torch.tanh(self.direct_layer(values['life_datas']))
+        #x1 = torch.sigmoid(x1)
+        #x_1 = torch.tanh(x1)
+
+        stats = values['follower_stats']#torch.sigmoid(self.follower_layer(values['follower_stats']))
+        #(-1,10,5)→(-1,10,n_mid)
+
+        #print(stats.size())
+        class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
+        #print("x3_size:",class_values.size())
+        x4 = self.ability_eye[follower_abilities]
+        x4 = torch.sum(x4,dim=2)
+        #print(follower_abilities.size())
+        #print(follower_abilities[0])
+        #print("x4_size:{}".format(x4.size()))
+        #print("x4:",x4[0])
+        abilities = x4.to(stats.device)#.cuda() if stats.device=='cuda:0' else x4#self.emb4(follower_abilities).view(-1,10,15)#,3*self.n_mid//2)
+        #print(abilities.size())
+        #print(stats.device,abilities.device)
+        x1 = torch.cat([stats, abilities],dim=2)#(-1,10,20)
+        #print(x1[0])
+        #stats_values = torch.split(x1,[1]*10,1)
+
+        x1 = torch.sigmoid(self.value_layer(x1))
+        #print(follower_card_ids[0])
+        exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
+        x1 = x1 * exist_filter
+        follower_values=x1.view(-1,10)
+        #x1 = torch.sigmoid(self.value_layer(x1)).view(-1,self.n_mid)
+        life_values = torch.sigmoid(self.life_layer(values['life_datas']))
+
+        x1 = torch.cat([follower_values,life_values,class_values],dim=1)
+        x1 = torch.sigmoid(self.concat_layer(x1))
+        x = x1#follower_values
+        #print(x.size())
+        #x = torch.sigmoid(self.small_layer(x))
+        #for i in range(self.layer_len):
+        #    x = self.layer[i](x)
+        #x = torch.sigmoid(self.big_layer(x))
+        tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
+        h_p2 = tmp
+
+        out_p = self.filtered_softmax(h_p2, able_to_choice)
+
+        #out_v = torch.sigmoid(self.direct_layer(x))
+        out_v = torch.tanh(self.final_layer(x))
+        if target:
+            #print("out_p:{}".format(out_p[0]))
+            #print("h_p2:{}".format(h_p2[0]))
+            z = states['target']['rewards']
+            pai = states['target']['actions']
+
+            #print("z:", z[0:3])
+            #print("v:{}".format(out_v[0:3]))
+
+            return out_p, out_v, self.loss_fn(out_p, out_v, z, pai)
+        else:
+            return out_p, out_v
+        """
         pp_datas = torch.sigmoid(self.pp_layer(values['pp_datas']))
         #pp_datas = self.mish(self.lin2(values['pp_datas']))
 
@@ -159,6 +235,7 @@ class New_Dual_Net(nn.Module):
         field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
         #tmp = self.action_value_net(v_x, action_categories, play_card_ids, field_card_ids)
+        #x = x1
         tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
         h_p2 = tmp
 
@@ -171,7 +248,9 @@ class New_Dual_Net(nn.Module):
         h_v2 = torch.sigmoid(self.fc3_v2(h_v1))
         #h_v2 = self.mish(self.fc3_v2(h_v1))
 
+
         out_v = torch.tanh(self.fc3_v3(h_v2))
+        out_v = x_1
         #print("out_v:",out_v)
 
 
@@ -187,6 +266,7 @@ class New_Dual_Net(nn.Module):
             return out_p, out_v, self.loss_fn(out_p, out_v, z, pai)
         else:
             return out_p, out_v
+        """
 
 
 class Dual_ResNet(nn.Module):
@@ -197,6 +277,8 @@ class Dual_ResNet(nn.Module):
         #self.mish = Mish()
 
     def forward(self, x):
+
+        return torch.sigmoid(self.fc1(x))
         h1 = torch.sigmoid(self.fc1(x))
         #h2 = F.relu(self.fc2(h1))
         h2 = torch.sigmoid(self.fc2(h1) + x)
@@ -212,7 +294,7 @@ class Action_Value_Net(nn.Module):
         self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
         self.emb2 = parent_net.emb1#nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
         #self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
-        self.lin1 = nn.Linear(7 * mid_size, mid_size)
+        self.lin1 = nn.Linear(mid_size+4, mid_size)#nn.Linear(7 * mid_size, mid_size)
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
         #self.lin3 = nn.Linear(36,mid_size)
@@ -220,6 +302,7 @@ class Action_Value_Net(nn.Module):
         layer = [Dual_ResNet(mid_size, mid_size) for _ in range(10)]
         self.lin4 = nn.ModuleList(layer)
         #self.mish = Mish()
+        self.action_catgory_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
 
     def forward(self, states, action_categories, play_card_ids, field_card_ids,values,label,target=False):
         life_datas = values['life_datas']
@@ -231,7 +314,8 @@ class Action_Value_Net(nn.Module):
         #assert False
         #print(stats)
 
-        embed_action_categories = self.emb1(action_categories)
+        embed_action_categories = self.action_catgory_eye[action_categories].to(stats.device)#self.emb1(action_categories)(-1,45,4)
+        #print(embed_action_categories.size())
         #embed_action_categories = torch.relu(embed_action_categories)
 
         embed_play_card_ids = self.emb2(play_card_ids)
@@ -240,18 +324,24 @@ class Action_Value_Net(nn.Module):
         embed_field_card_ids = self.emb2(field_card_ids).view(-1,45,3*self.mid_size)#self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
         #embed_field_card_ids = torch.relu(embed_field_card_ids)
 
-        new_states = states.unsqueeze(1)
-        _, new_states = torch.broadcast_tensors(embed_action_categories, new_states)
-        values_data = torch.cat([life_datas,pp_datas,hand_card_costs,stats],dim=1).unsqueeze(1)
+        new_states = states#.unsqueeze(1)
+
+        #_, new_states = torch.broadcast_tensors(embed_action_categories, new_states)
+        new_states = torch.stack([new_states]*45,dim=1)
+        #print(new_states.size(),embed_action_categories.size())
+        #values_data = torch.cat([life_datas,pp_datas,hand_card_costs,stats],dim=1).unsqueeze(1)
         #print("values_data:{}".format(values_data.size()))
-        new_values_data = torch.relu(self.lin3(values_data))
+        #new_values_data = torch.relu(self.lin3(values_data))
         #new_values_data = self.mish(self.lin3(values_data))
 
-        _, new_values_data = torch.broadcast_tensors(embed_action_categories, new_values_data)
+        #_, new_values_data = torch.broadcast_tensors(embed_action_categories, new_values_data)
         #print("new:{}".format(new_values_data.size()))
 
-        tmp = torch.cat([new_states,embed_action_categories, embed_play_card_ids,
-                         embed_field_card_ids,new_values_data], dim=2)
+        #tmp = torch.cat([new_states,embed_action_categories, embed_play_card_ids,
+        #                 embed_field_card_ids,new_values_data], dim=2)
+
+        tmp = torch.cat([new_states,embed_action_categories], dim=2)
+        #tmp = tmp * label
 
         #print("action_category:{}".format(embed_action_categories[0]))
         #print("origin:{}".format(action_categories[0]))
@@ -313,8 +403,15 @@ class Dual_Loss(nn.Module):
         #print("z:{}".format(z[0:10]))
         loss = torch.sum(
             torch.pow((z - v),2),
-            dim=1)
+           dim=1)
+        #loss = torch.sum(torch.abs(z-v),dim=1)
+        #print("z:{}".format(z))
+        #print("v:{}".format(v))
+        #print("loss:{}".format(loss))
         MSE = torch.mean(loss)
+        #print("loss:",loss)
+        #print("mean:",MSE)
+
         tmp_CEE = p[range(p.size()[0]),pai]+1.0e-8
         CEE = torch.mean(-torch.log(tmp_CEE))
         #pai = pai.t()[0]
