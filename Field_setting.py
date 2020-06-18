@@ -635,6 +635,7 @@ class Field:
         self.state_log.append([State_Code.START_OF_TURN.value, player_num, self.stack_num])
         self.ability_resolution(virtual=virtual, player_num=player_num)
         i = 0
+        opponent_num = 1-player_num
         while i < len(self.card_location[player_num]):
             thing = self.card_location[player_num][i]
             category = thing.card_category
@@ -643,53 +644,34 @@ class Field:
             for ability_id in thing.turn_start_ability:
                 no_ability_flg = 0
                 before = len(self.card_location[player_num])
-                used_ability_dict[ability_id](self, self.players[player_num], self.players[1 - player_num], virtual, None,
+                used_ability_dict[ability_id](self, self.players[player_num], self.players[opponent_num], virtual, None,
                             thing)
                 after = len(self.card_location[player_num])
                 i += int(before <= after)
                 if self.check_game_end(): return
             i += no_ability_flg
+        i = 0
+
+        while i < len(self.card_location[opponent_num]):
+            thing = self.card_location[opponent_num][i]
+            category = thing.card_category
+            used_ability_dict = creature_ability_dict if category == "Creature" else amulet_ability_dict
+            no_ability_flg = 1
+            for ability_id in thing.turn_start_ability:
+                no_ability_flg = 0
+                before = len(self.card_location[opponent_num])
+                used_ability_dict[ability_id](self, self.players[opponent_num], self.players[player_num], virtual,
+                                              None,
+                                              thing)
+                after = len(self.card_location[opponent_num])
+                i += int(before <= after)
+                if self.check_game_end(): return
+            i += no_ability_flg
 
 
-            """
-            if thing.turn_start_ability != []:
-                for ability in thing.turn_start_ability:
-                    #if not virtual:
-                    #    mylogger.info("{}'s start-of-turn ability acive".format(thing.name))
-
-                    before = len(self.card_location[player_num])
-                    ability(self, self.players[player_num], self.players[1 - player_num], virtual, None, \
-                            thing)
-                    after = len(self.card_location[player_num])
-                    i += int(before <= after)
-
-                    if self.check_game_end():
-                        break
-                if self.check_game_end():
-                    break
-            else:
-                i += 1
-            """
         self.ability_resolution(virtual=virtual, player_num=player_num)
         if self.check_game_end():
             return
-        """
-        i = 0
-        while i < len(self.card_location[player_num]):
-            thing = self.card_location[player_num][i]
-            category = thing.card_category
-            used_ability_dict = creature_ability_dict if category == "Creature" else amulet_ability_dict
-            no_ability_flg = 1
-            for ability_id in thing.turn_start_ability:
-                no_ability_flg = 0
-                before = len(self.card_location[player_num])
-                used_ability_dict[ability_id](self, self.players[player_num], self.players[1 - player_num], virtual, None,
-                            thing)
-                after = len(self.card_location[player_num])
-                i += int(before <= after)
-                if self.check_game_end(): return
-            i += no_ability_flg
-        """
         for thing in self.card_location[player_num]:
             thing.down_count(num=1, virtual=virtual)
         self.check_death(player_num, virtual=virtual)
@@ -712,6 +694,7 @@ class Field:
                 creature.until_turn_end_buff = [0, 0]
 
         i = 0
+        opponent_num = 1- player_num
         while i < len(self.card_location[player_num]):
             thing = self.card_location[player_num][i]
             category = thing.card_category
@@ -720,9 +703,24 @@ class Field:
             for ability_id in thing.turn_end_ability:
                 no_ability_flg = 0
                 before = len(self.card_location[player_num])
-                used_ability_dict[ability_id](self, self.players[player_num], self.players[1 - player_num], virtual, None,
+                used_ability_dict[ability_id](self, self.players[player_num], self.players[opponent_num], virtual, None,
                             thing)
                 after = len(self.card_location[player_num])
+                i += int(before <= after)
+                if self.check_game_end(): return
+            i += no_ability_flg
+        i = 0
+        while i < len(self.card_location[opponent_num]):
+            thing = self.card_location[opponent_num][i]
+            category = thing.card_category
+            used_ability_dict = creature_ability_dict if category == "Creature" else amulet_ability_dict
+            no_ability_flg = 1
+            for ability_id in thing.turn_end_ability:
+                no_ability_flg = 0
+                before = len(self.card_location[opponent_num])
+                used_ability_dict[ability_id](self, self.players[opponent_num], self.players[player_num], virtual, None,
+                            thing)
+                after = len(self.card_location[opponent_num])
                 i += int(before <= after)
                 if self.check_game_end(): return
             i += no_ability_flg

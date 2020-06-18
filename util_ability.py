@@ -314,6 +314,7 @@ def add_ability_until_end_of_player_turn(field, player, creature, virtual, add_a
 
     creature.turn_end_ability.append("ability_until_end_of_player_turn")
 
+
 def ability_until_end_of_player_turn(field, player, opponent, virtual, target, self_creature):
     if field.turn_player_num == player.player_num:
         for ability in self_creature.tmp_keyword_ability[0][1]:
@@ -328,6 +329,7 @@ def ability_until_end_of_player_turn(field, player, opponent, virtual, target, s
             else:
                 break
 
+
 def add_ability_until_end_of_opponent_turn(field, player, creature, virtual, add_ability=[]):
     for ability in add_ability:
         if ability not in creature.ability:
@@ -338,6 +340,7 @@ def add_ability_until_end_of_opponent_turn(field, player, creature, virtual, add
         mylogger.info(
             "{} get {} until end of opponent turn".format(creature.name, [KeywordAbility(i).name for i in add_ability]))
     creature.turn_end_ability.append("ability_until_end_of_opponent_turn")
+
 
 def ability_until_end_of_opponent_turn(field, player, opponent, virtual, target, self_creature):
     if field.turn_player_num == opponent.player_num:
