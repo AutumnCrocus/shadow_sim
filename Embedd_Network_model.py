@@ -82,10 +82,16 @@ class New_Dual_Net(nn.Module):
         self.direct_layer = nn.Linear(n_mid, n_mid)
         self.final_layer = nn.Linear(n_mid,1)
         self.value_layer = nn.Linear(5+15,1)
-        self.concat_layer = nn.Linear(n_mid+26,n_mid)
+        self.concat_layer = nn.Linear(n_mid+26+1,n_mid)
+        self.hand_value_layer = nn.Linear(n_mid,1)
         self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
 
         self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
+
+        self.prelu_1 = nn.PReLU(init=0.01)
+        self.prelu_2 = nn.PReLU(init=0.01)
+        self.prelu_3 = nn.PReLU(init=0.01)
+        self.prelu_4 = nn.PReLU(init=0.01)
 
 
 
@@ -130,16 +136,29 @@ class New_Dual_Net(nn.Module):
         #print(x1[0])
         #stats_values = torch.split(x1,[1]*10,1)
 
-        x1 = torch.sigmoid(self.value_layer(x1))
+        x1 = self.prelu_1(self.value_layer(x1))
+        #x1 = torch.sigmoid(self.value_layer(x1))
+
         #print(follower_card_ids[0])
         exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
         x1 = x1 * exist_filter
         follower_values=x1.view(-1,10)
         #x1 = torch.sigmoid(self.value_layer(x1)).view(-1,self.n_mid)
-        life_values = torch.sigmoid(self.life_layer(values['life_datas']))
 
-        x1 = torch.cat([follower_values,life_values,class_values],dim=1)
-        x1 = torch.sigmoid(self.concat_layer(x1))
+        life_values = self.prelu_2(self.life_layer(values['life_datas']))
+        #life_values = torch.sigmoid(self.life_layer(values['life_datas']))
+
+        hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
+        #hand_ids = torch.sigmoid(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
+
+        hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
+        #print(hand_card_values.size(),follower_values.size())
+
+        x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
+
+        x1 = self.prelu_4(self.concat_layer(x1))
+        #x1 = torch.sigmoid(self.concat_layer(x1))
+
         x = x1#follower_values
         #print(x.size())
         #x = torch.sigmoid(self.small_layer(x))
@@ -303,6 +322,9 @@ class Action_Value_Net(nn.Module):
         self.lin4 = nn.ModuleList(layer)
         #self.mish = Mish()
         self.action_catgory_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
+        self.prelu_1 = nn.PReLU(init=0.01)
+        self.prelu_2 = nn.PReLU(init=0.01)
+
 
     def forward(self, states, action_categories, play_card_ids, field_card_ids,values,label,target=False):
         life_datas = values['life_datas']
@@ -347,14 +369,17 @@ class Action_Value_Net(nn.Module):
         #print("origin:{}".format(action_categories[0]))
         #print("tmp:{}".format(tmp.size()))
 
-        output = torch.sigmoid(self.lin1(tmp))
+        output = self.prelu_1(self.lin1(tmp))
+        #output = torch.sigmoid(self.lin1(tmp))
+
         #output = self.mish(self.lin1(tmp))
         #for i in range(10):
         #    output = torch.relu(self.lin4[i](output))
             #output = self.mish(self.lin4[i](output))
         #print("lin1:{}".format(self.lin1(tmp)[0]))
         #print("lin2:{}".format(self.lin2(output)[0]))
-        output = torch.sigmoid(self.lin2(output)).view(-1,45)#torch.relu(self.lin2(output)).view(-1,45)
+        #output = torch.sigmoid(self.lin2(output)).view(-1,45)#torch.relu(self.lin2(output)).view(-1,45)
+        output = self.prelu_2(self.lin2(output)).view(-1,45)
         output = output * label
         #print(action_categories,output)
         #output = self.mish(self.lin2(output))
