@@ -41,6 +41,7 @@ parser.add_argument('--weight_decay', help='weight_decay', default=1e-2)
 parser.add_argument('--check', help='check score')
 parser.add_argument('--deck_list', help='deck_list',default="0,1,4,5,10,13")
 parser.add_argument('--model_name', help='model_name', default=None)
+parser.add_argument('--opponent_model_name', help='opponent_model_name', default=None)
 args = parser.parse_args()
 
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
@@ -856,8 +857,16 @@ def check_score():
     model_name = args.model_name
     PATH = 'model/' + model_name
     net.load_state_dict(torch.load(PATH))
+    opponent_net = None
+    if args.opponent_model_name is not None:
+        opponent_net = New_Dual_Net(node_num)
+        model_name = args.oppnent_model_name
+        PATH = 'model/' + model_name
+        opponent_net.load_state_dict(torch.load(PATH))
+
     if torch.cuda.is_available() and cuda_flg:
         net = net.cuda()
+        opponent_net = opponent_net.cuda() if opponent_net is not None else None
         print("cuda is available.")
     #net.zero_grad()
     deck_sampling_type = False
@@ -879,15 +888,16 @@ def check_score():
         elif fixed_opponent == "OM":
             # p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
             # p1.name = "Alice"
-            p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy())
+            p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy(),
+                        mulligan=Min_cost_mulligan_policy())
         else:
             p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
     else:
-        if False:  # epoch < 5:
+        if opponent_net is not None:  # epoch < 5:
             p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
             # p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy())
         else:
-            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=opponent_net, cuda=cuda_flg)
                         , mulligan=Min_cost_mulligan_policy())
     # p2 = Player(9, False, policy=RandomPolicy(), mulligan=Min_cost_mulligan_policy())
     p2.name = "Bob"
@@ -896,7 +906,7 @@ def check_score():
     print(deck_list)
     deck_pairs = list(itertools.product(deck_list,deck_list))
 
-    iter_data = [(p1, p2, episode_len,cell) for cell in deck_pairs]
+    iter_data = [(p1, p2, episode_len, cell_id,cell) for cell_id,cell in enumerate(deck_pairs)]
     freeze_support()
     pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
     memory = pool.map(multi_battle, iter_data)
@@ -904,6 +914,7 @@ def check_score():
 
     pool.close()  # add this.
     pool.terminate()  # add this.
+    print("\n" * (len(deck_pairs) + 1))
     memory = list(memory)
     for memory_cell in memory:
         Battle_Result[memory_cell[0]] = memory_cell[1]
