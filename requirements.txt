@@ -8,7 +8,6 @@ testpath==0.4.2
 tqdm==4.32.2
 numba
 pandas
-tensorflow=1.14
 torch==1.4.0
 matplotlib
 pytorch_memlab
