@@ -13,7 +13,7 @@ from Field_setting import *
 from Player_setting import *
 from Policy import *
 from Game_setting import Game
-from torch.utils.tensorboard import SummaryWriter
+
 from tqdm import tqdm
 from Embedd_Network_model import *
 import copy
@@ -407,6 +407,7 @@ from Policy import *
 from Game_setting import Game
 
 def run_main():
+    from torch.utils.tensorboard import SummaryWriter
     print(args)
     p_size = cpu_num
     print("use cpu num:{}".format(p_size))
