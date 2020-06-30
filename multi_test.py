@@ -861,7 +861,7 @@ def check_score():
     opponent_net = None
     if args.opponent_model_name is not None:
         opponent_net = New_Dual_Net(node_num)
-        model_name = args.oppnent_model_name
+        model_name = args.opponent_model_name
         PATH = 'model/' + model_name
         opponent_net.load_state_dict(torch.load(PATH))
 
