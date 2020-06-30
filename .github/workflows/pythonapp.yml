@@ -43,5 +43,6 @@ jobs:
         pip install -r requirements.txt
     
     - name: Run Test     
-      run: | 
-        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME
+      run: |
+         python3 multi_test.py --check True --episode_num 100 --model_name Multi_Dual_2020_6_28_21_52_56_31%_cuda.pth --opponent_model_name Multi_Dual_2020_6_22_18_25_10_all_cuda.pth --node_num 100 --deck_list $DECK_LIST
+        #python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME
