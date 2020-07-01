@@ -12,13 +12,14 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_6_22_18_25_10_all_cuda.pth
-      PLAYER_TYPE: 2
+      MODEL_NAME: Multi_Dual_2020_6_28_21_52_56_31%_cuda.pth
+      O_MODEL_NAME: Multi_Dual_2020_6_22_18_25_10_all_cuda.pth
+      PLAYER_TYPE: 29
       MODE: mirror
       PLAYER1: 29
       N: 200
       DECK_ID: 5
-      DECK_LIST: "5,10,12"  
+      DECK_LIST: "0,1,4,5,10,11,12"  
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -44,5 +45,6 @@ jobs:
     
     - name: Run Test     
       run: |
-         python3 multi_test.py --check True --episode_num 100 --model_name Multi_Dual_2020_6_28_21_52_56_31%_cuda.pth --opponent_model_name Multi_Dual_2020_6_22_18_25_10_all_cuda.pth --node_num 100 --deck_list $DECK_LIST
-        #python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME
+       python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $PLAYER_TYPE --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --opponent_model_name $O_MODEL_NAME
+       #python3 multi_test.py --check True --episode_num 100 --model_name $MODEL_NAME --opponent_model_name $O_MODEL_NAME --node_num 100 --deck_list $DECK_LIST
+
