@@ -1623,6 +1623,7 @@ if __name__ == '__main__':
     parser.add_argument('--output', help='出力')
     parser.add_argument('--step_num',help='MCTSの繰り返し上限')
     parser.add_argument('--model_name', help='ニューラルネットワークモデルの名前')
+    parser.add_argument('--opponent_model_name', help='対戦相手のニューラルネットワークモデルの名前')
     parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
     parser.add_argument('--cProfile')
     parser.add_argument('--node_num',default=100)
@@ -1838,7 +1839,12 @@ if __name__ == '__main__':
         if args.playertype2 == '0':
             d2 = copy.deepcopy(human_player)
         else:
-            d2 = copy.deepcopy(Players[b])
+            d2 = Player(9, True,
+                        policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(
+                            model_name=args.opponent_model_name,node_num=node_num),
+                        mulligan=Min_cost_mulligan_policy())\
+            if args.opponent_model_name is not None else copy.deepcopy(Players[b])
+            #d2 = copy.deepcopy(Players[b])
 
         make_mirror_match_table(d1,d2,n,deck_lists=deck_list,pairwise=args.pairwise is not None,
                                 out_put=args.output is not None)
