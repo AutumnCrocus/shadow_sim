@@ -313,7 +313,7 @@ class Action_Value_Net(nn.Module):
         self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
         self.emb2 = parent_net.emb1#nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
         #self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
-        self.lin1 = nn.Linear(mid_size+4, mid_size)#nn.Linear(7 * mid_size, mid_size)
+        self.lin1 = nn.Linear(5*mid_size+4, mid_size)#nn.Linear(7 * mid_size, mid_size)
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
         #self.lin3 = nn.Linear(36,mid_size)
@@ -324,6 +324,9 @@ class Action_Value_Net(nn.Module):
         self.action_catgory_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
         self.prelu_1 = nn.PReLU(init=0.01)
         self.prelu_2 = nn.PReLU(init=0.01)
+
+        self.prelu_3 = nn.PReLU(init=0.01)
+        self.prelu_4 = nn.PReLU(init=0.01)
 
 
     def forward(self, states, action_categories, play_card_ids, field_card_ids,values,label,target=False):
@@ -341,10 +344,10 @@ class Action_Value_Net(nn.Module):
         #embed_action_categories = torch.relu(embed_action_categories)
 
         embed_play_card_ids = self.emb2(play_card_ids)
-        #embed_play_card_ids = torch.relu(embed_play_card_ids)
+        embed_play_card_ids = self.prelu_3(embed_play_card_ids)
 
         embed_field_card_ids = self.emb2(field_card_ids).view(-1,45,3*self.mid_size)#self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
-        #embed_field_card_ids = torch.relu(embed_field_card_ids)
+        embed_field_card_ids = self.prelu_4(embed_field_card_ids)
 
         new_states = states#.unsqueeze(1)
 
@@ -362,7 +365,8 @@ class Action_Value_Net(nn.Module):
         #tmp = torch.cat([new_states,embed_action_categories, embed_play_card_ids,
         #                 embed_field_card_ids,new_values_data], dim=2)
 
-        tmp = torch.cat([new_states,embed_action_categories], dim=2)
+        tmp = torch.cat([new_states,embed_action_categories,embed_play_card_ids,embed_field_card_ids], dim=2)
+        #torch.cat([new_states,embed_action_categories], dim=2)
         #tmp = tmp * label
 
         #print("action_category:{}".format(embed_action_categories[0]))
