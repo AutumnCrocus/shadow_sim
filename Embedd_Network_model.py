@@ -184,108 +184,6 @@ class New_Dual_Net(nn.Module):
             return out_p, out_v, self.loss_fn(out_p, out_v, z, pai)
         else:
             return out_p, out_v
-        """
-        pp_datas = torch.sigmoid(self.pp_layer(values['pp_datas']))
-        #pp_datas = self.mish(self.lin2(values['pp_datas']))
-
-
-        #able_to_plays = torch.sum(self.emb6(values['able_to_play']),dim=1)
-        able_to_plays =self.emb6(values['able_to_play']).view(-1,9,self.n_mid)
-        able_to_plays = torch.sigmoid(able_to_plays)
-        hand_card_ids = self.emb1(hand_ids)
-        #hand_card_ids = torch.relu(hand_card_ids)
-        hand_card_costs = values['hand_card_costs'].unsqueeze(-1)
-        new_pp_datas = pp_datas.unsqueeze(1)
-        _, new_pp_datas = torch.broadcast_tensors(hand_card_ids, new_pp_datas)
-        tmp_x2 = torch.cat([new_pp_datas, hand_card_costs, hand_card_ids, able_to_plays], dim=2)
-        x2 = torch.sigmoid(self.hand_convert_layer(tmp_x2).view(-1,9*self.n_mid))
-        x2 = torch.sigmoid(self.hand_card_layer(x2))
-
-        able_to_evos = self.emb5(able_to_evo)
-        #able_to_evos = torch.relu(able_to_evos)
-        #stats = torch.tanh(self.lin3(values['follower_stats']))
-        stats = torch.sigmoid(self.follower_layer(values['follower_stats']))
-
-        abilities = self.emb4(follower_abilities).view(-1,10,3*self.n_mid//2)
-        #abilities = torch.relu(abilities)
-        #follower_ids = self.emb2(follower_card_ids)
-        follower_ids = self.emb1(follower_card_ids)
-        #follower_ids = torch.relu(follower_ids)
-        #x4 = torch.sum(self.emb3(amulet_card_ids),dim=1)
-        #x4 = torch.sum(self.emb1(amulet_card_ids), dim=1)
-        x4 = self.emb1(amulet_card_ids).view(-1,10*self.n_mid)
-        x4 = torch.sigmoid(x4)
-        x4 = torch.sigmoid(self.amulet_layer(x4))
-        #x4 = self.emb1(amulet_card_ids).view(-1,10*self.n_mid)
-        #x4 = torch.tanh(self.amulet_layer(x4))
-        tmp_x3 = torch.cat([stats, abilities, follower_ids, able_to_evos],dim=2)
-        x3 = torch.sigmoid(self.field_layer1(tmp_x3).view(-1,10*self.n_mid))
-        x3 = torch.sigmoid(self.field_layer2(x3))
-
-        x5 = torch.sigmoid(self.emb9(class_datas).view(-1, 2 * self.n_mid))
-        #x5 = self.emb9(class_datas).view(-1,2*self.n_mid)
-        deck_datas = states['deck_datas']
-        #x6 = torch.sum(self.emb1(deck_datas),dim=1)
-        x6 = self.emb1(deck_datas).view(-1,40*self.n_mid)
-        x6 = torch.sigmoid(self.deck_layer(x6))
-
-        x7 = torch.cat([x1,x2,x3,x4,x5,x6],dim=1)
-        x = torch.sigmoid(self.fc0(x7))
-        #if target:
-        #    print("initial")
-        #    print(x[0:10])
-        #x = self.fc0(x7)
-        #x = self.mish(self.fc0(x7))
-
-        #x = self.mish(self.fc1(x))
-        #x = F.relu(self.fc1(x))
-        #x = torch.tanh(self.fc1(x))
-        x = torch.sigmoid(self.fc1(x))
-        #print("x:{}".format(x[0:10]))
-        for i in range(self.layer_len):
-            x = self.layer[i](x)
-        #    #if target and (i==0 or i==18):
-        #    #    print("x{}:{}".format(i,x[0:10]))
-        #if target:
-        #    print("x7:",x7[0:3])
-        #    print("x",x[0:3])
-        action_categories = detailed_action_codes['action_categories']
-        play_card_ids = detailed_action_codes['play_card_ids']
-        field_card_ids = detailed_action_codes['field_card_ids']
-        able_to_choice = detailed_action_codes['able_to_choice']
-        #tmp = self.action_value_net(v_x, action_categories, play_card_ids, field_card_ids)
-        #x = x1
-        tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
-        h_p2 = tmp
-
-        out_p = self.filtered_softmax(h_p2, able_to_choice)
-
-        h_v1 = torch.sigmoid(self.fc3_v1(x))
-        #h_v1 = torch.sigmoid(self.bn_v1(self.fc3_v1(x)))
-        #h_v1 = self.mish(self.bn_v1(self.fc3_v1(x)))
-
-        h_v2 = torch.sigmoid(self.fc3_v2(h_v1))
-        #h_v2 = self.mish(self.fc3_v2(h_v1))
-
-
-        out_v = torch.tanh(self.fc3_v3(h_v2))
-        out_v = x_1
-        #print("out_v:",out_v)
-
-
-        if target:
-            #print("out_p:{}".format(out_p[0]))
-            #print("h_p2:{}".format(h_p2[0]))
-            z = states['target']['rewards']
-            pai = states['target']['actions']
-
-            #print("z:", z[0:3])
-            #print("v:{}".format(out_v[0:3]))
-
-            return out_p, out_v, self.loss_fn(out_p, out_v, z, pai)
-        else:
-            return out_p, out_v
-        """
 
 
 class Dual_ResNet(nn.Module):
@@ -304,6 +202,7 @@ class Dual_ResNet(nn.Module):
         #h1 = self.mish(self.fc1(x))
         #h2 = self.mish(self.fc2(h1) + x)
         return h2
+
 
 
 class Action_Value_Net(nn.Module):

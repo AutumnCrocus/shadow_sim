@@ -3726,10 +3726,6 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                         break
 
         else:
-            #mylogger.info("parent")
-            #node.field.players[player_num].show_hand()
-            #node.field.show_field()
-            #mylogger.info("able_actions:{} move:{}".format(node.children_moves,move))
             next_field.players[player_num].execute_action(next_field, next_field.players[1 - player_num],
                                                           action_code=move, virtual=True)
             flg = next_field.check_game_end()
@@ -5234,9 +5230,6 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
     def state_value(self, node, player_num):
         if node.state_value is not None:
             return node.state_value
-        #fixed_value  = super().state_value(node.field,player_num)
-        #node.state_value = fixed_value
-        #return fixed_value
 
         node_player_num = node.parent_node.player_num if node.parent_node is not None and node.player_num != node.parent_node.player_num\
                             else node.player_num
@@ -5254,12 +5247,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         out_value = (float(value[0]) + 1)/2
         if node_player_num != self.main_player_num:
             out_value = 1 - out_value
-        #print(node.depth,id(node),out_value)
         node.state_value = out_value
-        #value = float(value[0])*(2*int(self.main_player_num==node_player_num)-1)
-        #node.state_value = value
-        #mylogger.info("state_value:{:.3f} depth:{}".format(value,node.depth)) if node.depth < 2 else None
-        #assert len(node.child_nodes)==0,"{}".format(node.print_tree())
         node.pai = pai[0]
 
         return out_value
@@ -5337,26 +5325,22 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
     def execute_best(self, node, player_num=0):
         children = node.child_nodes
         action_uct_values = {}
-        action_uct_counts = {}
+        #action_uct_counts = {}
         action_2_node = {}
-
-
         for child in children:
-            #tmp_value = 0
-
             action = node.node_id_2_edge_action[id(child)]
             if action not in action_uct_values:
                 action_uct_values[action] = []
-                action_uct_counts[action] = []
+                #action_uct_counts[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
 
             tmp_value = child.value / max(1, child.visit_num) +\
                         np.sqrt(child.visit_num / max(1, node.visit_num) +1e-4)
             if action[0] == 0:
-                tmp_value /= 2
+                tmp_value = 0
             action_uct_values[action].append(tmp_value)
-            action_uct_counts[action].append(child.visit_num)
+            #action_uct_counts[action].append(child.visit_num)
             action_2_node[action].append(child)
         #mylogger.info("action_uct_values")
         #[mylogger.info("{}:{}".format(key,action_uct_values[key])) for key in list(action_uct_values.keys())]
@@ -5377,13 +5361,17 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         children = node.child_nodes
         action_uct_values = {}
         action_2_node = {}
+        more_than_one = len(node.edge_action_2_node_id) > 1
         for child in children:
             action = node.node_id_2_edge_action[id(child)]
             if action not in action_uct_values:
                 action_uct_values[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
-            value = self.uct(child, node, player_num=player_num)
+            if action == (0,0,0) and more_than_one:
+                value = -1
+            else:
+                value = self.uct(child, node, player_num=player_num)
             action_uct_values[action].append(value)
             action_2_node[action].append(child)
         max_value = None
@@ -5403,8 +5391,10 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
 
     def uct(self, child_node, node, player_num=0):
-        #Q(s,a) + C(s)P(a|s)(√N(s)/(1+N(s,a)))
-        #C(s) = log((1+N(s)+c_base)/c_base) + c_init
+        """
+        Q(s,a) + C(s)P(a|s)(√N(s)/(1+N(s,a)))
+        C(s) = log((1+N(s)+c_base)/c_base) + c_init
+        """
         over_all_n = node.visit_num #N(s)
         n = child_node.visit_num #N(s,a)
         w = child_node.value #Q(s,a)
