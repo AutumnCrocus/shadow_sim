@@ -42,6 +42,7 @@ parser.add_argument('--check', help='check score')
 parser.add_argument('--deck_list', help='deck_list',default="0,1,4,5,10,11")
 parser.add_argument('--model_name', help='model_name', default=None)
 parser.add_argument('--opponent_model_name', help='opponent_model_name', default=None)
+parser.add_argument('--th', help='threshold',default=1e-3)
 args = parser.parse_args()
 
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
@@ -412,6 +413,7 @@ def run_main():
     p_size = cpu_num
     print("use cpu num:{}".format(p_size))
     print("w_d:{}".format(weight_decay))
+    std_th = float(args.th)
 
     loss_history = []
 
@@ -828,7 +830,7 @@ def run_main():
         if len(loss_history) > epoch_interval-1:
             UB = np.std(loss_history[-epoch_interval:-1])/(np.sqrt(2*epoch) + 1)
             print("{:<2} std:{}".format(epoch,UB))
-            if UB < 1.0e-3:
+            if UB < std_th:
                 break
 
     writer.close()
