@@ -12,14 +12,14 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_7_1_15_49_51_all_cuda.pth
+      MODEL_NAME: Multi_Dual_2020_7_4_23_15_45_31%_cuda.pth
       O_MODEL_NAME: Multi_Dual_2020_6_22_18_25_10_all_cuda.pth
-      PLAYER_TYPE: 13
+      PLAYER_TYPE: 2
       MODE: mirror
       PLAYER1: 29
       N: 100
       DECK_ID: 5
-      DECK_LIST: "4,11"  
+      DECK_LIST: "0,1,4,5,10,11"  
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
