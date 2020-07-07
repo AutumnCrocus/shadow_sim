@@ -19,7 +19,7 @@ jobs:
       PLAYER1: 29
       N: 100
       DECK_ID: 5
-      DECK_LIST: "0,1"  
+      DECK_LIST: "4,5"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
