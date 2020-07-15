@@ -5146,6 +5146,10 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         self.policy_type = 3
         self.cuda = cuda
         self.iteration = 200
+        self.action_2_action_code_dict = {Action_Code.PLAY_CARD.value:1,
+                                          Action_Code.ATTACK_TO_FOLLOWER.value:10,
+                                          Action_Code.ATTACK_TO_PLAYER.value:35,
+                                          Action_Code.EVOLVE.value:40,0:0}
 
 
     def decide(self, player, opponent, field):
@@ -5168,7 +5172,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                             txt = "{:<40}".format(Action_Code.TURN_END.name)
 
                         elif action_code_id >= 1 and action_code_id <= 9:
-                            assert action_code_id-1 < len(sim_player.hand),"over_id!".format(sim_player.show_hand())
+                            assert action_code_id-1 < len(sim_player.hand),"over_id!:{},{}".format(action_code_id-1,sim_player.show_hand())
                             txt = "{},{}".format(Action_Code.PLAY_CARD.name, sim_player.hand[action_code_id-1].name)
 
                         elif action_code_id >= 10 and action_code_id <= 34:
@@ -5405,6 +5409,13 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         exploitation_value = (2*int( player_num == self.main_player_num)-1)*(w / (n + epsilon))
         action_code = node.node_id_2_edge_action[id(child_node)]#(action_category,play_id,target)
         action_id = Action_Code.TURN_END.value
+        if len(node.child_actions) > 1 and action_code[0] == 0:
+            return -1
+        action_id = action_code[1]+ self.action_2_action_code_dict[action_code[0]]
+        action_id = action_id + 4*action_code[1]+action_code[2] if action_code[0] == Action_Code.ATTACK_TO_FOLLOWER.value \
+            else action_id
+
+        """
         if action_code[0] == 0:
             if len(node.child_actions) > 1:
                 return -1
@@ -5416,6 +5427,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             action_id = 35 + action_code[1]
         elif action_code[0] == Action_Code.EVOLVE.value:
             action_id = 40 + action_code[1]
+        """
 
         probability = node.pai[action_id]
         exploration_value = c * probability * (np.sqrt(over_all_n) / (1 + n))

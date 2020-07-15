@@ -456,6 +456,8 @@ def run_main():
                                                              t1.second)
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
     th = 0.55
+    last_updated = 0
+    min_loss = 100
     for epoch in range(epoch_num):
         net.cpu()
         #net.class_eye.cpu()
@@ -763,7 +765,7 @@ def run_main():
         p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg)
                     ,mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
-        test_episode_len = 20 if deck_flg is None else 100 // p_size#2*episode_len
+        test_episode_len = 50 if deck_flg is None else 100 // p_size#2*episode_len
         
         #iter_data = [(p1, p2,test_episode_len//p_size,i) for i in range(p_size)]
         #freeze_support()
@@ -772,8 +774,8 @@ def run_main():
         #print("\n" * p_size)
         #pool.close()  # add this.
         #pool.terminate()  # add this.
-        
-        deck_pairs = ((d,d) for d in (0,1,4,10,13)) if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
+        constant_deck_list = (0,1,2,3,4,5,10,12,13)#(0,1,4,10,13)
+        deck_pairs = ((d,d) for d in constant_deck_list) if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
         iter_data = [(p1, p2, test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
         freeze_support()
         pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
@@ -784,7 +786,7 @@ def run_main():
         pool.close()  # add this.
         pool.terminate()  # add this.
         memory = list(memory)
-        match_num = 5 if deck_flg is None else p_size
+        match_num = len(constant_deck_list) if deck_flg is None else p_size
         if deck_flg is None:
             Battle_Result = {}
             for memory_cell in memory:
@@ -804,10 +806,10 @@ def run_main():
         #WR=1.0
         if WR < th:
             net = prev_net
-            th = max(0.5,th*0.95)
+            #th = max(0.5,th*0.95)
             print("new_model lose... WR:{:.1%}".format(WR))
         else:
-            th = 0.55
+            #th = 0.55
             win_flg = True
             print("new_model win! WR:{:.1%}".format(WR))
         #writer.add_scalar(LOG_PATH + 'WR', WR, epoch)
@@ -828,9 +830,18 @@ def run_main():
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
         if len(loss_history) > epoch_interval-1:
-            UB = np.std(loss_history[-epoch_interval:-1])/(np.sqrt(2*epoch) + 1)
+            #UB = np.std(loss_history[-epoch_interval:-1])/(np.sqrt(2*epoch) + 1)
+            UB = np.std(loss_history) / (np.sqrt(epoch) + 1)
             print("{:<2} std:{}".format(epoch,UB))
             if UB < std_th:
+                break
+        if min_loss > test_objective_loss:
+            last_updated = 0
+            min_loss = test_objective_loss
+        else:
+            last_updated += 1
+            if last_updated > 20:
+                print("update finished.")
                 break
 
     writer.close()

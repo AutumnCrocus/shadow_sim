@@ -34,6 +34,12 @@ class Game:
             # (win,lose,lib_num,turn,end_flg)=self.play_turn(f,1,win,lose,lib_num,turn,virtual_flg)
             if end_flg:
                 break
+        for player in f.players:
+            policy = player.policy
+            if policy.policy_type == 3:
+                policy.current_node = None
+                policy.prev_node = None
+
         if history_flg:
 
             #mylogger.info("state_value_histroy")
@@ -70,6 +76,11 @@ class Game:
                 break
             accumulate_turn += 1
             assert accumulate_turn < 100,"infinite loop"
+        for player in f.players:
+            policy = player.policy
+            if policy.policy_type == 3:
+                policy.current_node = None
+                policy.prev_node = None
         #reward = int(target_player_num == 0)*(2*win-1) + 1 - win
         reward = win if target_player_num == 0 else lose
         return train_datas, reward
@@ -100,6 +111,11 @@ class Game:
             accumulate_turn += 1
             assert accumulate_turn < 100,"infinite loop\n{}".format(f.get_observable_data(player_num=target_player_num))
             #print("accumulate_turn:{}".format(accumulate_turn))
+        for player in f.players:
+            policy = player.policy
+            if policy.policy_type == 3:
+                policy.current_node = None
+                policy.prev_node = None
         #reward = win if target_player_num == 0 else lose
         #reward = 2*reward - 1.0
         reward = [2*win-1,2*lose-1]
