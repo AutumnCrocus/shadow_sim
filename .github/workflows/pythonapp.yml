@@ -14,12 +14,12 @@ jobs:
     env:
       MODEL_NAME: Multi_Dual_2020_7_4_23_15_45_31%_cuda.pth
       O_MODEL_NAME: Multi_Dual_2020_6_22_18_25_10_all_cuda.pth
-      PLAYER_TYPE: 19
+      PLAYER_TYPE: 13
       MODE: mirror
       PLAYER1: 29
       N: 200
       DECK_ID: 5
-      DECK_LIST: "5,10,12"
+      DECK_LIST: "0,1,4"
       NODE_NUM: 100
     runs-on: ubuntu-latest
     steps:
