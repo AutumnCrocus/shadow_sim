@@ -60,7 +60,7 @@ class New_Dual_Net(nn.Module):
 
         self.small_layer = nn.Linear(n_mid,n_mid//10)
         self.big_layer = nn.Linear(n_mid//10, n_mid)
-        layer = [Dual_ResNet(n_mid//10, n_mid//10) for _ in range(0)]
+        layer = [Dual_ResNet(n_mid, n_mid) for _ in range(10)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
 
@@ -92,7 +92,6 @@ class New_Dual_Net(nn.Module):
         self.prelu_2 = nn.PReLU(init=0.01)
         self.prelu_3 = nn.PReLU(init=0.01)
         self.prelu_4 = nn.PReLU(init=0.01)
-
 
 
 
@@ -162,8 +161,8 @@ class New_Dual_Net(nn.Module):
         x = x1#follower_values
         #print(x.size())
         #x = torch.sigmoid(self.small_layer(x))
-        #for i in range(self.layer_len):
-        #    x = self.layer[i](x)
+        for i in range(self.layer_len):
+            x = self.layer[i](x)
         #x = torch.sigmoid(self.big_layer(x))
         tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
         h_p2 = tmp
@@ -191,14 +190,16 @@ class Dual_ResNet(nn.Module):
         super(Dual_ResNet, self).__init__()
         self.fc1 = nn.Linear(n_in, n_out)
         self.fc2 = nn.Linear(n_in, n_out)
+        self.prelu1 = nn.PReLU(init=0.01)
+        self.prelu2 = nn.PReLU(init=0.01)
         #self.mish = Mish()
 
     def forward(self, x):
 
-        return torch.sigmoid(self.fc1(x))
-        h1 = torch.sigmoid(self.fc1(x))
+        #return torch.sigmoid(self.fc1(x))
+        h1 = self.prelu1(self.fc1(x))
         #h2 = F.relu(self.fc2(h1))
-        h2 = torch.sigmoid(self.fc2(h1) + x)
+        h2 = self.prelu2(self.fc2(h1) + x)
         #h1 = self.mish(self.fc1(x))
         #h2 = self.mish(self.fc2(h1) + x)
         return h2
@@ -313,10 +314,10 @@ class Mish(nn.Module):
 
     def forward(self, x):
         tmp_x = x * torch.tanh(F.softplus(x))
-        if True in torch.isnan(tmp_x):
-            print(x)
-            print(tmp_x)
-            assert False
+        #if True in torch.isnan(tmp_x):
+        #    print(x)
+        #    print(tmp_x)
+        #    assert False
         return tmp_x
 
 class Dual_Loss(nn.Module):

@@ -765,7 +765,7 @@ def run_main():
         p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg)
                     ,mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
-        test_episode_len = 50 if deck_flg is None else 100 // p_size#2*episode_len
+        test_episode_len = int(200/p_size) if deck_flg is not None else 100 // p_size#2*episode_len
         
         #iter_data = [(p1, p2,test_episode_len//p_size,i) for i in range(p_size)]
         #freeze_support()
