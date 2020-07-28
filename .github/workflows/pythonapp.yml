@@ -19,7 +19,7 @@ jobs:
       PLAYER1: 29
       N: 400
       DECK_ID: 5
-      DECK_LIST: "10"
+      DECK_LIST: "12"
       NODE_NUM: 100
     runs-on: ubuntu-latest
     steps:
