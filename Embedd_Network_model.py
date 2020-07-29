@@ -109,6 +109,8 @@ class New_Dual_Net(nn.Module):
         play_card_ids = detailed_action_codes['play_card_ids']
         field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
+        action_choice_len = detailed_action_codes['action_choice_len']
+        #print(action_choice_len)
         class_datas = values['class_datas']
 
         #x1 = self.life_layer(values['life_datas'])
@@ -154,6 +156,7 @@ class New_Dual_Net(nn.Module):
         #print(hand_card_values.size(),follower_values.size())
 
         x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
+        #assert True not in torch.isnan(x1),"{},{}".format(x1,states)
 
         x1 = self.prelu_4(self.concat_layer(x1))
         #x1 = torch.sigmoid(self.concat_layer(x1))
@@ -166,6 +169,7 @@ class New_Dual_Net(nn.Module):
         #x = torch.sigmoid(self.big_layer(x))
         tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
         h_p2 = tmp
+        #assert True not in torch.isnan(h_p2), "{}".format(h_p2)
 
         out_p = self.filtered_softmax(h_p2, able_to_choice)
 
@@ -180,7 +184,7 @@ class New_Dual_Net(nn.Module):
             #print("z:", z[0:3])
             #print("v:{}".format(out_v[0:3]))
 
-            return out_p, out_v, self.loss_fn(out_p, out_v, z, pai)
+            return out_p, out_v, self.loss_fn(out_p, out_v, z, pai,action_choice_len)
         else:
             return out_p, out_v
 
@@ -325,7 +329,7 @@ class Dual_Loss(nn.Module):
     def __init__(self):
         super(Dual_Loss, self).__init__()
 
-    def forward(self, p, v, z, pai):
+    def forward(self, p, v, z, pai,action_choice_len):
         #l = (z − v)^2 − πlog p + c||θ||2
         #paiはスカラー値
         #print("p:{}".format(p[0:10]))
@@ -342,7 +346,10 @@ class Dual_Loss(nn.Module):
         #print("mean:",MSE)
 
         tmp_CEE = p[range(p.size()[0]),pai]+1.0e-8
-        CEE = torch.mean(-torch.log(tmp_CEE))
+        choice_len_term = 1/torch.sqrt(action_choice_len)
+        #print(choice_len_term)
+        CEE = -torch.log(tmp_CEE)*choice_len_term
+        CEE = torch.mean(CEE)
         #pai = pai.t()[0]
         #CEE = self.cross_entropy(p,pai)#softmaxも含まれている
         loss = MSE + CEE
@@ -578,11 +585,13 @@ def Detailed_action_code_2_Tensor(action_codes, cuda = False):
     tensor_field_card_ids_in_action = torch.LongTensor(
         [[action_codes[i]['action_codes'][j][2:5] for j in range(45)] for i in range(action_code_len)])
     able_to_choice = torch.Tensor([action_codes[i]['able_to_choice'] for i in range(action_code_len)])
-
+    action_choice_len = torch.Tensor([[int(sum(action_codes[i]['able_to_choice']))] for i in range(action_code_len)])
+    assert 0 not in action_choice_len,"{}".format(action_choice_len)
     action_codes_dict = {'action_categories': tensor_action_categories,
                          'play_card_ids': tensor_play_card_ids_in_action,
                          'field_card_ids': tensor_field_card_ids_in_action,
-                         'able_to_choice': able_to_choice}
+                         'able_to_choice': able_to_choice,
+                         'action_choice_len':action_choice_len}
     if cuda:
         for key in list(action_codes_dict.keys()):
             action_codes_dict[key] = action_codes_dict[key].cuda()

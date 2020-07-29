@@ -455,9 +455,10 @@ def run_main():
     LOG_PATH = "log_{}_{}_{}_{}_{}_{}/".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                              t1.second)
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
-    th = 0.55
+    th = 0.53
     last_updated = 0
     min_loss = 100
+    double_p_size = 2*p_size
     for epoch in range(epoch_num):
         net.cpu()
         #net.class_eye.cpu()
@@ -486,16 +487,17 @@ def run_main():
         #memories = multi(episode_len,p1,p2)
         #iter_data = [(i, p1, p2) for i in range(episode_len)]
         #p_size = 5 if epoch < 5 else cpu_num
-        iter_data = [(p1, p2,episode_len//p_size,i) for i in range(p_size)]
+        single_iter = episode_len//double_p_size
+        iter_data = [(p1, p2,single_iter,i) for i in range(double_p_size)]
         freeze_support()
         pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_preparation, iter_data)
-        print("\n" * (p_size+1))
+        print("\n" * (double_p_size+1))
         pool.close()  # add this.
         pool.terminate()  # add this.
         battle_data = [cell.pop(-1) for cell in memory]
         memories = []
-        [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(p_size)]
+        [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(double_p_size)]
 
         sum_of_choice = sum([cell["sum_of_choices"] for cell in battle_data])
         sum_of_code = sum([cell["sum_code"] for cell in battle_data])
@@ -595,6 +597,7 @@ def run_main():
             #batch_id_list = list(range(memory_len))
             #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
             train_num = iteration*len(train_ids)
+            current_net = copy.deepcopy(net)
             for i in tqdm(range(train_num)):
                 #data = R.sample(batch, cuda=cuda_flg)
                 #states, actions, rewards = data
@@ -625,19 +628,14 @@ def run_main():
                 net.zero_grad()
                 optimizer.zero_grad()
                 p, v, loss = net(states, target=True)
-                loss[0].backward()
-                #print(net.life_layer.weight.grad)
-                #print(loss[0].grad)
-                #loss[1].backward()
-                #loss[2].backward()
-                optimizer.step()
-                #sum_of_loss += float(loss[0].item())
-                #sum_of_MSE += float(loss[1].item())
-                #sum_of_CEE += float(loss[2].item())
-
-                #if i % 50 == 49:
-                #    print(v)
-                #    print(rewards)
+                if True not in torch.isnan(loss[0]):
+                    loss[0].backward()
+                    optimizer.step()
+                    current_net = copy.deepcopy(net)
+                else:
+                    print("nan is found!")
+                    net = copy.deepcopy(current_net)
+                    optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
             train_ids_len = len(train_ids)
             separate_num = train_ids_len//100
             train_objective_loss = 0
@@ -765,7 +763,8 @@ def run_main():
         p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg)
                     ,mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
-        test_episode_len = int(200/p_size) if deck_flg is not None else 100 // p_size#2*episode_len
+        constant_deck_list = (0, 1, 2, 4, 5, 10, 12)  # (0,1,4,10,13)
+        test_episode_len = int(200/p_size) if deck_flg is not None else 40#2*episode_len
         
         #iter_data = [(p1, p2,test_episode_len//p_size,i) for i in range(p_size)]
         #freeze_support()
@@ -774,7 +773,7 @@ def run_main():
         #print("\n" * p_size)
         #pool.close()  # add this.
         #pool.terminate()  # add this.
-        constant_deck_list = (0,1,2,3,4,5,10,12,13)#(0,1,4,10,13)
+
         deck_pairs = ((d,d) for d in constant_deck_list) if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
         iter_data = [(p1, p2, test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
         freeze_support()
@@ -787,10 +786,12 @@ def run_main():
         pool.terminate()  # add this.
         memory = list(memory)
         match_num = len(constant_deck_list) if deck_flg is None else p_size
+        min_WR=1.0
         if deck_flg is None:
             Battle_Result = {}
             for memory_cell in memory:
                 Battle_Result[memory_cell[0]] = memory_cell[1]
+                min_WR = min(min_WR,memory_cell[1])
             print(Battle_Result)
             WR = sum(Battle_Result.values())/match_num
         else:
@@ -804,14 +805,17 @@ def run_main():
 
         win_flg = False
         #WR=1.0
-        if WR < th:
+        writer.add_scalars(LOG_PATH + 'win_rate', {'mean': WR,
+                                              'min': min_WR
+                                              }, epoch)
+        if WR < th and min_WR < 0.5:
             net = prev_net
             #th = max(0.5,th*0.95)
             print("new_model lose... WR:{:.1%}".format(WR))
         else:
             #th = 0.55
             win_flg = True
-            print("new_model win! WR:{:.1%}".format(WR))
+            print("new_model win! WR:{:.1%} min:{:.1%}".format(WR,min_WR))
         #writer.add_scalar(LOG_PATH + 'WR', WR, epoch)
 
 
