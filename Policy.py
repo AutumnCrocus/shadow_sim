@@ -5150,12 +5150,12 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                                           Action_Code.ATTACK_TO_FOLLOWER.value:10,
                                           Action_Code.ATTACK_TO_PLAYER.value:35,
                                           Action_Code.EVOLVE.value:40,0:0}
+        self.origin_field_data = None
 
 
     def decide(self, player, opponent, field):
-
+        self.origin_field_data = field.before_observable_fields
         action = super().decide(player,opponent, field)
-
         if not field.secret and self.prev_node is not None:
             pai = self.prev_node.pai
             sim_field = self.prev_node.field
@@ -5244,9 +5244,13 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             return int(player.life > 0 and not player.lib_out_flg)#return 2*int(player.life > 0 and not player.lib_out_flg) - 1
 
         states = self.get_data(field, player_num=node_player_num)
+        before_states = self.origin_field_data[node_player_num]
+        before_states = [before_states]
+        before_states = self.state_convertor(before_states)
 
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])])
+        states['before_states'] = before_states
         pai, value = self.net(states)
         out_value = (float(value[0]) + 1)/2
         if node_player_num != self.main_player_num:

@@ -51,6 +51,7 @@ class Field:
         self.state_value_history = []
         self.start_count = 0
         self.copy_func = lambda card:card.get_copy()
+        self.before_observable_fields = [None,None]
 
 
     def eq(self, other):
@@ -1277,6 +1278,9 @@ class Field:
         return regal_targets
 
     def play_turn(self, turn_player_num, win, lose, lib_num, turn, virtual_flg):
+        if self.current_turn == [0,0]:
+            self.before_observable_fields = [get_data(self,player_num=0),
+                                             get_data(self,player_num=1)]
         non_turn_player_num = 1 - turn_player_num
         while True:
             can_play = True
@@ -1378,7 +1382,7 @@ class Field:
             state_value = self.state_value(non_turn_player_num)
             self.state_value_history.append(state_value)
 
-
+        self.before_observable_fields[turn_player_num] = get_data(self, player_num=turn_player_num)
         return win, lose, lib_num, turn, self.check_game_end()
 
     def play_turn_for_train(self, turn_player_num):
@@ -1470,12 +1474,16 @@ class Field:
 
 
     def play_turn_for_dual(self, turn_player_num):
+        if self.current_turn == [0,0]:
+            self.before_observable_fields = [get_data(self,player_num=0),
+                                             get_data(self,player_num=1)]
         win, lose, lib_num, turn = 0, 0, 0, 0
         train_datas = []
         count = 0
         player = self.players[turn_player_num]
         opponent = self.players[1-turn_player_num]
         non_turn_player_num = 1 - turn_player_num
+        before_state = self.before_observable_fields[turn_player_num]
         while True:
             self.untap(turn_player_num)
             self.increment_cost(turn_player_num)
@@ -1514,7 +1522,6 @@ class Field:
                 state = get_data(self, player_num=turn_player_num)
                 detailed_action_code = self.get_detailed_action_code(player)
                 end_flg, single_action = player.decide(player, opponent, self, virtual=True, dual=True)
-                next_state = get_data(self, player_num=turn_player_num)
                 action_code = 0
                 if single_action[0] == Action_Code.TURN_END.value:
                     action_code = 0
@@ -1533,7 +1540,7 @@ class Field:
                     single_action,action_code,detailed_action_code['able_to_choice'],
                     self.get_observable_data(player_num=player.player_num),player.show_hand(),self.show_field())
 
-                train_datas.append((state, action_code, next_state,detailed_action_code)) #\
+                train_datas.append((state, action_code, before_state, detailed_action_code)) #\
                     #if sum(detailed_action_code['able_to_choice']) > 1 else None
                 if end_flg:
                     break
@@ -1572,7 +1579,7 @@ class Field:
                 self.ex_turn_count[turn_player_num] -= 1
             else:
                 break
-
+        self.before_observable_fields[turn_player_num] = get_data(self,player_num=turn_player_num)
         return win, lose, self.check_game_end(), train_datas
 
     

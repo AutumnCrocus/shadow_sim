@@ -16,7 +16,7 @@ import torch.optim as optim
 #from pytorch_memlab import profile
 import argparse
 # Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
-Dual_State_value = namedtuple('Value', ('state', 'action', 'next_state', 'detailed_action_code','reward'))
+Dual_State_value = namedtuple('Value', ('state', 'action', 'before_state', 'detailed_action_code','reward'))
 Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
                                          'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
                                          'life_data', 'pp_data','able_to_play','able_to_attack', 'able_to_creature_attack',
@@ -29,38 +29,43 @@ Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follo
 class New_Dual_Net(nn.Module):
     def __init__(self,n_mid):
         super(New_Dual_Net, self).__init__()
-        self.life_layer = nn.Linear(5,n_mid)#お互いの体力、手札枚数、経過ターン
-        self.pp_layer = nn.Linear(2, n_mid)#最大PP,残りPP
+        self.state_net =Dual_State_Net(n_mid)
+        #self.life_layer = nn.Linear(5,n_mid)#お互いの体力、手札枚数、経過ターン
+        #self.pp_layer = nn.Linear(2, n_mid)#最大PP,残りPP
+
         #self.lin3 = nn.Linear(9, n_mid)#最大手札枚数
         #self.lin3 = nn.Linear(2,n_mid)#フォロワーの攻撃力,体力
-        self.follower_layer = nn.Linear(5,n_mid)#フォロワーの攻撃力,体力,フォロワーであるか,フォロワーに攻撃可能、プレイヤーに攻撃可能
-        self.hand_convert_layer = nn.Linear(3 * n_mid + 1, n_mid)#手札連結
+        #self.follower_layer = nn.Linear(5,n_mid)#フォロワーの攻撃力,体力,フォロワーであるか,フォロワーに攻撃可能、プレイヤーに攻撃可能
+        #self.hand_convert_layer = nn.Linear(3 * n_mid + 1, n_mid)#手札連結
         #self.lin5 = nn.Linear(6 * n_mid, n_mid)#自分の場のフォロワー連結
         #self.lin6 = nn.Linear(4 * n_mid, n_mid)  # 相手の場のフォロワー連結
-        self.field_layer1 = nn.Linear(9 * n_mid//2, n_mid)
-        self.field_layer2 = nn.Linear(10*n_mid,n_mid)
-        self.deck_layer = nn.Linear(40*n_mid,n_mid)
-        self.hand_card_layer = nn.Linear(9*n_mid,n_mid)
-        self.amulet_layer = nn.Linear(10*n_mid,n_mid)
-        self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
-        #self.emb2 = self.emb1
-        self.emb2 = nn.Embedding(1000, n_mid, padding_idx=0)  # フォロワー1000枚（空白含む）
-        #self.emb3 = self.emb1
-        self.emb3 = nn.Embedding(1000, n_mid, padding_idx=0)  # アミュレット1000枚（空白含む）
-        #self.emb4 = nn.Embedding(16, n_mid, padding_idx=0)  # キーワード能力15個と空白
-        self.emb4 = nn.Embedding(16, n_mid//10, padding_idx=0)
-        self.emb5 = nn.Embedding(6, n_mid, padding_idx=0)  # 進化可能最大五体と空白
-        self.emb6 = nn.Embedding(10, n_mid, padding_idx=0)  # 手札最大9枚の位置と空白
-        self.emb7 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
-        self.emb8 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
-        self.emb9 = nn.Embedding(9, n_mid, padding_idx=0)#両プレイヤーのリーダークラス
-        #self.fc0 = nn.Linear(6*n_mid,n_mid)
-        self.fc0 = nn.Linear(7*n_mid, n_mid)
-        self.fc1 = nn.Linear(n_mid, n_mid)
 
-        self.small_layer = nn.Linear(n_mid,n_mid//10)
-        self.big_layer = nn.Linear(n_mid//10, n_mid)
-        layer = [Dual_ResNet(n_mid, n_mid) for _ in range(10)]
+        #self.field_layer1 = nn.Linear(9 * n_mid//2, n_mid)
+        #self.field_layer2 = nn.Linear(10*n_mid,n_mid)
+
+        #self.deck_layer = nn.Linear(40*n_mid,n_mid)
+        #self.hand_card_layer = nn.Linear(9*n_mid,n_mid)
+        #self.amulet_layer = nn.Linear(10*n_mid,n_mid)
+        self.emb1 = self.state_net.emb1#nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
+        #self.emb2 = self.emb1
+        #self.emb2 = nn.Embedding(1000, n_mid, padding_idx=0)  # フォロワー1000枚（空白含む）
+
+        #self.emb3 = self.emb1
+        #self.emb3 = nn.Embedding(1000, n_mid, padding_idx=0)  # アミュレット1000枚（空白含む）
+        #self.emb4 = nn.Embedding(16, n_mid, padding_idx=0)  # キーワード能力15個と空白
+        #self.emb4 = nn.Embedding(16, n_mid//10, padding_idx=0)
+        #self.emb5 = nn.Embedding(6, n_mid, padding_idx=0)  # 進化可能最大五体と空白
+        #self.emb6 = nn.Embedding(10, n_mid, padding_idx=0)  # 手札最大9枚の位置と空白
+        #self.emb7 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
+        #self.emb8 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
+        #self.emb9 = nn.Embedding(9, n_mid, padding_idx=0)#両プレイヤーのリーダークラス
+        #self.fc0 = nn.Linear(6*n_mid,n_mid)
+        #self.fc0 = nn.Linear(7*n_mid, n_mid)
+        #self.fc1 = nn.Linear(n_mid, n_mid)
+
+        #self.small_layer = nn.Linear(n_mid,n_mid//10)
+        #self.big_layer = nn.Linear(n_mid//10, n_mid)
+        layer = [Dual_ResNet(2*n_mid, 2*n_mid) for _ in range(10)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
 
@@ -70,28 +75,30 @@ class New_Dual_Net(nn.Module):
         #self.fc3_p2 = nn.Linear(25, 25)
         self.action_value_net = Action_Value_Net(self,mid_size=n_mid)
 
-        self.fc3_v1 = nn.Linear(n_mid, 5)
-        self.bn_v1 = nn.BatchNorm1d(5)
-        self.fc3_v2 = nn.Linear(5, 2)
-        self.fc3_v3 = nn.Linear(2, 1)
+        #self.fc3_v1 = nn.Linear(n_mid, 5)
+        #self.bn_v1 = nn.BatchNorm1d(5)
+        #self.fc3_v2 = nn.Linear(5, 2)
+        #self.fc3_v3 = nn.Linear(2, 1)
 
         self.loss_fn = Dual_Loss()
         self.filtered_softmax = filtered_softmax()
         self.n_mid = n_mid
         self.mish = Mish()
-        self.direct_layer = nn.Linear(n_mid, n_mid)
+        #self.direct_layer = nn.Linear(n_mid, n_mid)
         self.final_layer = nn.Linear(n_mid,1)
-        self.value_layer = nn.Linear(5+15,1)
-        self.concat_layer = nn.Linear(n_mid+26+1,n_mid)
-        self.hand_value_layer = nn.Linear(n_mid,1)
-        self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
+        #self.value_layer = nn.Linear(5+15,1)
+        #self.concat_layer = nn.Linear(n_mid+26+1,n_mid)
+        #self.hand_value_layer = nn.Linear(n_mid,1)
+        #self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
 
-        self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
+        #self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
 
-        self.prelu_1 = nn.PReLU(init=0.01)
-        self.prelu_2 = nn.PReLU(init=0.01)
-        self.prelu_3 = nn.PReLU(init=0.01)
-        self.prelu_4 = nn.PReLU(init=0.01)
+        #self.prelu_1 = nn.PReLU(init=0.01)
+        #self.prelu_2 = nn.PReLU(init=0.01)
+        #self.prelu_3 = nn.PReLU(init=0.01)
+        #self.prelu_4 = nn.PReLU(init=0.01)
+        self.prelu = nn.PReLU(init=0.01)
+        self.integrate_layer = nn.Linear(2*n_mid,n_mid)
 
 
 
@@ -99,73 +106,47 @@ class New_Dual_Net(nn.Module):
     def forward(self, states,target=False):
 
         values = states['values']
+        """
         hand_ids = states['hand_ids']
         follower_card_ids = states['follower_card_ids']
         amulet_card_ids = states['amulet_card_ids']
         follower_abilities = states['follower_abilities']
         able_to_evo = states['able_to_evo']
+        """
         detailed_action_codes = states['detailed_action_codes']
         action_categories = detailed_action_codes['action_categories']
         play_card_ids = detailed_action_codes['play_card_ids']
         field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
         action_choice_len = detailed_action_codes['action_choice_len']
-        #print(action_choice_len)
+        """
         class_datas = values['class_datas']
-
-        #x1 = self.life_layer(values['life_datas'])
-        #x_1 = torch.tanh(self.direct_layer(values['life_datas']))
-        #x1 = torch.sigmoid(x1)
-        #x_1 = torch.tanh(x1)
-
-        stats = values['follower_stats']#torch.sigmoid(self.follower_layer(values['follower_stats']))
-        #(-1,10,5)→(-1,10,n_mid)
-
-        #print(stats.size())
+        stats = values['follower_stats']
         class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
-        #print("x3_size:",class_values.size())
         x4 = self.ability_eye[follower_abilities]
         x4 = torch.sum(x4,dim=2)
-        #print(follower_abilities.size())
-        #print(follower_abilities[0])
-        #print("x4_size:{}".format(x4.size()))
-        #print("x4:",x4[0])
-        abilities = x4.to(stats.device)#.cuda() if stats.device=='cuda:0' else x4#self.emb4(follower_abilities).view(-1,10,15)#,3*self.n_mid//2)
-        #print(abilities.size())
-        #print(stats.device,abilities.device)
-        x1 = torch.cat([stats, abilities],dim=2)#(-1,10,20)
-        #print(x1[0])
-        #stats_values = torch.split(x1,[1]*10,1)
-
+        abilities = x4.to(stats.device)
+        x1 = torch.cat([stats, abilities],dim=2)
         x1 = self.prelu_1(self.value_layer(x1))
-        #x1 = torch.sigmoid(self.value_layer(x1))
 
-        #print(follower_card_ids[0])
         exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
         x1 = x1 * exist_filter
         follower_values=x1.view(-1,10)
-        #x1 = torch.sigmoid(self.value_layer(x1)).view(-1,self.n_mid)
-
         life_values = self.prelu_2(self.life_layer(values['life_datas']))
-        #life_values = torch.sigmoid(self.life_layer(values['life_datas']))
-
         hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
-        #hand_ids = torch.sigmoid(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
-
         hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
-        #print(hand_card_values.size(),follower_values.size())
-
         x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
-        #assert True not in torch.isnan(x1),"{},{}".format(x1,states)
 
         x1 = self.prelu_4(self.concat_layer(x1))
-        #x1 = torch.sigmoid(self.concat_layer(x1))
 
         x = x1#follower_values
-        #print(x.size())
-        #x = torch.sigmoid(self.small_layer(x))
+        """
+        x1 = self.state_net(states)
+        x2 = self.state_net(states["before_states"])
+        x = torch.cat([x1,x2],dim=1)#self.prelu(self.integrate_layer(torch.cat([x1,x2],dim=1)))
         for i in range(self.layer_len):
             x = self.layer[i](x)
+        x=self.prelu(self.integrate_layer(x))
         #x = torch.sigmoid(self.big_layer(x))
         tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
         h_p2 = tmp
@@ -188,6 +169,50 @@ class New_Dual_Net(nn.Module):
         else:
             return out_p, out_v
 
+class Dual_State_Net(nn.Module):
+    def __init__(self, n_mid):
+        super(Dual_State_Net, self).__init__()
+        self.value_layer = nn.Linear(5+15,1)
+        self.life_layer = nn.Linear(5, n_mid)
+        self.hand_value_layer = nn.Linear(n_mid,1)
+        self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)
+        self.concat_layer = nn.Linear(n_mid+26+1,n_mid)
+        self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
+
+        self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
+
+        self.prelu_1 = nn.PReLU(init=0.01)
+        self.prelu_2 = nn.PReLU(init=0.01)
+        self.prelu_3 = nn.PReLU(init=0.01)
+        self.prelu_4 = nn.PReLU(init=0.01)
+
+    def forward(self, states):
+        values = states['values']
+        hand_ids = states['hand_ids']
+        follower_card_ids = states['follower_card_ids']
+        amulet_card_ids = states['amulet_card_ids']
+        follower_abilities = states['follower_abilities']
+        class_datas = values['class_datas']
+        stats = values['follower_stats']
+        class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
+        x4 = self.ability_eye[follower_abilities]
+        x4 = torch.sum(x4,dim=2)
+        abilities = x4.to(stats.device)
+        x1 = torch.cat([stats, abilities],dim=2)
+        x1 = self.prelu_1(self.value_layer(x1))
+
+        exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
+        x1 = x1 * exist_filter
+        follower_values=x1.view(-1,10)
+        life_values = self.prelu_2(self.life_layer(values['life_datas']))
+        hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
+        hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
+        x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
+
+        x1 = self.prelu_4(self.concat_layer(x1))
+
+
+        return x1
 
 class Dual_ResNet(nn.Module):
     def __init__(self, n_in, n_out):
@@ -364,10 +389,10 @@ class New_Dual_ReplayMemory:
         self.memory = []
         self.index = 0
 
-    def push(self, state, action, next_state, detailed_action_code, reward):
+    def push(self, state, action, before_state, detailed_action_code, reward):
         if len(self.memory) < self.capacity:
             self.memory.append(None) #メモリが満タンじゃないときには追加
-        self.memory[self.index] = Dual_State_value(state, action, next_state, detailed_action_code, reward)
+        self.memory[self.index] = Dual_State_value(state, action, before_state, detailed_action_code, reward)
         self.index = (self.index + 1) % self.capacity
 
     def sample(self, batch_size,all=False,cuda=False):
@@ -378,6 +403,8 @@ class New_Dual_ReplayMemory:
             tmp = random.sample(self.memory, batch_size)
         states = [cell.state for cell in tmp]
         states = Detailed_State_data_2_Tensor(states,cuda=cuda)
+        before_states = [cell.before_state for cell in tmp]
+        before_states = Detailed_State_data_2_Tensor(before_states,cuda=cuda)
         actions = [cell.action for cell in tmp]
         actions = torch.LongTensor(actions)#torch.stack(actions, dim=0)
         rewards = [[cell.reward] for cell in tmp]
@@ -385,6 +412,7 @@ class New_Dual_ReplayMemory:
         detailed_action_codes = [cell.detailed_action_code for cell in tmp]
         detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes,cuda=cuda)
         states['detailed_action_codes'] = detailed_action_codes
+        states['before_states'] = before_states
         if cuda:
             actions = actions.cuda()
             rewards = rewards.cuda()

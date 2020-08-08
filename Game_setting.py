@@ -96,7 +96,7 @@ class Game:
         #reward = 0.0
         accumulate_turn = 0
         while True:
-            (win, lose, end_flg, train_data) = f.play_turn_for_dual(0,)
+            (win, lose, end_flg, train_data) = f.play_turn_for_dual(0)
             train_datas[0].extend(train_data)
             #if target_player_num == 0:
             #    train_datas.extend(train_data)

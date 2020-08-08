@@ -499,8 +499,8 @@ def run_main():
         memories = []
         [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(double_p_size)]
 
-        sum_of_choice = sum([cell["sum_of_choices"] for cell in battle_data])
-        sum_of_code = sum([cell["sum_code"] for cell in battle_data])
+        sum_of_choice = max(sum([cell["sum_of_choices"] for cell in battle_data]),1)
+        sum_of_code = max(sum([cell["sum_code"] for cell in battle_data]),1)
         win_num = sum([cell["win_num"] for cell in battle_data])
         sum_end_turn = sum([cell["end_turn"] for cell in battle_data])
         memories = list(itertools.chain.from_iterable(memory))
@@ -598,6 +598,7 @@ def run_main():
             #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
             train_num = iteration*len(train_ids)
             current_net = copy.deepcopy(net)
+            first_flg = False
             for i in tqdm(range(train_num)):
                 #data = R.sample(batch, cuda=cuda_flg)
                 #states, actions, rewards = data
@@ -617,6 +618,21 @@ def run_main():
                             states['detailed_action_codes'][sub_key] = \
                                 torch.clone(all_states['detailed_action_codes'][sub_key][key])
                             #states['detailed_action_codes'][sub_key].grad=None
+                    elif dict_key == 'before_states':
+                        orig_before_states = all_states["before_states"]
+                        before_states = {}
+                        for dict_key in states_keys:
+                            if dict_key == 'values':
+                                before_states['values'] = {}
+                                for sub_key in value_keys:
+                                    before_states['values'][sub_key] = \
+                                        torch.clone(orig_before_states['values'][sub_key][key])
+                                    # states['values'][sub_key].grad=None
+                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
+                                pass
+                            else:
+                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
+                        states["before_states"] = before_states
                     else:
                         states[dict_key] = torch.clone(all_states[dict_key][key])
                         #states[dict_key].grad=None
@@ -633,16 +649,18 @@ def run_main():
                     optimizer.step()
                     current_net = copy.deepcopy(net)
                 else:
-                    print("nan is found!")
+                    if not first_flg:
+                        print("nan is found!")
+                        first_flg = True
                     net = copy.deepcopy(current_net)
                     optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
             train_ids_len = len(train_ids)
-            separate_num = train_ids_len//100
+            separate_num = train_ids_len//10
             train_objective_loss = 0
             train_MSE = 0
             train_CEE = 0
             for i in tqdm(range(separate_num)):
-                key = train_ids[i*100:min(train_ids_len,(i+1)*100)] # [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
+                key = train_ids[i*10:min(train_ids_len,(i+1)*10)] # [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
                 states = {}
                 for dict_key in states_keys:
                     if dict_key == 'values':
@@ -654,6 +672,21 @@ def run_main():
                         for sub_key in action_code_keys:
                             states['detailed_action_codes'][sub_key] = \
                                 all_states['detailed_action_codes'][sub_key][key]
+                    elif dict_key == 'before_states':
+                        orig_before_states = all_states["before_states"]
+                        before_states = {}
+                        for dict_key in states_keys:
+                            if dict_key == 'values':
+                                before_states['values'] = {}
+                                for sub_key in value_keys:
+                                    before_states['values'][sub_key] = \
+                                        torch.clone(orig_before_states['values'][sub_key][key])
+                                    # states['values'][sub_key].grad=None
+                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
+                                pass
+                            else:
+                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
+                        states["before_states"] = before_states
                     else:
                         states[dict_key] = all_states[dict_key][key]
 
@@ -663,6 +696,9 @@ def run_main():
                 del loss
                 torch.cuda.empty_cache()
                 _, _, loss = net(states, target=True)
+                if True in torch.isnan(loss[0]):
+                    separate_num -= 1
+                    continue
                 train_objective_loss += float(loss[0].item())
                 train_MSE += float(loss[1].item())
                 train_CEE += float(loss[2].item())
@@ -692,6 +728,21 @@ def run_main():
                         for sub_key in action_code_keys:
                             states['detailed_action_codes'][sub_key] = \
                                 all_states['detailed_action_codes'][sub_key][key]
+                    elif dict_key == 'before_states':
+                        orig_before_states = all_states["before_states"]
+                        before_states = {}
+                        for dict_key in states_keys:
+                            if dict_key == 'values':
+                                before_states['values'] = {}
+                                for sub_key in value_keys:
+                                    before_states['values'][sub_key] = \
+                                        torch.clone(orig_before_states['values'][sub_key][key])
+                                    # states['values'][sub_key].grad=None
+                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
+                                pass
+                            else:
+                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
+                        states["before_states"] = before_states
                     else:
                         states[dict_key] = all_states[dict_key][key]
 
@@ -701,7 +752,8 @@ def run_main():
                 del loss
                 torch.cuda.empty_cache()
                 p, v, loss = net(states, target=True)
-
+                if True in torch.isnan(loss[0]):
+                    continue
                 test_objective_loss += float(loss[0].item())
                 test_MSE += float(loss[1].item())
                 test_CEE += float(loss[2].item())
@@ -825,12 +877,12 @@ def run_main():
 
         t4 = datetime.datetime.now()
         print(t4-t3)
-        if epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num:
-            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{:.0%}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                                 t1.second, (epoch+1)/epoch_num,node_num)
+        if win_flg or (epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num):
+            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}|{}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+                                                                 t1.second, epoch+1,epoch_num,node_num)
             if torch.cuda.is_available() and cuda_flg:
-                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{:.0%}_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                                        t1.second, (epoch + 1) / epoch_num)
+                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}|{}_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+                                                                        t1.second, epoch + 1 , epoch_num)
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
         if len(loss_history) > epoch_interval-1:
