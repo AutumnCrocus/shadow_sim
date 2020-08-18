@@ -702,6 +702,7 @@ def run_main():
                 train_objective_loss += float(loss[0].item())
                 train_MSE += float(loss[1].item())
                 train_CEE += float(loss[2].item())
+            separate_num = max(1,separate_num)
             #writer.add_scalar(LOG_PATH + "WIN_RATE", win_num / episode_len, epoch)
             print(train_MSE,separate_num)
             train_objective_loss /= separate_num

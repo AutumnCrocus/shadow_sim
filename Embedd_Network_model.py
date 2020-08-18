@@ -172,9 +172,10 @@ class New_Dual_Net(nn.Module):
 class Dual_State_Net(nn.Module):
     def __init__(self, n_mid):
         super(Dual_State_Net, self).__init__()
-        self.value_layer = nn.Linear(5+15,1)
+        self.value_layer = nn.Linear(5+15+1,1)
         self.life_layer = nn.Linear(5, n_mid)
         self.hand_value_layer = nn.Linear(n_mid,1)
+        self.field_value_layer = nn.Linear(n_mid, 1)
         self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)
         self.concat_layer = nn.Linear(n_mid+26+1,n_mid)
         self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
@@ -185,6 +186,7 @@ class Dual_State_Net(nn.Module):
         self.prelu_2 = nn.PReLU(init=0.01)
         self.prelu_3 = nn.PReLU(init=0.01)
         self.prelu_4 = nn.PReLU(init=0.01)
+        self.prelu_5 = nn.PReLU(init=0.01)
 
     def forward(self, states):
         values = states['values']
@@ -198,7 +200,9 @@ class Dual_State_Net(nn.Module):
         x4 = self.ability_eye[follower_abilities]
         x4 = torch.sum(x4,dim=2)
         abilities = x4.to(stats.device)
-        x1 = torch.cat([stats, abilities],dim=2)
+        field_card_ids = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
+        #print(stats.size(),abilities.size(),field_card_ids.size())
+        x1 = torch.cat([stats, abilities,field_card_ids],dim=2)
         x1 = self.prelu_1(self.value_layer(x1))
 
         exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
