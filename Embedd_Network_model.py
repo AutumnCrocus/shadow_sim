@@ -15,6 +15,7 @@ from my_enum import *
 import torch.optim as optim
 #from pytorch_memlab import profile
 import argparse
+from torch.autograd import detect_anomaly
 # Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'))
 Dual_State_value = namedtuple('Value', ('state', 'action', 'before_state', 'detailed_action_code','reward'))
 Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
@@ -65,7 +66,7 @@ class New_Dual_Net(nn.Module):
 
         #self.small_layer = nn.Linear(n_mid,n_mid//10)
         #self.big_layer = nn.Linear(n_mid//10, n_mid)
-        layer = [Dual_ResNet(2*n_mid, 2*n_mid) for _ in range(10)]
+        layer = [Dual_ResNet(2*n_mid, 2*n_mid) for _ in range(20)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
 
@@ -106,65 +107,27 @@ class New_Dual_Net(nn.Module):
     def forward(self, states,target=False):
 
         values = states['values']
-        """
-        hand_ids = states['hand_ids']
-        follower_card_ids = states['follower_card_ids']
-        amulet_card_ids = states['amulet_card_ids']
-        follower_abilities = states['follower_abilities']
-        able_to_evo = states['able_to_evo']
-        """
         detailed_action_codes = states['detailed_action_codes']
         action_categories = detailed_action_codes['action_categories']
         play_card_ids = detailed_action_codes['play_card_ids']
         field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
         action_choice_len = detailed_action_codes['action_choice_len']
-        """
-        class_datas = values['class_datas']
-        stats = values['follower_stats']
-        class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
-        x4 = self.ability_eye[follower_abilities]
-        x4 = torch.sum(x4,dim=2)
-        abilities = x4.to(stats.device)
-        x1 = torch.cat([stats, abilities],dim=2)
-        x1 = self.prelu_1(self.value_layer(x1))
-
-        exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
-        x1 = x1 * exist_filter
-        follower_values=x1.view(-1,10)
-        life_values = self.prelu_2(self.life_layer(values['life_datas']))
-        hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
-        hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
-        x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
-
-        x1 = self.prelu_4(self.concat_layer(x1))
-
-        x = x1#follower_values
-        """
         x1 = self.state_net(states)
         x2 = self.state_net(states["before_states"])
         x = torch.cat([x1,x2],dim=1)#self.prelu(self.integrate_layer(torch.cat([x1,x2],dim=1)))
         for i in range(self.layer_len):
             x = self.layer[i](x)
         x=self.prelu(self.integrate_layer(x))
-        #x = torch.sigmoid(self.big_layer(x))
         tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
         h_p2 = tmp
-        #assert True not in torch.isnan(h_p2), "{}".format(h_p2)
 
         out_p = self.filtered_softmax(h_p2, able_to_choice)
 
-        #out_v = torch.sigmoid(self.direct_layer(x))
         out_v = torch.tanh(self.final_layer(x))
         if target:
-            #print("out_p:{}".format(out_p[0]))
-            #print("h_p2:{}".format(h_p2[0]))
             z = states['target']['rewards']
             pai = states['target']['actions']
-
-            #print("z:", z[0:3])
-            #print("v:{}".format(out_v[0:3]))
-
             return out_p, out_v, self.loss_fn(out_p, out_v, z, pai,action_choice_len)
         else:
             return out_p, out_v
@@ -201,20 +164,61 @@ class Dual_State_Net(nn.Module):
         x4 = torch.sum(x4,dim=2)
         abilities = x4.to(stats.device)
         field_card_ids = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
-        #print(stats.size(),abilities.size(),field_card_ids.size())
+        """
+        if True in torch.isnan(field_card_ids):
+            x = follower_card_ids
+            print("follower_card_id")
+            print(x)
+            x = self.emb1(x)
+            print("emb1,nan:{}".format(True in torch.isnan(x)))
+            print(x)
+            print("weight,nan:{}".format(True in torch.isnan(self.emb1.weight)))
+            print(self.emb1.weight)
+            x = self.field_value_layer(x)
+            print("field_value_layer,nan:{}".format(True in torch.isnan(x)))
+            print(x)
+            print("weight,nan:{}".format(True in torch.isnan(self.field_value_layer.weight)))
+            print(self.field_value_layer.weight)
+            x = self.prelu_5(x)
+            print("prelu_5")
+            print("weight")
+            print(self.prelu_5.weight)
+            print(x)
+            assert False,"nan in field_card_ids"
+        """
         x1 = torch.cat([stats, abilities,field_card_ids],dim=2)
         x1 = self.prelu_1(self.value_layer(x1))
-
+        """
+        if True in torch.isnan(x1):
+            print("x1")
+            x = torch.cat([stats, abilities,field_card_ids],dim=2)
+            print(x)
+            x = self.value_layer(x)
+            print("value_layer")
+            print(x)
+            x = self.prelu_1(x)
+            print("prelu_1")
+            print(x)
+            assert False,"nan in first_x1"
+        """
         exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
         x1 = x1 * exist_filter
         follower_values=x1.view(-1,10)
         life_values = self.prelu_2(self.life_layer(values['life_datas']))
+        #if True in torch.isnan(life_values):
+        #    print(life_values)
+        #    assert False,"nan in life_values"
         hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
+        #if True in torch.isnan(hand_ids):
+        #    print(hand_ids)
+        #    assert False,"nan in hand_ids"
         hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
         x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
 
         x1 = self.prelu_4(self.concat_layer(x1))
-
+        #if True in torch.isnan(x1):
+        #    print(x1)
+        #    assert False,"nan in second_x1"
 
         return x1
 
@@ -337,7 +341,9 @@ class filtered_softmax(nn.Module):
         x = torch.exp(x)
         x = x * label
         sum_of_x = torch.sum(x, dim=1, keepdim=True)
-        x = x / sum_of_x
+        assert 0 not in sum_of_x,"{}".format(sum_of_x)
+        x = x/sum_of_x
+
         #print(x)
         return x
 
@@ -618,7 +624,8 @@ def Detailed_action_code_2_Tensor(action_codes, cuda = False):
         [[action_codes[i]['action_codes'][j][2:5] for j in range(45)] for i in range(action_code_len)])
     able_to_choice = torch.Tensor([action_codes[i]['able_to_choice'] for i in range(action_code_len)])
     action_choice_len = torch.Tensor([[int(sum(action_codes[i]['able_to_choice']))] for i in range(action_code_len)])
-    assert 0 not in action_choice_len,"{}".format(action_choice_len)
+    #assert 0 not in action_choice_len,"{}".format(action_choice_len)
+    #print(able_to_choice)
     action_codes_dict = {'action_categories': tensor_action_categories,
                          'play_card_ids': tensor_play_card_ids_in_action,
                          'field_card_ids': tensor_field_card_ids_in_action,

@@ -20,6 +20,7 @@ import copy
 import datetime
 # net = New_Dual_Net(100)
 import os
+from torch.autograd import detect_anomaly
 GAMMA = 0.9
 parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')
 
@@ -459,11 +460,13 @@ def run_main():
     last_updated = 0
     min_loss = 100
     double_p_size = 2*p_size
+    #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
         net.cpu()
         #net.class_eye.cpu()
         #et.ability_eye.cpu()
         prev_net.cpu()
+
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
@@ -579,11 +582,15 @@ def run_main():
             loss_history.append(sum_of_loss / iteration)
 
         else:
+            prev_optimizer = copy.deepcopy(optimizer)
             if cuda_flg:
                 net = net.cuda()
-                #net.class_eye.to("cuda:0")
-                #net.ability_eye.to("cuda:0")
-            optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
+                prev_net = prev_net.cuda()
+                optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
+                optimizer.load_state_dict(prev_optimizer.state_dict())
+                #optimizer = optimizer.cuda()
+
+            current_net = copy.deepcopy(net).cuda() if cuda_flg else copy.deepcopy(net)
             all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
             all_states, all_actions, all_rewards = all_data
             #print("rewards:{}".format(rewards))
@@ -597,14 +604,10 @@ def run_main():
             #batch_id_list = list(range(memory_len))
             #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
             train_num = iteration*len(train_ids)
-            current_net = copy.deepcopy(net)
-            first_flg = False
-            for i in tqdm(range(train_num)):
-                #data = R.sample(batch, cuda=cuda_flg)
-                #states, actions, rewards = data
+            nan_count = 0
 
-                #key = random.sample(batch_id_list, k=batch)
-                key = random.sample(train_ids,k=batch)#[batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
+            for i in tqdm(range(train_num)):
+                key = random.sample(train_ids,k=batch)
                 states = {}
                 for dict_key in states_keys:
                     if dict_key == 'values':
@@ -643,24 +646,31 @@ def run_main():
                 states['target'] = {'actions': actions, 'rewards': rewards}
                 net.zero_grad()
                 optimizer.zero_grad()
-                p, v, loss = net(states, target=True)
-                if True not in torch.isnan(loss[0]):
-                    loss[0].backward()
-                    optimizer.step()
-                    current_net = copy.deepcopy(net)
-                else:
-                    if not first_flg:
-                        print("nan is found!")
-                        first_flg = True
-                    net = copy.deepcopy(current_net)
-                    optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
+                with detect_anomaly():
+                    p, v, loss = net(states, target=True)
+                    if True not in torch.isnan(loss[0]):
+                        loss[0].backward()
+                        optimizer.step()
+                        current_net = copy.deepcopy(net)
+                        prev_optimizer = copy.deepcopy(optimizer)
+                    else:
+                        if nan_count < 5:
+                            print("loss:{}".format(nan_count))
+                            print(loss)
+                        net = current_net
+                        optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
+                        optimizer.load_state_dict(prev_optimizer.state_dict())
+                        nan_count += 1
+            print("nan_count:{}/{}".format(nan_count,train_num))
             train_ids_len = len(train_ids)
-            separate_num = train_ids_len//10
+            separate_num = train_ids_len
             train_objective_loss = 0
             train_MSE = 0
             train_CEE = 0
+            nan_batch_num = 0
+
             for i in tqdm(range(separate_num)):
-                key = train_ids[i*10:min(train_ids_len,(i+1)*10)] # [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
+                key = [train_ids[i]]#train_ids[2*i:2*i+2] if 2*i+2 < train_ids_len else train_ids[train_ids_len-2:train_ids_len]#train_ids[i*10:min(train_ids_len,(i+1)*10)] # [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
                 states = {}
                 for dict_key in states_keys:
                     if dict_key == 'values':
@@ -697,13 +707,18 @@ def run_main():
                 torch.cuda.empty_cache()
                 _, _, loss = net(states, target=True)
                 if True in torch.isnan(loss[0]):
+                    if nan_batch_num < 5:
+                        print("loss")
+                        print(loss)
                     separate_num -= 1
+                    nan_batch_num += 1
                     continue
                 train_objective_loss += float(loss[0].item())
                 train_MSE += float(loss[1].item())
                 train_CEE += float(loss[2].item())
             separate_num = max(1,separate_num)
             #writer.add_scalar(LOG_PATH + "WIN_RATE", win_num / episode_len, epoch)
+            print("nan_batch_ids:{}/{}".format(nan_batch_num,train_ids_len))
             print(train_MSE,separate_num)
             train_objective_loss /= separate_num
             train_MSE /= separate_num
@@ -713,11 +728,12 @@ def run_main():
             test_ids_len = len(test_ids)
             batch_len = 100 if 100 < test_ids_len else 10
             separate_num = test_ids_len // batch_len
+            separate_num = test_ids_len
             test_objective_loss = 0
             test_MSE = 0
             test_CEE = 0
             for i in tqdm(range(separate_num)):
-                key = test_ids[i*batch_len:min(test_ids_len,(i+1)*batch_len)] # [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
+                key = [test_ids[i]]#test_ids[i*batch_len:min(test_ids_len,(i+1)*batch_len)] # [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
                 states = {}
                 for dict_key in states_keys:
                     if dict_key == 'values':
@@ -754,32 +770,20 @@ def run_main():
                 torch.cuda.empty_cache()
                 p, v, loss = net(states, target=True)
                 if True in torch.isnan(loss[0]):
+                    separate_num -= 1
                     continue
                 test_objective_loss += float(loss[0].item())
                 test_MSE += float(loss[1].item())
                 test_CEE += float(loss[2].item())
             print("")
-            for batch_id in range(2):
+            for batch_id in range(1):
                 print("states:{}".format(batch_id))
-                """
-                for dict_key in states_keys:
-                    if dict_key == 'values':
-                        for sub_key in value_keys:
-                            print(sub_key)
-                            print(states['values'][sub_key][batch_id])
-                    elif dict_key == 'detailed_action_codes':
-                        for sub_key in action_code_keys:
-                            print(sub_key)
-                            print(states['detailed_action_codes'][sub_key][batch_id])
-                    else:
-                        print(dict_key)
-                        print(states[dict_key][batch_id])
-                """
                 print("p:{}".format(p[batch_id]))
                 print("pi:{}".format(actions[batch_id]))
                 print("v:{} z:{}".format(v[batch_id],rewards[batch_id]))
             del p,v
             del actions
+            separate_num = max(1, separate_num)
             print(test_MSE,separate_num)
             test_objective_loss /= separate_num
             test_MSE /= separate_num
@@ -797,15 +801,6 @@ def run_main():
                   .format(test_objective_loss, test_MSE, test_CEE))
             
             loss_history.append(test_objective_loss)
-            #prev_net.cuda()
-            #del loss
-            #torch.cuda.empty_cache()
-            #_, _, loss = prev_net(states, target=True)
-            #test_objective_loss = float(loss[0].item())
-            #test_MSE = float(loss[1].item())
-            #test_CEE = float(loss[2].item())
-            #print("AVE(prev) | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
-            #      .format(test_objective_loss, test_MSE, test_CEE))
 
         net.cpu()
         prev_net.cpu()
