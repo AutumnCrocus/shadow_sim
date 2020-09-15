@@ -12,8 +12,8 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_8_16_9_36_3_9|128_cuda.pth
-      O_MODEL_NAME: Multi_Dual_2020_8_16_9_36_3_9|128_cuda.pth
+      MODEL_NAME: Multi_Dual_2020_9_7_21_49_47_40|128_cuda.pth
+      O_MODEL_NAME: Multi_Dual_2020_9_7_21_49_47_40|128_cuda.pth
       PLAYER_TYPE: 2
       MODE: mirror
       PLAYER1: 29
