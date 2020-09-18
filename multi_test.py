@@ -842,7 +842,7 @@ def run_main():
                     ,mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
         constant_deck_list = (0, 1, 2, 4, 5, 10, 12)  # (0,1,4,10,13)
-        test_episode_len = int(200/p_size) if deck_flg is not None else 40#2*episode_len
+        test_episode_len = int(400/p_size) if deck_flg is not None else 40#2*episode_len
         
         #iter_data = [(p1, p2,test_episode_len//p_size,i) for i in range(p_size)]
         #freeze_support()
@@ -876,6 +876,7 @@ def run_main():
             WR_list = [cell[1] for cell in memory]
             print(WR_list)
             WR = sum(WR_list)/match_num
+            min_WR = WR
 
 
         #battle_data = [cell.pop(-1) for cell in memory]

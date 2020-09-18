@@ -306,14 +306,14 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
                       -3: "Rune_Basic",
                       -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
                       100: "Test",
-                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow",13:"Neutral-Blood"}
+                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow",13:"Neutral-Blood",100:"TEST"}
 
     key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
                       3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
                       6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
                       9: ["SpellBoost-Rune.tsv", "RUNE"],10: ["Dimension_Shift_Rune.tsv", "RUNE"],
                       11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"],
-                      13: ["Neutral_Blood.tsv", "BLOOD"]}
+                      13: ["Neutral_Blood.tsv", "BLOOD"],100: ["TEST.tsv", "SHADOW"]}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
@@ -321,6 +321,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         if deck_type[i] in key_2_tsv_name:
             D[i] = tsv_to_deck(key_2_tsv_name[deck_type[i]][0])
             D[i].set_leader_class(key_2_tsv_name[deck_type[i]][1])
+            continue
 
         if deck_type[i] == -1:
             D[i] = tsv_to_deck("Forest_Basic.tsv")
@@ -352,6 +353,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         elif deck_type[i] == -10:
             D[i] = tsv_to_deck("Test-Haven.tsv")
             D[i].set_leader_class("HAVEN")
+        """
         elif deck_type[i] == 100:
 
             D[i].set_leader_class("NEUTRAL")
@@ -365,6 +367,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
             D[i].append(Creature(creature_name_to_id["Golyat"]), num=3)
             D[i].append(Creature(creature_name_to_id["Angelic Sword Maiden"]), num=9)
             D[i].append(Creature(creature_name_to_id["Gilgamesh"]), num=3)
+        """
 
     Player1.class_num = class_pool[0]
     Player2.class_num = class_pool[1]
@@ -372,12 +375,12 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     mylogger.info("Bob's deck mean cost:{:<4}".format(D[1].get_mean_cost()))
     D[0].mean_cost = D[0].get_mean_cost()
     D[1].mean_cost = D[1].get_mean_cost()
-    assert len(D[0].deck) == 40 and len(D[1].deck) == 40, "deck_len:{},{}" \
-        .format(len(D[0].deck), len(D[1].deck))
     mylogger.info("deck detail")
     D[0].show_remain_card_set()
     D[1].show_remain_card_set()
     mylogger.info("")
+    assert len(D[0].deck) == 40 and len(D[1].deck) == 40, "deck_len:{},{}" \
+        .format(len(D[0].deck), len(D[1].deck))
     sum_of_turn = 0
     span = max(iteration // 10, 1)
     Turn_Players = [Player1, Player2]

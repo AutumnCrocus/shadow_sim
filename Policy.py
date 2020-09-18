@@ -5360,7 +5360,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                 max_value = sum_of_value
                 max_value_action = key
         if max_value_action not in action_2_node:
-            return node, (Action_Code.ERROR.value,0,0)
+            return node, (Action_Code.ERROR.value,"{} not in {}".format(max_value_action,action_2_node),0)
 
         max_value_node = random.choice(action_2_node[max_value_action])
         return max_value_node, max_value_action
