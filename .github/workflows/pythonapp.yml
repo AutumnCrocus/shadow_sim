@@ -17,9 +17,9 @@ jobs:
       PLAYER_TYPE: 2
       MODE: mirror
       PLAYER1: 29
-      N: 100
+      N: 400
       DECK_ID: 5
-      DECK_LIST: "0,1,2,4"
+      DECK_LIST: "100"
       NODE_NUM: 100
     runs-on: ubuntu-latest
     steps:
