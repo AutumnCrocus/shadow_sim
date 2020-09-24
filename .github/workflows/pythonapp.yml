@@ -14,10 +14,10 @@ jobs:
     env:
       MODEL_NAME: Multi_Dual_2020_9_20_7_5_9_13|128_cuda.pth
       O_MODEL_NAME: Multi_Dual_2020_9_20_7_5_9_13|128_cuda.pth
-      PLAYER_TYPE: 2
+      PLAYER_TYPE: 13
       MODE: mirror
       PLAYER1: 29
-      N: 400
+      N: 100
       DECK_ID: 5
       DECK_LIST: "100"
       NODE_NUM: 100
