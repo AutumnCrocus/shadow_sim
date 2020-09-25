@@ -164,43 +164,8 @@ class Dual_State_Net(nn.Module):
         x4 = torch.sum(x4,dim=2)
         abilities = x4.to(stats.device)
         field_card_ids = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
-        """
-        if True in torch.isnan(field_card_ids):
-            x = follower_card_ids
-            print("follower_card_id")
-            print(x)
-            x = self.emb1(x)
-            print("emb1,nan:{}".format(True in torch.isnan(x)))
-            print(x)
-            print("weight,nan:{}".format(True in torch.isnan(self.emb1.weight)))
-            print(self.emb1.weight)
-            x = self.field_value_layer(x)
-            print("field_value_layer,nan:{}".format(True in torch.isnan(x)))
-            print(x)
-            print("weight,nan:{}".format(True in torch.isnan(self.field_value_layer.weight)))
-            print(self.field_value_layer.weight)
-            x = self.prelu_5(x)
-            print("prelu_5")
-            print("weight")
-            print(self.prelu_5.weight)
-            print(x)
-            assert False,"nan in field_card_ids"
-        """
         x1 = torch.cat([stats, abilities,field_card_ids],dim=2)
         x1 = self.prelu_1(self.value_layer(x1))
-        """
-        if True in torch.isnan(x1):
-            print("x1")
-            x = torch.cat([stats, abilities,field_card_ids],dim=2)
-            print(x)
-            x = self.value_layer(x)
-            print("value_layer")
-            print(x)
-            x = self.prelu_1(x)
-            print("prelu_1")
-            print(x)
-            assert False,"nan in first_x1"
-        """
         exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
         x1 = x1 * exist_filter
         follower_values=x1.view(-1,10)
@@ -270,16 +235,9 @@ class Action_Value_Net(nn.Module):
         life_datas = values['life_datas']
         pp_datas = values['pp_datas']
         hand_card_costs = values['hand_card_costs']
-        #print(values['follower_stats'])
         stats = values['follower_stats'].view(-1,50)
-        #print(stats)
-        #assert False
-        #print(stats)
 
         embed_action_categories = self.action_catgory_eye[action_categories].to(stats.device)#self.emb1(action_categories)(-1,45,4)
-        #print(embed_action_categories.size())
-        #embed_action_categories = torch.relu(embed_action_categories)
-
         embed_play_card_ids = self.emb2(play_card_ids)
         embed_play_card_ids = self.prelu_3(embed_play_card_ids)
 
@@ -287,44 +245,11 @@ class Action_Value_Net(nn.Module):
         embed_field_card_ids = self.prelu_4(embed_field_card_ids)
 
         new_states = states#.unsqueeze(1)
-
-        #_, new_states = torch.broadcast_tensors(embed_action_categories, new_states)
         new_states = torch.stack([new_states]*45,dim=1)
-        #print(new_states.size(),embed_action_categories.size())
-        #values_data = torch.cat([life_datas,pp_datas,hand_card_costs,stats],dim=1).unsqueeze(1)
-        #print("values_data:{}".format(values_data.size()))
-        #new_values_data = torch.relu(self.lin3(values_data))
-        #new_values_data = self.mish(self.lin3(values_data))
-
-        #_, new_values_data = torch.broadcast_tensors(embed_action_categories, new_values_data)
-        #print("new:{}".format(new_values_data.size()))
-
-        #tmp = torch.cat([new_states,embed_action_categories, embed_play_card_ids,
-        #                 embed_field_card_ids,new_values_data], dim=2)
-
         tmp = torch.cat([new_states,embed_action_categories,embed_play_card_ids,embed_field_card_ids], dim=2)
-        #torch.cat([new_states,embed_action_categories], dim=2)
-        #tmp = tmp * label
-
-        #print("action_category:{}".format(embed_action_categories[0]))
-        #print("origin:{}".format(action_categories[0]))
-        #print("tmp:{}".format(tmp.size()))
-
         output = self.prelu_1(self.lin1(tmp))
-        #output = torch.sigmoid(self.lin1(tmp))
-
-        #output = self.mish(self.lin1(tmp))
-        #for i in range(10):
-        #    output = torch.relu(self.lin4[i](output))
-            #output = self.mish(self.lin4[i](output))
-        #print("lin1:{}".format(self.lin1(tmp)[0]))
-        #print("lin2:{}".format(self.lin2(output)[0]))
-        #output = torch.sigmoid(self.lin2(output)).view(-1,45)#torch.relu(self.lin2(output)).view(-1,45)
         output = self.prelu_2(self.lin2(output)).view(-1,45)
         output = output * label
-        #print(action_categories,output)
-        #output = self.mish(self.lin2(output))
-        #output = torch.sum(output,dim=2)
 
         return output
 
@@ -334,17 +259,8 @@ class filtered_softmax(nn.Module):
         super(filtered_softmax, self).__init__()
 
     def forward(self, x, label):
-        #x = x * label
-        max_x = x.max(dim=1,keepdim=True).values
-        x = x-max_x
-        #x = x
-        x = torch.exp(x)
-        x = x * label
-        sum_of_x = torch.sum(x, dim=1, keepdim=True)
-        assert 0 not in sum_of_x,"{}".format(sum_of_x)
-        x = x/sum_of_x
-
-        #print(x)
+        x = torch.softmax(x,dim=1)
+        x = x*label
         return x
 
 class Mish(nn.Module):
