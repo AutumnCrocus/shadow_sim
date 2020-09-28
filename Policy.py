@@ -5344,7 +5344,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                 action_2_node[action] = []
 
             tmp_value = child.value / max(1, child.visit_num) +\
-                        np.sqrt(child.visit_num / max(1, node.visit_num) +1e-4)
+                        (child.visit_num / max(1, node.visit_num))**2#np.sqrt(child.visit_num / max(1, node.visit_num) +1e-4)
             if action[0] == 0:
                 tmp_value = 0
             action_uct_values[action].append(tmp_value)
