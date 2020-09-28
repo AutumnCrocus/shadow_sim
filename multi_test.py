@@ -44,6 +44,7 @@ parser.add_argument('--deck_list', help='deck_list',default="0,1,4,5,10,11")
 parser.add_argument('--model_name', help='model_name', default=None)
 parser.add_argument('--opponent_model_name', help='opponent_model_name', default=None)
 parser.add_argument('--th', help='threshold',default=1e-3)
+parser.add_argument('--WR_th', help='WR_threshold',default=0.55)
 args = parser.parse_args()
 
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
@@ -353,12 +354,13 @@ def multi_train(data):
         z = all_rewards
         pai = all_actions  # 45種類の抽象化した行動
         # loss.backward()
-        loss[0].backward()
-        all_loss += float(loss[0].item())
-        MSE += float(loss[1].item())
-        CEE += float(loss[2].item())
+        with detect_anomaly():
+            loss[0].backward()
+            all_loss += float(loss[0].item())
+            MSE += float(loss[1].item())
+            CEE += float(loss[2].item())
 
-        optimizer.step()
+            optimizer.step()
 
 
     return all_loss, MSE, CEE
@@ -431,6 +433,9 @@ def run_main():
     cuda_flg = args.cuda == "True"
     node_num = int(args.node_num)
     net = New_Dual_Net(node_num)
+    if args.model_name is not None:
+        PATH = 'model/' + model_name
+        net.load_state_dict(torch.load(PATH))
     if torch.cuda.is_available() and cuda_flg:
         net = net.cuda()
         print("cuda is available.")
@@ -466,7 +471,7 @@ def run_main():
     LOG_PATH = "log_{}_{}_{}_{}_{}_{}/".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                              t1.second)
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
-    th = 0.53
+    th = float(args.WR_th)
     last_updated = 0
     min_loss = 100
     double_p_size = 2*p_size
@@ -506,8 +511,9 @@ def run_main():
         pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_preparation, iter_data)
         print("\n" * (double_p_size+1))
-        pool.close()  # add this.
         pool.terminate()  # add this.
+        pool.close()  # add this.
+
         battle_data = [cell.pop(-1) for cell in memory]
         memories = []
         [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(double_p_size)]
@@ -591,8 +597,9 @@ def run_main():
             test_objective_loss = loss[0].item()
             test_MSE = loss[1].item()
             test_CEE = loss[2].item()
-            pool.close()  # add this.
             pool.terminate()  # add this.
+            pool.close()  # add this.
+
 
             #writer.add_scalar(LOG_PATH + "Over_All_Loss", sum_of_loss / iteration, epoch)
             #writer.add_scalar(LOG_PATH + "MSE", sum_of_MSE / iteration, epoch)
@@ -859,9 +866,9 @@ def run_main():
         memory = pool.map(multi_battle, iter_data)
         print("\n" * (p_size+1))
         # Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
-
-        pool.close()  # add this.
         pool.terminate()  # add this.
+        pool.close()  # add this.
+
         memory = list(memory)
         match_num = len(constant_deck_list) if deck_flg is None else p_size
         min_WR=1.0
@@ -887,7 +894,7 @@ def run_main():
         writer.add_scalars(LOG_PATH + 'win_rate', {'mean': WR,
                                               'min': min_WR
                                               }, epoch)
-        if WR < th and min_WR < 0.5:
+        if WR < th: #and min_WR < 0.5:
             net = prev_net
             #th = max(0.5,th*0.95)
             print("new_model lose... WR:{:.1%}".format(WR))
@@ -905,10 +912,10 @@ def run_main():
         t4 = datetime.datetime.now()
         print(t4-t3)
         if win_flg or (epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num):
-            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}|{}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                  t1.second, epoch+1,epoch_num,node_num)
             if torch.cuda.is_available() and cuda_flg:
-                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}|{}_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                         t1.second, epoch + 1 , epoch_num)
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
