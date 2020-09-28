@@ -434,7 +434,7 @@ def run_main():
     node_num = int(args.node_num)
     net = New_Dual_Net(node_num)
     if args.model_name is not None:
-        PATH = 'model/' + model_name
+        PATH = 'model/' + args.model_name
         net.load_state_dict(torch.load(PATH))
     if torch.cuda.is_available() and cuda_flg:
         net = net.cuda()
