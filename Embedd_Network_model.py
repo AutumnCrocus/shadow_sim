@@ -100,6 +100,7 @@ class New_Dual_Net(nn.Module):
         #self.prelu_4 = nn.PReLU(init=0.01)
         self.prelu = nn.PReLU(init=0.01)
         self.integrate_layer = nn.Linear(2*n_mid,n_mid)
+        self.rnn = nn.LSTM(input_size=n_mid,hidden_size=n_mid,batch_first=True)
 
 
 
@@ -115,7 +116,11 @@ class New_Dual_Net(nn.Module):
         action_choice_len = detailed_action_codes['action_choice_len']
         x1 = self.state_net(states)
         x2 = self.state_net(states["before_states"])
-        x = torch.cat([x1,x2],dim=1)#self.prelu(self.integrate_layer(torch.cat([x1,x2],dim=1)))
+        #x = torch.cat([x1,x2],dim=1)#self.prelu(self.integrate_layer(torch.cat([x1,x2],dim=1)))
+        x = torch.stack([x2,x1],dim=1)
+        x, (_,_) = self.rnn(x)
+        x = x.view(-1,2*self.n_mid)
+
         for i in range(self.layer_len):
             x = self.layer[i](x)
         x=self.prelu(self.integrate_layer(x))
