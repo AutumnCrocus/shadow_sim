@@ -12,12 +12,12 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_9_25_11_4_28_13_128_100nodes.pth
+      MODEL_NAME: Multi_Dual_2020_9_28_10_37_36_6_128_100nodes.pth
       O_MODEL_NAME: Multi_Dual_2020_9_25_11_4_28_13_128_100nodes.pth
-      PLAYER_TYPE: 2
+      PLAYER_TYPE: 29
       MODE: mirror
       PLAYER1: 29
-      N: 400
+      N: 100
       DECK_ID: 5
       DECK_LIST: "100"
       NODE_NUM: 100
