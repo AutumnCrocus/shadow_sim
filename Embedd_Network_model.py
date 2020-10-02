@@ -119,7 +119,7 @@ class New_Dual_Net(nn.Module):
         #x = torch.cat([x1,x2],dim=1)#self.prelu(self.integrate_layer(torch.cat([x1,x2],dim=1)))
         x = torch.stack([x2,x1],dim=1)
         x, (_,_) = self.rnn(x)
-        x = x.view(-1,2*self.n_mid)
+        x = x.reshape(-1,2*self.n_mid)
 
         for i in range(self.layer_len):
             x = self.layer[i](x)

@@ -5333,13 +5333,11 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
     def execute_best(self, node, player_num=0):
         children = node.child_nodes
         action_uct_values = {}
-        #action_uct_counts = {}
-        action_2_node = {}
+        action_2_node = {(0,0,0):[None]}
         for child in children:
             action = node.node_id_2_edge_action[id(child)]
             if action not in action_uct_values:
                 action_uct_values[action] = []
-                #action_uct_counts[action] = []
             if action not in action_2_node:
                 action_2_node[action] = []
 
@@ -5359,10 +5357,10 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             if max_value < sum_of_value:
                 max_value = sum_of_value
                 max_value_action = key
-        if max_value_action not in action_2_node:
-            return node, (Action_Code.ERROR.value,"{} not in {}".format(max_value_action,action_2_node),0)
+        if max_value_action not in action_2_node and max_value_action != (0,0,0):
+            return node, (Action_Code.ERROR.value,"{} not in {}".format(max_value_action,action_2_node.keys()),0)
 
-        max_value_node = random.choice(action_2_node[max_value_action])
+        max_value_node = random.choice(action_2_node[max_value_action]) if max_value_action != (0,0,0) else None
         return max_value_node, max_value_action
 
     def best(self, node, player_num=0):
