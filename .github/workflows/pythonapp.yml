@@ -14,7 +14,7 @@ jobs:
     env:
       MODEL_NAME: Multi_Dual_2020_10_1_7_3_37_32|128_cuda.pth
       O_MODEL_NAME: Multi_Dual_2020_10_1_7_3_37_32|128_cuda.pth
-      OPPONENT_PLAYER_TYPE: 1
+      OPPONENT_PLAYER_TYPE: 13
       MODE: mirror
       PLAYER1: 29
       N: 400
@@ -48,8 +48,8 @@ jobs:
       run: |
        python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $OPPONENT_PLAYER_TYPE --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
        
-    - name: Run Test2     
-      run: |
-       python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 2 --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
+    #- name: Run Test2     
+    #  run: |
+    #   python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 2 --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
         
        
