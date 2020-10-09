@@ -267,7 +267,7 @@ class Player:
             self.policy.current_node = None
             return self.decide(player, opponent, field, virtual=virtual,dual=dual)
 
-        elif action_num != Action_Code.TURN_END.value and self.policy.policy_type == 3:
+        elif action_num != Action_Code.TURN_END.value and self.policy.policy_type == 3 and self.policy.name != "MCTSPolicy":
             #mylogger.info("adjust")
             sim_field = self.policy.prev_node.field
 
