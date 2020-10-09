@@ -2381,7 +2381,7 @@ class Information_Set_MCTSPolicy():
         self.current_node = None
         self.prev_node = None
         self.node_index = 0
-        self.policy_type = 3
+        self.policy_type = 4
         self.name = "ISMCTS(n={})Policy".format(iteration)
         self.type = "root"
         self.iteration = iteration
@@ -2936,7 +2936,7 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
         self.main_player_num = 0
         self.play_out_policy = AggroPolicy()
         self.iteration = iteration
-        self.policy_type = 3
+        self.policy_type = 4
 
     def state_value(self, field, player_num):
         return default_state_value(field,player_num)
@@ -5146,7 +5146,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                 assert False,"non-model error"
 
         self.state_convertor = Detailed_State_data_2_Tensor
-        self.policy_type = 3
+        self.policy_type = 4
         self.cuda = cuda
         self.iteration = 200
         self.action_2_action_code_dict = {Action_Code.PLAY_CARD.value:1,

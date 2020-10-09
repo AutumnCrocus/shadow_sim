@@ -1,5 +1,6 @@
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support
-
+#import os
+#os.environ["OMP_NUM_THREADS"] = "6"
 try:
     set_start_method('spawn')
     print("spawn is run.")
@@ -45,6 +46,7 @@ parser.add_argument('--model_name', help='model_name', default=None)
 parser.add_argument('--opponent_model_name', help='opponent_model_name', default=None)
 parser.add_argument('--th', help='threshold',default=1e-3)
 parser.add_argument('--WR_th', help='WR_threshold',default=0.55)
+parser.add_argument('--check_deck_id', help='check_deck_id')
 args = parser.parse_args()
 
 deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
@@ -1023,7 +1025,7 @@ def check_score():
     print("use cpu num:{}".format(p_size))
 
     loss_history = []
-
+    check_deck_id = int(args.check_deck_id) if args.check_deck_id is not None else None
     cuda_flg = args.cuda == "True"
     node_num = int(args.node_num)
     net = New_Dual_Net(node_num)
@@ -1079,7 +1081,9 @@ def check_score():
     print(deck_list)
     deck_pairs = list(itertools.product(deck_list,deck_list))
 
-    iter_data = [(p1, p2, episode_len, cell_id,cell) for cell_id,cell in enumerate(deck_pairs)]
+    iter_data = [(p1, p2, episode_len, cell_id,cell) for cell_id,cell in enumerate(deck_pairs)]\
+        if check_deck_id is None else [(p1, p2, episode_len//(2*p_size), cell_id,(check_deck_id,check_deck_id)) \
+                                       for cell_id in range(2*p_size)]
     freeze_support()
     pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
     memory = pool.map(multi_battle, iter_data)

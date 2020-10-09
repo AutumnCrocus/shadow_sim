@@ -1,5 +1,5 @@
 import os
-os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["OMP_NUM_THREADS"] = "6"
 import torch
 #import torchvision
 #import torchvision.transforms as transforms

@@ -30,6 +30,7 @@ from tqdm import tqdm
 value_history = []
 
 
+
 def tsv_to_deck(tsv_name):
     deck = Deck()
     with open("Deck_TSV/" + tsv_name) as f:
@@ -511,14 +512,14 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                       -3: "Rune_Basic",
                       -4: "Dragon_Basic", -5: "FOREST_Basic", -6: "Blood_Basic", -7: "Haven_Basic", -8: "Portal_Basic",
                       100: "Test",
-                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow",13:"Neutral-Blood"}
+                      -9: "Spell-Rune",11:"PtP-Forest",12:"Mid-Shadow",13:"Neutral-Blood",100:"TEST"}
 
     key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"], 2: ["Sword.tsv", "SWORD"],
                       3: ["New-Shadow.tsv", "SHADOW"], 4: ["Dragon_PDK.tsv", "DRAGON"], 5: ["Test-Haven.tsv", "HAVEN"],
                       6: ["Blood.tsv", "BLOOD"], 7: ["Dragon.tsv", "DRAGON"], 8: ["Forest.tsv", "FOREST"],
                       9: ["SpellBoost-Rune.tsv", "RUNE"],10: ["Dimension_Shift_Rune.tsv", "RUNE"],
                       11: ["PtP_Forest.tsv", "FOREST"],12: ["Mid_Shadow.tsv", "SHADOW"],
-                      13: ["Neutral_Blood.tsv", "BLOOD"]}
+                      13: ["Neutral_Blood.tsv", "BLOOD"],100: ["TEST.tsv", "SHADOW"]}
     mylogger.info("{}({})vs {}({})".format(Player_1.policy.name, deck_id_2_name[deck_type[0]], Player_2.policy.name,
                                            deck_id_2_name[deck_type[1]]))
     class_pool = [0, 0]
