@@ -572,11 +572,14 @@ def run_main():
             memory_len = all_actions.size()[0]
             all_data_ids = list(range(memory_len))
             train_ids = random.sample(all_data_ids, k=int(memory_len * 0.8))
+            test_ids =list(set(all_data_ids)-set(train_ids))
             iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
                          for i in range(p_size)]
             freeze_support()
             pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
             loss_data = pool.map(multi_train, iter_data)
+            pool.terminate()  # add this.
+            pool.close()  # add this.
             print("\n" * p_size)
             #imap = pool.imap(multi_train, iter_data)
             #loss_data = list(tqdm(imap, total=p_size))
@@ -589,16 +592,78 @@ def run_main():
             train_CEE = sum_of_CEE / iteration
             print("AVE | Over_All_Loss(train): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                   .format(train_objective_loss, train_MSE, train_CEE))
-            all_states, all_actions, all_rewards = all_data
-            all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
+            #all_states, all_actions, all_rewards = all_data
+            test_ids_len = len(test_ids)
+            separate_num = test_ids_len
+            test_objective_loss = 0
+            test_MSE = 0
+            test_CEE = 0
+            states_keys = list(all_states.keys())
+            value_keys = list(all_states['values'].keys())
+            action_code_keys = list(all_states['detailed_action_codes'].keys())
+            for i in tqdm(range(separate_num)):
+                key = [test_ids[i]]
+                states = {}
+                for dict_key in states_keys:
+                    if dict_key == 'values':
+                        states['values'] = {}
+                        for sub_key in value_keys:
+                            states['values'][sub_key] = all_states['values'][sub_key][key]
+                    elif dict_key == 'detailed_action_codes':
+                        states['detailed_action_codes'] = {}
+                        for sub_key in action_code_keys:
+                            states['detailed_action_codes'][sub_key] = \
+                                all_states['detailed_action_codes'][sub_key][key]
+                    elif dict_key == 'before_states':
+                        orig_before_states = all_states["before_states"]
+                        before_states = {}
+                        for dict_key in states_keys:
+                            if dict_key == 'values':
+                                before_states['values'] = {}
+                                for sub_key in value_keys:
+                                    before_states['values'][sub_key] = \
+                                        torch.clone(orig_before_states['values'][sub_key][key])
+                                    # states['values'][sub_key].grad=None
+                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
+                                pass
+                            else:
+                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
+                        states["before_states"] = before_states
+                    else:
+                        states[dict_key] = all_states[dict_key][key]
+
+                actions = all_actions[key]
+                rewards = all_rewards[key]
+                states['target'] = {'actions': actions, 'rewards': rewards}
+                torch.cuda.empty_cache()
+                _, _, loss = net(states, target=True)
+                test_objective_loss += float(loss[0].item())
+                test_MSE += float(loss[1].item())
+                test_CEE += float(loss[2].item())
+                del loss
+            print("")
+            del actions
+            del all_data
+            del all_states
+            del all_actions
+            del all_rewards
+            separate_num = max(1, separate_num)
+            print(test_MSE,separate_num)
+            test_objective_loss /= separate_num
+            test_MSE /= separate_num
+            test_CEE /= separate_num
+            print("AVE | Over_All_Loss(test): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+                  .format(test_objective_loss, test_MSE, test_CEE))
+            """
+            #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
             p, v, loss = net(all_states, target=True)
 
             print("loss:{:.3f} MSE:{:.3f} CEE:{:.3f}".format(loss[0].item(), loss[1].item(), loss[2].item()))
             test_objective_loss = loss[0].item()
             test_MSE = loss[1].item()
             test_CEE = loss[2].item()
-            pool.terminate()  # add this.
-            pool.close()  # add this.
+            """
+
 
 
             #writer.add_scalar(LOG_PATH + "Over_All_Loss", sum_of_loss / iteration, epoch)
@@ -820,6 +885,10 @@ def run_main():
                 print("v:{} z:{}".format(v[batch_id],rewards[batch_id]))
             del p,v
             del actions
+            del all_data
+            del all_states
+            del all_actions
+            del all_rewards
             separate_num = max(1, separate_num)
             print(test_MSE,separate_num)
             test_objective_loss /= separate_num

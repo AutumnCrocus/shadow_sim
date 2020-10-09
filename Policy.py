@@ -677,6 +677,7 @@ class MCTSPolicy(Policy):
         self.type = "root"
         self.iteration = 100
         self.default_iteration = 10
+        self.prev_node = None
 
     # import numba
     # @numba.jit
@@ -708,6 +709,7 @@ class MCTSPolicy(Policy):
                 return 0,0,0
             #next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
+            self.prev_node = self.current_node
             self.current_node = next_node
             #if not field.secret and len(self.current_node.child_nodes) != len(self.current_node.children_moves):
             #    mylogger.info("children_moves:{}".format(self.starting_node.children_moves))
@@ -745,6 +747,7 @@ class MCTSPolicy(Policy):
                 return Action_Code.ERROR.value, 0, 0
             #next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
+            self.prev_node = self.current_node
             self.current_node = next_node
             if tmp_move == (0, 0, 0):
                 if not field.secret:
