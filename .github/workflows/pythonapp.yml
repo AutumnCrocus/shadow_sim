@@ -17,7 +17,7 @@ jobs:
       OPPONENT_PLAYER_TYPE: 15
       MODE: mirror
       PLAYER1: 29
-      N: 400
+      N: 300
       DECK_ID: 5
       DECK_LIST: "100"
       NODE_NUM: 100
