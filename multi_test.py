@@ -1,6 +1,5 @@
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support
-#import os
-#os.environ["OMP_NUM_THREADS"] = "6"
+
 try:
     set_start_method('spawn')
     print("spawn is run.")
@@ -34,7 +33,7 @@ parser.add_argument('--deck', help='サンプリングに用いるデッキの�
 parser.add_argument('--cuda', help='gpuを使用するかどうか')
 parser.add_argument('--multi_train', help="学習時も並列化するかどうか")
 parser.add_argument('--epoch_interval', help="モデルの保存間隔")
-parser.add_argument('--fixed_deck_id', help="使用デッキidの固定")
+parser.add_argument('--fixed_deck_ids', help="使用デッキidリストの固定")
 parser.add_argument('--cpu_num', help="使用CPU数",default=2 if torch.cuda.is_available() else 3)
 parser.add_argument('--batch_num', help='サンプルに対するバッチの数')
 parser.add_argument('--fixed_opponent', help='対戦相手を固定')
@@ -46,10 +45,9 @@ parser.add_argument('--model_name', help='model_name', default=None)
 parser.add_argument('--opponent_model_name', help='opponent_model_name', default=None)
 parser.add_argument('--th', help='threshold',default=1e-3)
 parser.add_argument('--WR_th', help='WR_threshold',default=0.55)
-parser.add_argument('--check_deck_id', help='check_deck_id')
 args = parser.parse_args()
 
-deck_flg = int(args.fixed_deck_id) if args.fixed_deck_id is not None else None
+deck_flg = list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
 weight_decay = float(args.weight_decay)
 
 
@@ -79,8 +77,8 @@ def preparation(episode_data):
         #deck_type1 = random.choice(list(key_2_tsv_name.keys()))
         #deck_type2 = random.choice(list(key_2_tsv_name.keys()))
     else:
-        deck_type1 = deck_flg
-        deck_type2 = deck_flg
+        deck_type1 = random.choice(deck_flg)#deck_flg
+        deck_type2 = random.choice(deck_flg)#deck_flg
     d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
     d1.set_leader_class(key_2_tsv_name[deck_type1][1])
     d2 = tsv_to_deck(key_2_tsv_name[deck_type2][0])
@@ -171,8 +169,8 @@ def multi_preparation(episode_data):
             #deck_type1 = random.choice(list(key_2_tsv_name.keys()))
             #deck_type2 = random.choice(list(key_2_tsv_name.keys()))
         else:
-            deck_type1 = deck_flg
-            deck_type2 = deck_flg
+            deck_type1 = random.choice(deck_flg)#deck_flg
+            deck_type2 = random.choice(deck_flg)#deck_flg
         d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
         d1.set_leader_class(key_2_tsv_name[deck_type1][1])
         d2 = tsv_to_deck(key_2_tsv_name[deck_type2][0])
@@ -356,13 +354,12 @@ def multi_train(data):
         z = all_rewards
         pai = all_actions  # 45種類の抽象化した行動
         # loss.backward()
-        with detect_anomaly():
-            loss[0].backward()
-            all_loss += float(loss[0].item())
-            MSE += float(loss[1].item())
-            CEE += float(loss[2].item())
+        loss[0].backward()
+        all_loss += float(loss[0].item())
+        MSE += float(loss[1].item())
+        CEE += float(loss[2].item())
 
-            optimizer.step()
+        optimizer.step()
 
 
     return all_loss, MSE, CEE
@@ -435,9 +432,6 @@ def run_main():
     cuda_flg = args.cuda == "True"
     node_num = int(args.node_num)
     net = New_Dual_Net(node_num)
-    if args.model_name is not None:
-        PATH = 'model/' + args.model_name
-        net.load_state_dict(torch.load(PATH))
     if torch.cuda.is_available() and cuda_flg:
         net = net.cuda()
         print("cuda is available.")
@@ -474,6 +468,7 @@ def run_main():
                                                              t1.second)
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
     th = float(args.WR_th)
+    fail_count = 0
     last_updated = 0
     min_loss = 100
     double_p_size = 2*p_size
@@ -513,9 +508,8 @@ def run_main():
         pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_preparation, iter_data)
         print("\n" * (double_p_size+1))
-        pool.terminate()  # add this.
         pool.close()  # add this.
-
+        pool.terminate()  # add this.
         battle_data = [cell.pop(-1) for cell in memory]
         memories = []
         [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(double_p_size)]
@@ -574,14 +568,11 @@ def run_main():
             memory_len = all_actions.size()[0]
             all_data_ids = list(range(memory_len))
             train_ids = random.sample(all_data_ids, k=int(memory_len * 0.8))
-            test_ids =list(set(all_data_ids)-set(train_ids))
             iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
                          for i in range(p_size)]
             freeze_support()
             pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
             loss_data = pool.map(multi_train, iter_data)
-            pool.terminate()  # add this.
-            pool.close()  # add this.
             print("\n" * p_size)
             #imap = pool.imap(multi_train, iter_data)
             #loss_data = list(tqdm(imap, total=p_size))
@@ -594,79 +585,16 @@ def run_main():
             train_CEE = sum_of_CEE / iteration
             print("AVE | Over_All_Loss(train): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                   .format(train_objective_loss, train_MSE, train_CEE))
-            #all_states, all_actions, all_rewards = all_data
-            test_ids_len = len(test_ids)
-            separate_num = test_ids_len
-            test_objective_loss = 0
-            test_MSE = 0
-            test_CEE = 0
-            states_keys = list(all_states.keys())
-            value_keys = list(all_states['values'].keys())
-            action_code_keys = list(all_states['detailed_action_codes'].keys())
-            for i in tqdm(range(separate_num)):
-                key = [test_ids[i]]
-                states = {}
-                for dict_key in states_keys:
-                    if dict_key == 'values':
-                        states['values'] = {}
-                        for sub_key in value_keys:
-                            states['values'][sub_key] = all_states['values'][sub_key][key]
-                    elif dict_key == 'detailed_action_codes':
-                        states['detailed_action_codes'] = {}
-                        for sub_key in action_code_keys:
-                            states['detailed_action_codes'][sub_key] = \
-                                all_states['detailed_action_codes'][sub_key][key]
-                    elif dict_key == 'before_states':
-                        orig_before_states = all_states["before_states"]
-                        before_states = {}
-                        for dict_key in states_keys:
-                            if dict_key == 'values':
-                                before_states['values'] = {}
-                                for sub_key in value_keys:
-                                    before_states['values'][sub_key] = \
-                                        torch.clone(orig_before_states['values'][sub_key][key])
-                                    # states['values'][sub_key].grad=None
-                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
-                                pass
-                            else:
-                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
-                        states["before_states"] = before_states
-                    else:
-                        states[dict_key] = all_states[dict_key][key]
-
-                actions = all_actions[key]
-                rewards = all_rewards[key]
-                states['target'] = {'actions': actions, 'rewards': rewards}
-                torch.cuda.empty_cache()
-                _, _, loss = net(states, target=True)
-                test_objective_loss += float(loss[0].item())
-                test_MSE += float(loss[1].item())
-                test_CEE += float(loss[2].item())
-                del loss
-            print("")
-            del actions
-            del all_data
-            del all_states
-            del all_actions
-            del all_rewards
-            separate_num = max(1, separate_num)
-            print(test_MSE,separate_num)
-            test_objective_loss /= separate_num
-            test_MSE /= separate_num
-            test_CEE /= separate_num
-            print("AVE | Over_All_Loss(test): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
-                  .format(test_objective_loss, test_MSE, test_CEE))
-            """
-            #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
+            all_states, all_actions, all_rewards = all_data
+            all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
             p, v, loss = net(all_states, target=True)
 
             print("loss:{:.3f} MSE:{:.3f} CEE:{:.3f}".format(loss[0].item(), loss[1].item(), loss[2].item()))
             test_objective_loss = loss[0].item()
             test_MSE = loss[1].item()
             test_CEE = loss[2].item()
-            """
-
-
+            pool.close()  # add this.
+            pool.terminate()  # add this.
 
             #writer.add_scalar(LOG_PATH + "Over_All_Loss", sum_of_loss / iteration, epoch)
             #writer.add_scalar(LOG_PATH + "MSE", sum_of_MSE / iteration, epoch)
@@ -887,10 +815,6 @@ def run_main():
                 print("v:{} z:{}".format(v[batch_id],rewards[batch_id]))
             del p,v
             del actions
-            del all_data
-            del all_states
-            del all_actions
-            del all_rewards
             separate_num = max(1, separate_num)
             print(test_MSE,separate_num)
             test_objective_loss /= separate_num
@@ -937,9 +861,9 @@ def run_main():
         memory = pool.map(multi_battle, iter_data)
         print("\n" * (p_size+1))
         # Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
-        pool.terminate()  # add this.
-        pool.close()  # add this.
 
+        pool.close()  # add this.
+        pool.terminate()  # add this.
         memory = list(memory)
         match_num = len(constant_deck_list) if deck_flg is None else p_size
         min_WR=1.0
@@ -965,11 +889,13 @@ def run_main():
         writer.add_scalars(LOG_PATH + 'win_rate', {'mean': WR,
                                               'min': min_WR
                                               }, epoch)
-        if WR < th: #and min_WR < 0.5:
+        if WR < max(0.51,th*100/(100+fail_count)):# and min_WR < 0.5:
             net = prev_net
+            fail_count += 1
             #th = max(0.5,th*0.95)
-            print("new_model lose... WR:{:.1%}".format(WR))
+            print("new_model lose... WR:{:.1%} fail_count:{}".format(WR,fail_count))
         else:
+            fail_count = 0
             #th = 0.55
             win_flg = True
             print("new_model win! WR:{:.1%} min:{:.1%}".format(WR,min_WR))
@@ -983,10 +909,10 @@ def run_main():
         t4 = datetime.datetime.now()
         print(t4-t3)
         if win_flg or (epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num):
-            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}|{}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                  t1.second, epoch+1,epoch_num,node_num)
             if torch.cuda.is_available() and cuda_flg:
-                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}|{}_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                         t1.second, epoch + 1 , epoch_num)
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
@@ -1025,7 +951,7 @@ def check_score():
     print("use cpu num:{}".format(p_size))
 
     loss_history = []
-    check_deck_id = int(args.check_deck_id) if args.check_deck_id is not None else None
+
     cuda_flg = args.cuda == "True"
     node_num = int(args.node_num)
     net = New_Dual_Net(node_num)
@@ -1081,9 +1007,7 @@ def check_score():
     print(deck_list)
     deck_pairs = list(itertools.product(deck_list,deck_list))
 
-    iter_data = [(p1, p2, episode_len, cell_id,cell) for cell_id,cell in enumerate(deck_pairs)]\
-        if check_deck_id is None else [(p1, p2, episode_len//(2*p_size), cell_id,(check_deck_id,check_deck_id)) \
-                                       for cell_id in range(2*p_size)]
+    iter_data = [(p1, p2, episode_len, cell_id,cell) for cell_id,cell in enumerate(deck_pairs)]
     freeze_support()
     pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
     memory = pool.map(multi_battle, iter_data)
