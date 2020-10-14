@@ -7,7 +7,7 @@ mylogger = get_module_logger(__name__)
 
 def adjust_action_code(field,sim_field,player_num,action_code = None, msg=None):
     #mylogger.info("check")
-    assert sim_field.eq(field),"diff field!"
+    assert sim_field.eq(field,debug=True),"diff field!\n{}\n{}".format(sim_field.show_field(),field.show_field())
     player = field.players[player_num]
     opponent = field.players[1-player_num]
     sim_player = sim_field.players[player.player_num]

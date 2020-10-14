@@ -54,12 +54,18 @@ class Field:
         self.before_observable_fields = [None,None]
 
 
-    def eq(self, other):
+    def eq(self, other,debug=False):
         if type(self) != type(other):
             assert False, "NoImplemented"
-        if len(self.card_location[0]) != len(other.card_location[0]): return False
-        if len(self.card_location[1]) != len(other.card_location[1]): return False
-        if self.turn_player_num != other.turn_player_num: return False
+        if len(self.card_location[0]) != len(other.card_location[0]):
+            print("1",len(self.card_location[0]),len(other.card_location[0])) if debug else None
+            return False
+        if len(self.card_location[1]) != len(other.card_location[1]):
+            print("2,",len(self.card_location[1]), len(other.card_location[1])) if debug else None
+            return False
+        if self.turn_player_num != other.turn_player_num:
+            print("3",self.turn_player_num , other.turn_player_num) if debug else None
+            return False
         observable = self.get_observable_data(player_num=0)
         other_observable = other.get_observable_data(player_num=0)
         for key in list(observable.keys()):
@@ -67,6 +73,9 @@ class Field:
             other_first = other_observable[key]
             for second_key in list(observable[key].keys()):
                 if player_first[second_key] !=other_first[second_key]:
+                    print("first:{} second:{} {} != {}".format(key,second_key,
+                       player_first[second_key],other_first[second_key])) if debug else None
+
                     return False
 
         observable = self.get_observable_data(player_num=1)
@@ -76,6 +85,8 @@ class Field:
             other_first = other_observable[key]
             for second_key in list(observable[key].keys()):
                 if player_first[second_key] !=other_first[second_key]:
+                    print("first:{} second:{} {} != {}".format(key,second_key,
+                       player_first[second_key],other_first[second_key])) if debug else None
                     return False
         #仮実装
         self.play_cards.play_cards_set()
@@ -86,24 +97,29 @@ class Field:
                 first_card = self.card_location[i][j]
                 second_card = other.card_location[i][j]
                 if not first_card.eq(second_card):
+                    print("{}!={}".format(first_card,second_card)) if debug else None
                     return False
             player_name_list = self.play_cards.name_list[i]
             for cost_key in sorted(list(player_name_list.keys())):
                 other_name_list = other.play_cards.name_list[i]
                 if cost_key not in other_name_list:
+                    print("{} not in {}".format(cost_key, other_name_list)) if debug else None
                     return False
                 other_cost_list = other_name_list[cost_key]
                 player_cost_list = player_name_list[cost_key]
                 for category_key in sorted(list(player_cost_list.keys())):
                     if category_key not in other_cost_list:
+                        print("{} not in {}".format(category_key, other_cost_list)) if debug else None
                         return False
                     player_category_list = player_cost_list[category_key]
                     other_category_list = other_cost_list[category_key]
                     for name_key in sorted(list(player_category_list.keys())):
                         if name_key not in other_category_list:
+                            print("{} not in {}".format(name_key, other_category_list)) if debug else None
                             return False
                         if other_category_list[name_key] !=\
                             player_category_list[name_key]:
+                            print("{} != {}".format(other_category_list[name_key], player_category_list[name_key])) if debug else None
                             return False
 
         return True

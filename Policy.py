@@ -442,12 +442,12 @@ class Default_GreedyPolicy(GreedyPolicy):
 
 class Node:
 
-    def __init__(self, field=None, player_num=0, finite_state_flg=False, depth=0):
+    def __init__(self, field=None, player_num=0, finite_state_flg=False, depth=0,root=False):
         self.field = field
         self.finite_state_flg = finite_state_flg
         self.value = 0.0
         self.visit_num = 0
-        self.is_root = False
+        self.is_root = root
         self.uct = 0.0
         self.depth = depth
         self.child_nodes = []
@@ -667,12 +667,12 @@ class MCTSPolicy(Policy):
         self.uct_c = 1. / np.sqrt(2)
         self.play_out_policy = RandomPolicy()
         self.end_count = 0
-        self.decide_node_seq = []
+        #self.decide_node_seq = []
         self.starting_node = None
         self.current_node = None
         self.next_node = None
         self.node_index = 0
-        self.policy_type = 3
+        self.policy_type = 4
         self.name = "MCTSPolicy"
         self.type = "root"
         self.iteration = 100
@@ -709,19 +709,11 @@ class MCTSPolicy(Policy):
                 return 0,0,0
             #next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
-            #self.prev_node = self.current_node
+            self.prev_node = self.current_node
             self.current_node = next_node
-            #if not field.secret and len(self.current_node.child_nodes) != len(self.current_node.children_moves):
-            #    mylogger.info("children_moves:{}".format(self.starting_node.children_moves))
-            #    self.starting_node.print_tree(single=True)
+            #print(id(self.prev_node),id(self.current_node))
             self.type = "root"
             if tmp_move == (0, 0, 0):
-                #if not field.secret:
-                #    if self.current_node.parent_node is not None:
-                #        if self.current_node.parent_node.children_moves != [(0,0,0)]:
-                #            mylogger.info("turn end is prior to other moves")
-                #            mylogger.info("children_moves:{}".format(self.current_node.parent_node.children_moves))
-                #            self.current_node.parent_node.print_tree(single=True)
                 self.current_node = None
             return tmp_move  # action
         else:
@@ -729,6 +721,16 @@ class MCTSPolicy(Policy):
 
             next_node = None
             tmp_move = None
+            hit_flg = False
+            for child_tuple in self.prev_node.child_nodes:
+                child = child_tuple[1]
+                sim_player_hand = child.field.players[player.player_num].hand
+                if child.field.eq(field) and player.compare_hand(sim_player_hand):
+                    hit_flg = True
+                    self.current_node = child
+
+                    break
+            """
             if not self.fully_expand(self.current_node, player_num=player.player_num):
                 #if not field.secret:
                 #    mylogger.info("reuse existed node as root(able_move_num:{},child_num:{})"
@@ -736,18 +738,47 @@ class MCTSPolicy(Policy):
                 action = self.uct_search(player, opponent, field)
                 tmp_move = action
                 if len(self.current_node.child_nodes) > 0:
-                    next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
+                    next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
+                    self.prev_node = self.current_node
                     self.current_node = next_node
                 if tmp_move == (0, 0, 0):
                     self.current_node = None
                 return tmp_move
-            if len(self.current_node.child_nodes) == 0:
-                #if not field.secret:
-                #    mylogger.info("no child error")
-                return Action_Code.ERROR.value, 0, 0
+            """
+            #if len(self.current_node.child_nodes) == 0:
+            #    return Action_Code.ERROR.value, 0, 0
             #next_node, tmp_move = self.best(self.current_node, player_num=player.player_num)
+            if hit_flg:
+                self.type = "hit"
+                self.last_node = self.current_node
+
+                if not field.secret:
+                    mylogger.info("corresponding node is not found(visit_num:{},child_num:{})"
+                                  .format(self.current_node.visit_num,
+                                          len(self.current_node.child_nodes)))
+                if not field.secret:
+                    mylogger.info("reuse current_node as root")
+
+                self.uct_search(player, opponent, field,use_existed_node=True)
+                #mylogger.info("yes")
+                #self.current_node.field.show_field()
+
+            else:
+                self.type = "nohit"
+
+                self.uct_search(player, opponent, field)
+                self.last_node = self.current_node
+            if not player.compare_hand(self.last_node.field.players[player.player_num].hand):
+                print(self.type)
+                player.show_hand()
+                self.last_node.field.players[player.player_num].show_hand()
+                mylogger.info("differror")
+            if not field.secret:
+                mylogger.info("use existed tree")
+            if len(self.current_node.child_nodes) == 0:
+                return Action_Code.ERROR.value, "no_child", 0
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
-            #self.prev_node = self.current_node
+            self.prev_node = self.current_node
             self.current_node = next_node
             if tmp_move == (0, 0, 0):
                 if not field.secret:
@@ -759,19 +790,33 @@ class MCTSPolicy(Policy):
                 self.current_node = None
             return tmp_move  # action
 
-    def uct_search(self, player, opponent, field):
+    def uct_search(self, player, opponent, field,use_existed_node=False):
         field.get_regal_target_dict(player, opponent)
         player_num = player.player_num
+        starting_node = None
+        if use_existed_node:
+            starting_node = self.current_node
+            starting_node.parent_node = None
+            starting_node.is_root = True
+        else:
+            starting_field = Field_setting.Field(5)
+            starting_field.set_data(field)
+            starting_field.get_regal_target_dict(starting_field.players[player.player_num],
+                                                 starting_field.players[opponent.player_num])
+            starting_node = Node(field=starting_field, player_num=player.player_num,root=True)
+            starting_node.is_root = True
+        """
         starting_field = Field_setting.Field(5)
         starting_field.set_data(field)
         starting_field.get_regal_target_dict(starting_field.players[player.player_num],
                                              starting_field.players[opponent.player_num])
         starting_node = Node(field=starting_field, player_num=player.player_num)
         starting_node.is_root = True
+        """
         self.starting_node = starting_node
         self.current_node = starting_node
-        self.decide_node_seq = []
-        self.decide_node_seq.append(starting_node)
+        #self.decide_node_seq = []
+        #self.decide_node_seq.append(starting_node)
         if starting_node.get_able_action_list() == [(0, 0, 0)]:
             return 0, 0, 0
         for i in range(self.iteration):
@@ -1375,7 +1420,7 @@ class EXP3_MCTSPolicy(Policy):
         self.uct_c = 1. / np.sqrt(2)
         self.play_out_policy = RandomPolicy()
         self.end_count = 0
-        self.decide_node_seq = []
+        #self.decide_node_seq = []
         self.starting_node = None
         self.current_node = None
         self.node_index = 0
@@ -1453,8 +1498,8 @@ class EXP3_MCTSPolicy(Policy):
         self.starting_node = starting_node
         self.current_node = starting_node
         end_flg = False
-        self.decide_node_seq = []
-        self.decide_node_seq.append(starting_node)
+        #self.decide_node_seq = []
+        #self.decide_node_seq.append(starting_node)
         if starting_node.get_able_action_list() == [(0, 0, 0)]:
             # mylogger.info("check:{}".format(self.current_node==self.starting_node))
             return
@@ -1837,8 +1882,8 @@ class Time_bounded_MCTSPolicy(MCTSPolicy):
         self.starting_node = starting_node
         self.current_node = starting_node
         end_flg = False
-        self.decide_node_seq = []
-        self.decide_node_seq.append(starting_node)
+        #self.decide_node_seq = []
+        #self.decide_node_seq.append(starting_node)
         if starting_node.get_able_action_list() == [(0, 0, 0)]:
             return 0, 0, 0
         t1 = time.time()
@@ -2411,6 +2456,23 @@ class Information_Set_MCTSPolicy():
 
             hit_flg = False
             self.type = "blanch"
+            if hit_flg:
+                self.type = "hit"
+                self.last_node = self.current_node
+
+                if not field.secret:
+                    mylogger.info("corresponding node is not found(visit_num:{},child_num:{})"
+                                  .format(self.current_node.visit_num,
+                                          len(self.current_node.child_nodes)))
+                if not field.secret:
+                    mylogger.info("reuse current_node as root")
+
+                self.uct_search(player, opponent, field,use_existed_node=True)
+
+            else:
+                self.type = "nohit"
+                self.uct_search(player, opponent, field)
+            """
             for child in self.prev_node.child_nodes:
                 if child.field.eq(field):
                     hit_flg = True
@@ -2424,8 +2486,7 @@ class Information_Set_MCTSPolicy():
                 return Action_Code.ERROR.value, "not exist in simulation child_num:{}"\
                                   .format(len(self.prev_node.child_nodes)), 0
 
-
-            self.node_index += 1
+            """
             if len(self.current_node.child_nodes) == 0:
                 if not field.secret:
                     mylogger.info("no child in this node")
@@ -2436,6 +2497,9 @@ class Information_Set_MCTSPolicy():
             self.prev_node = self.current_node
             if tmp_move[0] == Action_Code.TURN_END.value:
                 self.current_node = None
+                self.prev_node = None
+            else:
+                self.current_node = next_node
             return tmp_move
 
     def uct_search(self, player, opponent, field,use_existed_node=False):
@@ -3027,8 +3091,8 @@ class Opponent_Modeling_MCTSPolicy(MCTSPolicy):
             starting_node.is_root = True
             self.starting_node = starting_node
         self.current_node = starting_node
-        self.decide_node_seq = []
-        self.decide_node_seq.append(starting_node)
+        #self.decide_node_seq = []
+        #self.decide_node_seq.append(starting_node)
         if starting_node.get_able_action_list() == [(0, 0, 0)]:
             return 0, 0, 0
         for i in range(self.iteration):
@@ -3478,8 +3542,6 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                 mylogger.info("use existed tree")
             next_node, tmp_move = self.execute_best(self.current_node, player_num=player.player_num)
             if tmp_move[0] == Action_Code.TURN_END.value:
-                if not field.secret and len(self.prev_node.children_moves) > 1:
-                    mylogger.info("choices:{}".format(self.prev_node.children_moves))
                 self.error_count = 0
                 self.current_node = None
                 self.prev_node = None

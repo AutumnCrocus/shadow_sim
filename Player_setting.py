@@ -256,7 +256,7 @@ class Player:
             #self.policy.starting_node.print_node()
             #assert False
             self.error_count += 1
-            mylogger.info("error_count:{}".format(self.error_count))
+            #mylogger.info("error_count:{}".format(self.error_count))
             if self.error_count >= 3:
                 self.policy.starting_node.print_tree()
                 print((action_num, card_id, target_id))
