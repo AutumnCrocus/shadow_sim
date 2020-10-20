@@ -1,6 +1,7 @@
-import os
-os.environ["OMP_NUM_THREADS"] = "6"
+
 import torch
+import os
+os.environ["OMP_NUM_THREADS"] = "4" if torch.cuda.is_available() else "6"
 #import torchvision
 #import torchvision.transforms as transforms
 #import matplotlib.pyplot as plt
@@ -145,7 +146,7 @@ class Dual_State_Net(nn.Module):
         self.hand_value_layer = nn.Linear(n_mid,1)
         self.field_value_layer = nn.Linear(n_mid, 1)
         self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)
-        self.concat_layer = nn.Linear(n_mid+26+1,n_mid)
+        self.concat_layer = nn.Linear(n_mid+37,n_mid)
         self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
 
         self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
@@ -164,16 +165,25 @@ class Dual_State_Net(nn.Module):
         follower_abilities = states['follower_abilities']
         class_datas = values['class_datas']
         stats = values['follower_stats']
+        deck_datas = states["deck_datas"]
         class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
         x4 = self.ability_eye[follower_abilities]
         x4 = torch.sum(x4,dim=2)
         abilities = x4.to(stats.device)
-        field_card_ids = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
-        x1 = torch.cat([stats, abilities,field_card_ids],dim=2)
+        follower_cards = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
+        x1 = torch.cat([stats, abilities,follower_cards],dim=2)
         x1 = self.prelu_1(self.value_layer(x1))
-        exist_filter = (follower_card_ids != 0).float().view(-1,10,1)
-        x1 = x1 * exist_filter
+        exist_filter1 = (follower_card_ids != 0).float().view(-1,10,1)
+        x1 = x1 * exist_filter1
         follower_values=x1.view(-1,10)
+
+        amulet_cards = self.prelu_5(self.field_value_layer(self.emb1(amulet_card_ids))).view(-1, 10,1)
+        x2 = amulet_cards
+        exist_filter2 = (amulet_cards != 0).float().view(-1,10,1)
+        x2 = x2 * exist_filter2
+        amulet_values=x2.view(-1,10)
+
+
         life_values = self.prelu_2(self.life_layer(values['life_datas']))
         #if True in torch.isnan(life_values):
         #    print(life_values)
@@ -183,14 +193,17 @@ class Dual_State_Net(nn.Module):
         #    print(hand_ids)
         #    assert False,"nan in hand_ids"
         hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
-        x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
+        #print(follower_values.size(), amulet_values.size(),life_values.size(),class_values.size(),hand_card_values.size())
+        x = torch.cat([follower_values,amulet_values,life_values,class_values,hand_card_values],dim=1)
 
-        x1 = self.prelu_4(self.concat_layer(x1))
+        #x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
+
+        x = self.prelu_4(self.concat_layer(x))
         #if True in torch.isnan(x1):
         #    print(x1)
         #    assert False,"nan in second_x1"
 
-        return x1
+        return x
 
 class Dual_ResNet(nn.Module):
     def __init__(self, n_in, n_out):

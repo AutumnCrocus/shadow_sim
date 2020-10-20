@@ -429,12 +429,12 @@ class Creature(Card):
         self.toughness = creature_list[self.card_id][2]  # カードの体力
         self.buff = [0, 0]  # スタッツ上昇量
         self.until_turn_end_buff = [0, 0]  # ターン終了時までのスタッツ上昇量
-        self.target_regulation = None
-        if card_id in creature_target_regulation:
-            self.target_regulation = creature_target_regulation[card_id]
+        self.target_regulation = card_id
+        #if card_id in creature_target_regulation:
+        #    self.target_regulation = card_id#creature_target_regulation[card_id]
         self.player_attack_regulation = None
         if card_id in player_attack_regulation:
-            self.player_attack_regulation = player_attack_regulation[card_id]
+            self.player_attack_regulation = card_id#player_attack_regulation[card_id]
         self.evo_stat = [2, 2]
         if card_id in special_evo_stats_id:
             self.evo_stat = evo_stats[special_evo_stats_id[card_id]]
@@ -443,11 +443,13 @@ class Creature(Card):
         self.have_active_ability = card_id in creature_active_ability_card_id_list
         if self.have_active_ability:
             func_id = creature_active_ability_card_id_list[card_id]
-            self.active_ability_check_func = active_ability_check_func_list[func_id]
+            self.func_id = func_id
+            #self.active_ability_check_func = active_ability_check_func_list[func_id]
             self.active_ability = creature_active_ability_list[card_id]
         self.fanfare_ability = None
         if card_id in creature_fanfare_ability:
-            self.fanfare_ability = creature_ability_dict[creature_fanfare_ability[card_id]]
+            self.fanfare_ability = creature_fanfare_ability[card_id]
+            #creature_ability_dict[creature_fanfare_ability[card_id]]
 
         self.lastword_ability = [creature_lastword_ability[card_id]] if card_id in creature_lastword_ability else []
         #self.lastword_ability = []
@@ -461,7 +463,8 @@ class Creature(Card):
         self.evo_effect = None
         self.evo_target = None
         if card_id in creature_evo_effect:
-            self.evo_effect = creature_ability_dict[creature_evo_effect[card_id]]
+            self.evo_effect = creature_evo_effect[card_id]
+            #creature_ability_dict[creature_evo_effect[card_id]]
             if card_id in creature_has_evo_effect_target:
                 self.evo_target = creature_has_evo_effect_target[card_id]
             self.evo_target_regulation = None
@@ -591,7 +594,8 @@ class Creature(Card):
         self.toughness += self.evo_stat[1]
         if auto: return
         if self.evo_effect is not None:
-            self.evo_effect(field, field.players[player_num], field.players[1 - player_num], virtual, target, self)
+            creature_ability_dict[self.evo_effect](field, field.players[player_num], field.players[1 - player_num], virtual, target, self)
+            #self.evo_effect(field, field.players[player_num], field.players[1 - player_num], virtual, target, self)
 
     def get_damage(self, amount):
         if KeywordAbility.REDUCE_DAMAGE_TO_ZERO.value not in self.ability:
@@ -728,9 +732,9 @@ class Spell(Card):
         self.card_category = "Spell"
         self.cost = spell_list[self.card_id][0]  # カードのコスト
         self.origin_cost = spell_list[self.card_id][0]  # カードの元々のコスト
-        self.target_regulation = None
-        if card_id in spell_target_regulation:
-            self.target_regulation = spell_target_regulation[card_id]
+        self.target_regulation = card_id#None
+        #if card_id in spell_target_regulation:
+        #    self.target_regulation = card_id#spell_target_regulation[card_id]
 
         self.triggered_ability = [spell_ability_dict[spell_triggered_ability[card_id]]]
 
@@ -841,13 +845,14 @@ class Amulet(Card):
         #if card_id in amulet_trigger_ability_dict:
         #    self.trigger_ability.append(trigger_ability_dict[amulet_trigger_ability_dict[card_id]]())
         #    self.trigger_ability_stack = []
-        self.target_regulation = None
-        if card_id in amulet_target_regulation:
-            self.target_regulation = amulet_target_regulation[card_id]
+        self.target_regulation = card_id#None
+        #if card_id in amulet_target_regulation:
+        #    self.target_regulation = amulet_target_regulation[card_id]
 
         self.fanfare_ability = None
         if card_id in amulet_fanfare_ability:
-            self.fanfare_ability = amulet_ability_dict[amulet_fanfare_ability[card_id]]
+            self.fanfare_ability = amulet_fanfare_ability[card_id]
+            #amulet_ability_dict[amulet_fanfare_ability[card_id]]
         self.lastword_ability = [amulet_lastword_ability[card_id]] if card_id in amulet_lastword_ability else []
         #self.lastword_ability = []
         #if card_id in amulet_lastword_ability:

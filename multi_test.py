@@ -1,6 +1,7 @@
+# -*- coding: utf-8 -*-
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support
-#import os
-#os.environ["OMP_NUM_THREADS"] = "6"
+import os
+os.environ["OMP_NUM_THREADS"] = "4"
 try:
     set_start_method('spawn')
     print("spawn is run.")
@@ -356,13 +357,12 @@ def multi_train(data):
         z = all_rewards
         pai = all_actions  # 45種類の抽象化した行動
         # loss.backward()
-        with detect_anomaly():
-            loss[0].backward()
-            all_loss += float(loss[0].item())
-            MSE += float(loss[1].item())
-            CEE += float(loss[2].item())
-
-            optimizer.step()
+        #with detect_anomaly():
+        loss[0].backward()
+        all_loss += float(loss[0].item())
+        MSE += float(loss[1].item())
+        CEE += float(loss[2].item())
+        optimizer.step()
 
 
     return all_loss, MSE, CEE
@@ -933,7 +933,7 @@ def run_main():
         freeze_support()
         pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_battle, iter_data)
-        print("\n" * (len(deck_pairs)+1))
+        print("\n" * (len(test_deck_list)+1))
         # Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
         pool.terminate()  # add this.
         pool.close()  # add this.

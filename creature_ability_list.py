@@ -2,7 +2,7 @@ import random
 from my_moduler import get_module_logger
 import card_setting
 import Player_Ability_setting
-
+import card_setting
 mylogger = get_module_logger(__name__)
 from util_ability import *
 from my_enum import *
@@ -187,7 +187,8 @@ def creature_ability_025(field, player, opponent, virtual, target, itself):
 
 def creature_ability_026(field, player, opponent, virtual, target, itself):
     if target is not None and target < len(field.card_location[opponent.player_num]):
-        if itself.target_regulation(field.card_location[opponent.player_num][target]):
+        #if itself.target_regulation(field.card_location[opponent.player_num][target]):
+        if card_setting.creature_target_regulation[itself.target_regulation](field.card_location[opponent.player_num][target]):
             destroy_opponent_creature(field, opponent, virtual, target)
     elif target is not None:
         able_targets = field.get_regal_targets(itself, target_type=1, player_num=player.player_num)
@@ -203,7 +204,8 @@ def creature_ability_027(field, player, opponent, virtual, target, itself):
     """
     if target is not None:
         target_creature = field.card_location[player.player_num][target]
-        if not itself.target_regulation(target_creature):
+        if not card_setting.creature_target_regulation[itself.target_regulation](target_creature):
+            #if not itself.target_regulation(target_creature):
             mylogger.info("target_id:{}".format(target))
             field.show_field()
             assert False
@@ -516,14 +518,6 @@ def creature_ability_065(field, player, opponent, virtual, target, itself):
             mylogger.info("hand_regal_targets:{}".format(field.get_regal_target_dict(player,opponent)))
             player.show_hand()
             field.show_field()
-            #mylogger.info("sim")
-            #sim_field = player.policy.prev_node.field
-            #sim_player = sim_field.players[player.player_num]
-            #sim_opponent = sim_field.players[opponent.player_num]
-            #mylogger.info("hand_regal_targets:{}".format(sim_field.get_regal_target_dict(sim_player, sim_opponent)))
-            #sim_player = sim_field.players[player.player_num]
-            #sim_player.show_hand()
-            #sim_field.show_field()
             mylogger.info("last")
             sim_field = player.policy.last_node.field
             sim_player = sim_field.players[player.player_num]
@@ -532,28 +526,6 @@ def creature_ability_065(field, player, opponent, virtual, target, itself):
             sim_player = sim_field.players[player.player_num]
             sim_player.show_hand()
             sim_field.show_field()
-            """
-            mylogger.info("target_id:{} name:{}".format(target, creature.name))
-            mylogger.info("real")
-            mylogger.info("hand_regal_targets:{}".format(field.get_regal_target_dict(player,opponent)))
-            player.show_hand()
-            field.show_field()
-            if player.policy.prev_node is not None:
-                mylogger.info("sim")
-                sim_field = player.policy.prev_node.field
-                sim_player = sim_field.players[player.player_num]
-                sim_opponent = sim_field.players[opponent.player_num]
-                mylogger.info("hand_regal_targets:{}".format(sim_field.get_regal_target_dict(sim_player,sim_opponent)))
-                sim_player = sim_field.players[player.player_num]
-                sim_player.show_hand()
-                sim_field.show_field()
-                mylogger.info("eq:{}".format(field.eq(sim_field)))
-                mylogger.info("hand_eq:{}".format(player.compare_hand(sim_player.hand)))
-            mylogger.info("current_node")
-            current_field = player.policy.current_node.field
-            current_field.players[player.player_num].show_field()
-            current_field.show_field()
-            """
 
             assert False,"non-follower-error"
         if not virtual:
