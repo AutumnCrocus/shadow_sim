@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import torch
 import os
@@ -146,10 +147,11 @@ class Dual_State_Net(nn.Module):
         self.hand_value_layer = nn.Linear(n_mid,1)
         self.field_value_layer = nn.Linear(n_mid, 1)
         self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)
-        self.concat_layer = nn.Linear(n_mid+37,n_mid)
+        self.concat_layer = nn.Linear(n_mid+10*2+1+16+8,n_mid)
         self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
 
         self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
+        self.deck_type_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
 
         self.prelu_1 = nn.PReLU(init=0.01)
         self.prelu_2 = nn.PReLU(init=0.01)
@@ -164,9 +166,11 @@ class Dual_State_Net(nn.Module):
         amulet_card_ids = states['amulet_card_ids']
         follower_abilities = states['follower_abilities']
         class_datas = values['class_datas']
+        deck_type_datas = values['deck_type_datas']
         stats = values['follower_stats']
         deck_datas = states["deck_datas"]
         class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
+        deck_type_values = self.deck_type_eye[deck_type_datas].view(-1,8).to(stats.device)
         x4 = self.ability_eye[follower_abilities]
         x4 = torch.sum(x4,dim=2)
         abilities = x4.to(stats.device)
@@ -194,8 +198,9 @@ class Dual_State_Net(nn.Module):
         #    assert False,"nan in hand_ids"
         hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
         #print(follower_values.size(), amulet_values.size(),life_values.size(),class_values.size(),hand_card_values.size())
-        x = torch.cat([follower_values,amulet_values,life_values,class_values,hand_card_values],dim=1)
-
+        #x = torch.cat([follower_values,amulet_values,life_values,class_values,hand_card_values],dim=1)
+        x = torch.cat([follower_values,amulet_values,life_values,class_values,deck_type_values,hand_card_values],dim=1)
+        
         #x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
 
         x = self.prelu_4(self.concat_layer(x))
@@ -478,7 +483,8 @@ def get_data(f,player_num=0):
 
     class_data = [player.deck.leader_class.value,
                     opponent.deck.leader_class.value]
-    life_data = (life_data, class_data)
+    deck_type_data = [player.deck.deck_type,opponent.deck.deck_type]
+    life_data = (life_data, class_data,deck_type_data)
     datas = Detailed_State_data(hand_ids, hand_card_costs, follower_card_ids, amulet_card_ids,
                               follower_stats, follower_abilities, able_to_evo, life_data, pp_data,
                               able_to_play, able_to_attack, able_to_creature_attack,deck_data)
@@ -520,10 +526,12 @@ def Detailed_State_data_2_Tensor(datas,cuda=False):
     pp_datas = torch.Tensor([datas[i].pp_data for i in range(data_len)])
     life_datas = torch.Tensor([datas[i].life_data[0] for i in range(data_len)])
     class_datas = torch.LongTensor([datas[i].life_data[1] for i in range(data_len)])
+    deck_type_datas = torch.LongTensor([datas[i].life_data[2] for i in range(data_len)])
     deck_datas = torch.LongTensor([datas[i].deck_data for i in range(data_len)])
 
     ans = {'values': {'life_datas': life_datas,
                       'class_datas': class_datas,
+                      'deck_type_datas':deck_type_datas,
                       'hand_card_costs': hand_card_costs,
                       'follower_stats': follower_stats,
                       'pp_datas': pp_datas,
@@ -588,6 +596,23 @@ key_2_tsv_name = {0: ["Sword_Aggro.tsv", "SWORD"], 1: ["Rune_Earth.tsv", "RUNE"]
                   11: ["PtP_Forest.tsv", "FOREST"], 12: ["Mid_Shadow.tsv", "SHADOW"],
                   13: ["Neutral_Blood.tsv", "BLOOD"],100: ["TEST.tsv", "SHADOW"],
                   -2: ["Sword_Basic.tsv", "SWORD"]}
+
+
+# +
+
+def deck_id_2_deck_type(type_num):
+    if type_num in [0,1]:
+        return DeckType.AGGRO.value
+    elif type_num in [5,6,7]:
+        return DeckType.CONTROL.value
+    elif type_num in [8,9,10,-9,11]:
+        return DeckType.COMBO.value
+    else:
+        return DeckType.MID.value
+        
+
+
+# -
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')

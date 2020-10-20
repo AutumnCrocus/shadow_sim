@@ -21,7 +21,7 @@ import csv
 import pandas as pd
 import warnings
 
-#warnings.simplefilter('ignore', NumbaWarning)
+# warnings.simplefilter('ignore', NumbaWarning)
 
 
 def tsv_to_card_list(tsv_name):
@@ -1037,8 +1037,8 @@ class Deck:
         return sum_of_cost / len(self.deck)
 
     def set_deck_type(self, type_num):
-        self.deck_type = DeckType(type_num)
-        mylogger.info("Deck_Type:{}".format(self.deck_type.name))
+        self.deck_type = DeckType(type_num).value
+        #mylogger.info("Deck_Type:{}".format(self.deck_type.name))
         # 1はAggro,2はMid,3はControl,4はCombo
 
     def set_leader_class(self, leader_class):

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import random
 import math
@@ -45,6 +46,7 @@ class Player:
             #    player.deck.append(card)
             player.deck.deck = deque(map(field.copy_func, self.deck.deck)) if field is not None else deque()
             player.deck.remain_num = int(self.deck.remain_num)
+            player.deck.deck_type = int(self.deck.deck_type)
 
         player.field = field
         player.name = self.name

@@ -84,8 +84,10 @@ def preparation(episode_data):
         deck_type2 = random.choice(deck_flg)#deck_flg
     d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
     d1.set_leader_class(key_2_tsv_name[deck_type1][1])
+    d1.set_deck_type(deck_id_2_deck_type(deck_type1))
     d2 = tsv_to_deck(key_2_tsv_name[deck_type2][0])
     d2.set_leader_class(key_2_tsv_name[deck_type2][1])
+    d2.set_deck_type(deck_id_2_deck_type(deck_type2))
     d1.shuffle()
     d2.shuffle()
     p1.deck = d1
@@ -176,8 +178,10 @@ def multi_preparation(episode_data):
             deck_type2 = random.choice(deck_flg)#deck_flg
         d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
         d1.set_leader_class(key_2_tsv_name[deck_type1][1])
+        d1.set_deck_type(deck_id_2_deck_type(deck_type1))
         d2 = tsv_to_deck(key_2_tsv_name[deck_type2][0])
         d2.set_leader_class(key_2_tsv_name[deck_type2][1])
+        d2.set_deck_type(deck_id_2_deck_type(deck_type2))
         d1.shuffle()
         d2.shuffle()
         p1.deck = d1
@@ -268,8 +272,10 @@ def multi_battle(episode_data):
         deck_type2 = deck_ids[1-episode%2]
         d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
         d1.set_leader_class(key_2_tsv_name[deck_type1][1])
+        d1.set_deck_type(deck_id_2_deck_type(deck_type1))
         d2 = tsv_to_deck(key_2_tsv_name[deck_type2][0])
         d2.set_leader_class(key_2_tsv_name[deck_type2][1])
+        d2.set_deck_type(deck_id_2_deck_type(deck_type2))
         d1.shuffle()
         d2.shuffle()
         p1.deck = d1

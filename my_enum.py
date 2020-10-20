@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from enum import Enum
 class __LeaderClass(Enum):
     NEUTRAL = 0
@@ -9,7 +10,7 @@ class __LeaderClass(Enum):
     BLOOD = 6
     HAVEN = 7
     PORTAL = 8
-    
+
 LeaderClass=__LeaderClass
 
 class __Trait(Enum):
