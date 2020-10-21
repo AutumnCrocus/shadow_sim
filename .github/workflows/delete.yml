@@ -1,5 +1,7 @@
 name: Delete
 on:
+  push:
+    branches: [master]
   workflow_dispatch:
 jobs:
   build: 
@@ -7,7 +9,7 @@ jobs:
     steps:
     - name: delete all_model    
       run: |
-       git clone "https://github.com/AutumnCrocus/shadow_sim.git"
+       git clone https://github.com/AutumnCrocus/shadow_sim.git
        git rm ./model/*pth
        git commit
-       git push
+       git push origin master
