@@ -4,7 +4,7 @@
 name: Python application
 on:
   push:
-    paths: "pythonapp.yml"
+    paths: ".github/workflows/*.yml"
   workflow_dispatch:
 
 jobs:
