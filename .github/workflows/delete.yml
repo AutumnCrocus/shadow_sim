@@ -1,12 +1,12 @@
 name: Delete
 on:
-  push:
-    branches: [ master ]
-  #workflow_dispatch:
+  workflow_dispatch:
 jobs:
   build: 
     runs-on: ubuntu-latest
     steps:
     - name: delete all_model    
       run: |
-       rm ./model/*.pth
+       git pull master
+       git rm ./model/*pth
+       git commit
