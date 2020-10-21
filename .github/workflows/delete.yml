@@ -19,4 +19,5 @@ jobs:
        cd shadow_sim
        git rm model/*.pth
        git commit -m "test"
+       git remote set-url origin git@github.com:AutumnCrocus/shadow_sim.git
        git push origin master
