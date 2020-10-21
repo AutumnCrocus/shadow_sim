@@ -9,7 +9,11 @@ jobs:
     steps:
     - name: delete all_model    
       run: |
+       git config --global user.name "AutumnCrocus"
+       git config --global user.email "t4kicyis@gmail.com"
+       git init
        git clone https://github.com/AutumnCrocus/shadow_sim.git
+       git branch
        git rm ./model/*pth
        git commit
        git push origin master
