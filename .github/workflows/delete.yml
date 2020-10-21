@@ -7,5 +7,4 @@ jobs:
     steps:
     - name: delete all_model    
       run: |
-       ls
-      shell: bash
+       rm ./model/*.pth
