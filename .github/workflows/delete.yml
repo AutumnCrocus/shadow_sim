@@ -12,4 +12,5 @@ jobs:
     steps:
     - name: delete all_model    
       run: |
+       cd bin/bash
        ls
