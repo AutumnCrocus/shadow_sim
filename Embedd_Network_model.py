@@ -3,6 +3,7 @@
 import torch
 import os
 os.environ["OMP_NUM_THREADS"] = "4" if torch.cuda.is_available() else "6"
+os.environ["PYTHONWARNINGS"] = 'ignore:semaphore_tracker:UserWarning'
 #import torchvision
 #import torchvision.transforms as transforms
 #import matplotlib.pyplot as plt
@@ -142,22 +143,44 @@ class New_Dual_Net(nn.Module):
 class Dual_State_Net(nn.Module):
     def __init__(self, n_mid):
         super(Dual_State_Net, self).__init__()
-        self.value_layer = nn.Linear(5+15+1,1)
+        self.value_layer = nn.Linear(5+15+n_mid,n_mid)
+        #self.value_layer = nn.Linear(5 + 15 + 1, 1)
+
         self.life_layer = nn.Linear(5, n_mid)
-        self.hand_value_layer = nn.Linear(n_mid,1)
-        self.field_value_layer = nn.Linear(n_mid, 1)
+
+        self.hand_value_layer = nn.Linear(n_mid, n_mid)
+        #self.hand_value_layer = nn.Linear(n_mid,1)
+        self.deck_value_layer = nn.Linear(n_mid, n_mid)
+
+        self.field_value_layer = nn.Linear(n_mid, n_mid)
+        #self.field_value_layer = nn.Linear(n_mid, 1)
+
         self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)
-        self.concat_layer = nn.Linear(n_mid+10*2+1+16+8,n_mid)
+
+        self.concat_layer = nn.Linear(n_mid,n_mid)
+
+        #self.concat_layer = nn.Linear(n_mid+10*2+1+16+8,n_mid)
         self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
 
         self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
         self.deck_type_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
-
+        """
         self.prelu_1 = nn.PReLU(init=0.01)
         self.prelu_2 = nn.PReLU(init=0.01)
         self.prelu_3 = nn.PReLU(init=0.01)
         self.prelu_4 = nn.PReLU(init=0.01)
         self.prelu_5 = nn.PReLU(init=0.01)
+        self.prelu_6 = nn.PReLU(init=0.01)
+        self.prelu_7 = nn.PReLU(init=0.01)
+        self.prelu_8 = nn.PReLU(init=0.01)
+        self.prelu_9 = nn.PReLU(init=0.01)
+        """
+        prelu_layer = [nn.PReLU(init=0.01) for i in range(7)]
+        self.prelu_layer = nn.ModuleList(prelu_layer)
+        self.modify_layer = nn.Linear(94*n_mid,n_mid)
+        self.n_mid = n_mid
+        #layer = [nn.Linear(n_mid,n_mid) for _ in range(3)]
+        #self.layer = nn.ModuleList(layer)
 
     def forward(self, states):
         values = states['values']
@@ -169,44 +192,74 @@ class Dual_State_Net(nn.Module):
         deck_type_datas = values['deck_type_datas']
         stats = values['follower_stats']
         deck_datas = states["deck_datas"]
-        class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
-        deck_type_values = self.deck_type_eye[deck_type_datas].view(-1,8).to(stats.device)
+        #class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
+        #deck_type_values = self.deck_type_eye[deck_type_datas].view(-1,8).to(stats.device)
+        class_values = self.class_eye[class_datas].view(-1, 16).unsqueeze(-1).to(stats.device)
+        class_values = class_values.expand(-1, 16, self.n_mid)
+        deck_type_values = self.deck_type_eye[deck_type_datas].view(-1, 8).unsqueeze(-1).to(stats.device)
+        deck_type_values = deck_type_values.expand(-1, 8, self.n_mid)
         x4 = self.ability_eye[follower_abilities]
         x4 = torch.sum(x4,dim=2)
         abilities = x4.to(stats.device)
+
+
+        follower_cards = self.prelu_layer[0](self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10, self.n_mid)
+        x1 = torch.cat([stats, abilities,follower_cards],dim=2)
+        x1 = self.prelu_layer[1](self.value_layer(x1))
+        #exist_filter1 = (follower_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
+        #print("follower_cards:{},exist_filter1:{}".format(follower_cards.size(),exist_filter1.size()))
+        #exist_filter1.expand(*[-1,10,self.n_mid])
+        #x1 = x1 * exist_filter1
+        follower_values=x1#x1.view(-1,10)
+        """
         follower_cards = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
         x1 = torch.cat([stats, abilities,follower_cards],dim=2)
         x1 = self.prelu_1(self.value_layer(x1))
         exist_filter1 = (follower_card_ids != 0).float().view(-1,10,1)
         x1 = x1 * exist_filter1
         follower_values=x1.view(-1,10)
+        """
 
+        amulet_cards = self.prelu_layer[0](self.field_value_layer(self.emb1(amulet_card_ids))).view(-1, 10,self.n_mid)
+        #print("amulet_cards:{}".format(amulet_cards.size()))
+        x2 = amulet_cards
+        #exist_filter2 = (amulet_cards != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
+        #exist_filter2.expand(*[-1, 10, self.n_mid])
+        #x2 = x2 * exist_filter2
+        amulet_values=x2#x2.view(-1,10)
+        """
         amulet_cards = self.prelu_5(self.field_value_layer(self.emb1(amulet_card_ids))).view(-1, 10,1)
         x2 = amulet_cards
         exist_filter2 = (amulet_cards != 0).float().view(-1,10,1)
         x2 = x2 * exist_filter2
         amulet_values=x2.view(-1,10)
+        """
 
 
-        life_values = self.prelu_2(self.life_layer(values['life_datas']))
-        #if True in torch.isnan(life_values):
-        #    print(life_values)
-        #    assert False,"nan in life_values"
-        hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
-        #if True in torch.isnan(hand_ids):
-        #    print(hand_ids)
-        #    assert False,"nan in hand_ids"
-        hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
-        #print(follower_values.size(), amulet_values.size(),life_values.size(),class_values.size(),hand_card_values.size())
+        life_values = self.prelu_layer[2](self.life_layer(values['life_datas'])).view(-1, 1,self.n_mid)
+
+        #hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
+        # hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
+        hand_cards = self.prelu_layer[3](self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9,self.n_mid)
+        #exist_filter3 = (hand_ids != 0).float().unsqueeze(-1)
+        hand_card_values = hand_cards# * exist_filter3
+
+
+        deck_cards = self.prelu_layer[4](self.deck_value_layer(self.emb1(deck_datas))).view(-1, 40,self.n_mid)
+        deck_card_values = deck_cards
+        #deck_card_values = torch.sum(hand_ids, dim=1).view(-1, 1)
+
         #x = torch.cat([follower_values,amulet_values,life_values,class_values,hand_card_values],dim=1)
-        x = torch.cat([follower_values,amulet_values,life_values,class_values,deck_type_values,hand_card_values],dim=1)
-        
+        input_tensor = [follower_values,amulet_values,life_values,\
+                       class_values,deck_type_values,hand_card_values,deck_card_values]
+        #print([cell.size() for cell in input_tensor])
+        x = torch.cat(input_tensor,dim=1)
+
         #x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
 
-        x = self.prelu_4(self.concat_layer(x))
-        #if True in torch.isnan(x1):
-        #    print(x1)
-        #    assert False,"nan in second_x1"
+        x = self.prelu_layer[5](self.concat_layer(x)).view(-1,94*self.n_mid)
+        x = self.prelu_layer[6](self.modify_layer(x))
+
 
         return x
 

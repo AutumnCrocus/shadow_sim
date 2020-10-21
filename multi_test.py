@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support
+# +
+
+from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support, Value, Array, Manager
+import ctypes
 import os
 os.environ["OMP_NUM_THREADS"] = "4"
 try:
@@ -9,6 +12,7 @@ try:
     #print('fork')
 except RuntimeError:
     pass
+# -
 
 from test import *  # importの依存関係により必ず最初にimport
 from Field_setting import *
@@ -48,10 +52,12 @@ parser.add_argument('--opponent_model_name', help='opponent_model_name', default
 parser.add_argument('--th', help='threshold',default=1e-3)
 parser.add_argument('--WR_th', help='WR_threshold',default=0.55)
 parser.add_argument('--check_deck_id', help='check_deck_id')
+parser.add_argument('--evaluate_num', help='evaluate_num',default=100)
 args = parser.parse_args()
 
 deck_flg = list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
 weight_decay = float(args.weight_decay)
+evaluate_num = int(args.evaluate_num)
 
 
 #Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
@@ -152,15 +158,23 @@ def preparation(episode_data):
     return result_data
 
 def multi_preparation(episode_data):
-    partial_iteration = episode_data[-2]
+    #partial_iteration = episode_data[-2]
     p_num = episode_data[-1]
     info = f'#{p_num:>2} '
     all_result_data = []
+    shared_count = episode_data[-3]
+    count_limit  = episode_data[-2]
+
+
+
     battle_data = {"sum_of_choices":0, "sum_code":0, "win_num":0,"end_turn":0}
-    for episode in tqdm(range(partial_iteration),desc=info,position=p_num):
-        #f = Field(5)
-        #p1 = episode_data[0].get_copy(f)
-        #p2 = episode_data[1].get_copy(f)
+    #for episode in tqdm(range(partial_iteration),desc=info,position=p_num):
+    for _ in tqdm(range(count_limit),desc=info,position=p_num):
+        if shared_count.value >= count_limit:
+            all_result_data.append(battle_data)
+            break
+        shared_count.value += 1
+        episode = int(shared_count.value)
         f = Field(5)
         p1 = episode_data[episode%2].get_copy(f)
         p2 = episode_data[1-(episode%2)].get_copy(f)
@@ -248,19 +262,35 @@ def multi_preparation(episode_data):
         battle_data["win_num"] += int(reward[int(episode % 2)] > 0)
         battle_data["end_turn"] += end_turn
         all_result_data.append(result_data)
-    all_result_data.append(battle_data)
+
+    #all_result_data.append(battle_data)
     #print("\033["+str(p_num)+"A", end="")
     return all_result_data
 
 import itertools
 def multi_battle(episode_data):
-    partial_iteration = episode_data[-3]
+    count_limit = episode_data[-3]
+    #partial_iteration = episode_data[-3]
     p_id = episode_data[-2]
-    deck_ids = episode_data[-1]
+    #deck_ids = episode_data[-1]
+    deck_id_data = episode_data[-1]
+    deck_data_len = len(deck_id_data)
+    shared_array = episode_data[-4]
+    #win_rate_dict = {ele:{"win_num":0,"first_win_num":0}\
+    #                 for ele in deck_id_data}
     win_num = 0
     first_num = 0
-    info = f'#{str(deck_ids):>8} '
-    for episode in tqdm(range(partial_iteration),desc=info,position=p_id):
+    info = f'#{str(p_id):>8} '#info = f'#{str(deck_ids):>8} '
+    #for episode in tqdm(range(partial_iteration),desc=info,position=p_id):
+    for _ in tqdm(range(deck_data_len*count_limit), desc=info, position=p_id):
+        if all(shared_array[3*ele] >= count_limit for ele in range(deck_data_len)):
+            break
+        available_deck_ids = [(index,ele) for index,ele in enumerate(deck_id_data) if shared_array[index]< count_limit]
+
+        current_deck_id_data = random.choice(available_deck_ids)
+        deck_index,current_deck_id = current_deck_id_data
+        shared_array[3*deck_index] += 1
+        episode = shared_array[3*deck_index]
         f = Field(5)
         p1 = episode_data[episode%2].get_copy(f)
         p2 = episode_data[1-(episode%2)].get_copy(f)
@@ -268,8 +298,10 @@ def multi_battle(episode_data):
         p2.is_first = False
         p1.player_num = 0
         p2.player_num = 1
-        deck_type1 = deck_ids[episode%2]
-        deck_type2 = deck_ids[1-episode%2]
+
+
+        deck_type1 = current_deck_id#deck_ids[episode%2]
+        deck_type2 = current_deck_id#deck_ids[1-episode%2]
         d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
         d1.set_leader_class(key_2_tsv_name[deck_type1][1])
         d1.set_deck_type(deck_id_2_deck_type(deck_type1))
@@ -283,17 +315,27 @@ def multi_battle(episode_data):
         f.players = [p1, p2]
         p1.field = f
         p2.field = f
-        x1 = datetime.datetime.now()
+        #x1 = datetime.datetime.now()
         f.players[0].draw(f.players[0].deck, 3)
         f.players[1].draw(f.players[1].deck, 3)
         win, lose, _, _ = G.start(f, virtual_flg=True)
+
         reward = [win,lose]
+        shared_array[3*deck_index + 1] += int(reward[int(episode % 2)] > 0)
+        shared_array[3*deck_index + 2] += int(episode%2==0)*int(reward[0] > 0)
+        #current_dict = win_rate_dict[current_deck_id]
+        #current_dict["battle_num"] += 1
+        #current_dict["win_num"] += int(reward[int(episode % 2)] > 0)
+        #current_dict["first_win_num"] += int(episode%2==0)*int(reward[0] > 0)
+
         #train_data, reward = G.start_for_dual(f, virtual_flg=True, target_player_num=episode % 2)
-        win_num += int(reward[int(episode % 2)] > 0)
-        first_num += int(episode%2==0)*int(reward[0] > 0)
+
+        #win_num += int(reward[int(episode % 2)] > 0)
+        #first_num += int(episode%2==0)*int(reward[0] > 0)
     #print(deck_ids,":",win_num/partial_iteration)
     #print("\033[" + str(p_id) + "A", end="")
-    return (deck_ids,win_num/partial_iteration,first_num/(partial_iteration//2))
+    #return (deck_ids,win_num/partial_iteration,first_num/(partial_iteration//2))
+    return #win_rate_dict
 
 import itertools
 
@@ -479,7 +521,6 @@ def run_main():
     th = float(args.WR_th)
     last_updated = 0
     min_loss = 100
-    double_p_size = 2*p_size
     #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
         net.cpu()
@@ -490,11 +531,6 @@ def run_main():
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
-        #p1 = Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=net))
-        if False:# epoch < 5:
-            p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
-            #p1 = Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy())
-        #else:
         p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
                     ,mulligan=Min_cost_mulligan_policy())
         #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
@@ -510,19 +546,21 @@ def run_main():
         #memories = multi(episode_len,p1,p2)
         #iter_data = [(i, p1, p2) for i in range(episode_len)]
         #p_size = 5 if epoch < 5 else cpu_num
-        single_iter = episode_len//double_p_size
-        iter_data = [(p1, p2,single_iter,i) for i in range(double_p_size)]
+        #single_iter = episode_len//double_p_size
+        manager = Manager()
+        shared_value = manager.Value("i",0)
+        #iter_data = [[p1, p2,shared_value,single_iter,i] for i in range(double_p_size)]
+        iter_data = [[p1, p2, shared_value, episode_len, i] for i in range(p_size)]
         freeze_support()
         pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_preparation, iter_data)
-        print("\n" * (double_p_size+1))
+        print("\n" * (p_size+1))
         pool.terminate()  # add this.
         pool.close()  # add this.
 
         battle_data = [cell.pop(-1) for cell in memory]
         memories = []
-        [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(double_p_size)]
-
+        [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(p_size)]
         sum_of_choice = max(sum([cell["sum_of_choices"] for cell in battle_data]),1)
         sum_of_code = max(sum([cell["sum_code"] for cell in battle_data]),1)
         win_num = sum([cell["win_num"] for cell in battle_data])
@@ -653,12 +691,13 @@ def run_main():
             del all_actions
             del all_rewards
             separate_num = max(1, separate_num)
-            print(test_MSE,separate_num)
+
             test_objective_loss /= separate_num
             test_MSE /= separate_num
             test_CEE /= separate_num
-            print("AVE | Over_All_Loss(test): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+            print("AVE | Over_All_Loss(test ): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                   .format(test_objective_loss, test_MSE, test_CEE))
+            print(test_MSE, separate_num)
             """
             #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
             p, v, loss = net(all_states, target=True)
@@ -684,8 +723,8 @@ def run_main():
             writer.add_scalars(LOG_PATH+'CEE', {'train': train_CEE,
                                                 'test': test_CEE
                                                 }, epoch)
-            print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
-                  .format(sum_of_loss / iteration, sum_of_MSE / iteration, sum_of_CEE / iteration))
+            #print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+            #      .format(sum_of_loss / iteration, sum_of_MSE / iteration, sum_of_CEE / iteration))
             loss_history.append(sum_of_loss / iteration)
 
         else:
@@ -924,7 +963,8 @@ def run_main():
                     ,mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
         test_deck_list = (0, 1, 2, 4, 5, 10, 12)  if deck_flg is None else deck_flg# (0,1,4,10,13)
-        test_episode_len = 100
+        test_episode_len = evaluate_num#100
+        match_num = len(test_deck_list)
         
         #iter_data = [(p1, p2,test_episode_len//p_size,i) for i in range(p_size)]
         #freeze_support()
@@ -935,11 +975,15 @@ def run_main():
         #pool.terminate()  # add this.
 
         deck_pairs = ((d,d) for d in test_deck_list) #if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
-        iter_data = [(p1, p2, test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
+        manager = Manager()
+        shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
+        #iter_data = [(p1, p2,test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
+        iter_data = [(p1, p2, shared_array,test_episode_len, p_id, test_deck_list) for p_id in range(p_size)]
+
         freeze_support()
         pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_battle, iter_data)
-        print("\n" * (len(test_deck_list)+1))
+        print("\n" * (match_num+1))
         # Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
         pool.terminate()  # add this.
         pool.close()  # add this.
@@ -947,12 +991,19 @@ def run_main():
         memory = list(memory)
         match_num = len(test_deck_list) #if deck_flg is None else p_size
         min_WR=1.0
-        Battle_Result = {}
-        for memory_cell in memory:
-            Battle_Result[memory_cell[0]] = memory_cell[1]
-            min_WR = min(min_WR,memory_cell[1])
-        print(Battle_Result)
-        WR = sum(Battle_Result.values())/match_num
+        #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
+        Battle_Result = {(deck_id, deck_id): \
+                             tuple(shared_array[3*index+1:3*index+3]) for index, deck_id in enumerate(test_deck_list)}
+        #for memory_cell in memory:
+        #    #Battle_Result[memory_cell[0]] = memory_cell[1]
+        #    #min_WR = min(min_WR,memory_cell[1])
+        print(shared_array)
+        for key in sorted(list((Battle_Result.keys()))):
+            print("{}:train_WR:{:.2%},first_WR:{:.2%}"\
+                  .format(key,Battle_Result[key][0]/test_episode_len,2*Battle_Result[key][1]/test_episode_len))
+        WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
+        min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
+        #WR = sum(Battle_Result.values())/match_num
 
 
         #battle_data = [cell.pop(-1) for cell in memory]
