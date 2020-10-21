@@ -23,4 +23,5 @@ jobs:
        git rm model/*.pth
        git commit -m "test"
        git remote set-url origin https://$token:x-oauth-basic@github.com/AutumnCrocus/shadow_sim.git
+       git config --list
        git push origin master
