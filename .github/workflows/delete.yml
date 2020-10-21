@@ -12,10 +12,11 @@ jobs:
        mkdir git_hub
        cd git_hub
        git init
+       export GITHUB_TOKEN=$token
        git config --global hub.protocol https
        git config --global user.name "AutumnCrocus"
        git config --global user.email "t4kicyis@gmail.com"
-       export GITHUB_TOKEN=$token
+       git config --global remote.origin.url https://$token:x-oauth-basic@github.com/AutumnCrocus/shadow_sim.git
        git clone https://github.com/AutumnCrocus/shadow_sim.git
        git branch
        cd shadow_sim
