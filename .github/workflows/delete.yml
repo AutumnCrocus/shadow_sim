@@ -11,9 +11,8 @@ jobs:
       run: |
        git config --global user.name "AutumnCrocus"
        git config --global user.email "t4kicyis@gmail.com"
-       git init
        git clone https://github.com/AutumnCrocus/shadow_sim.git
-       git branch
+       git checkout master
        git pull
        git rm model/*.pth
        git commit
