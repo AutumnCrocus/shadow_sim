@@ -1,4 +1,4 @@
-name: Python application
+name: Delete
 
 on:
   push:
@@ -12,5 +12,4 @@ jobs:
     steps:
     - name: delete all_model    
       run: |
-       ls -a
-       rm model/*.pth
+       ls
