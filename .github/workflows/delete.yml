@@ -7,7 +7,7 @@ jobs:
     steps:
     - name: delete all_model    
       run: |
-       git add "https://github.com/AutumnCrocus/shadow_sim.git"
-       git pull master
+       git clone "https://github.com/AutumnCrocus/shadow_sim.git"
        git rm ./model/*pth
        git commit
+       git push
