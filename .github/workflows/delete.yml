@@ -14,6 +14,6 @@ jobs:
        git init
        git clone https://github.com/AutumnCrocus/shadow_sim.git
        git branch
-       git rm ./model/*pth
+       git rm model/*.pth
        git commit
        git push origin master
