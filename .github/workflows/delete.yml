@@ -15,8 +15,8 @@ jobs:
        git config --global user.name "AutumnCrocus"
        git config --global user.email "t4kicyis@gmail.com"
        git clone https://github.com/AutumnCrocus/shadow_sim.git
-       git checkout master
-       git pull origin master
+       git branch
+       cd shadow_sim
        git rm model/*.pth
        git commit
        git push origin master
