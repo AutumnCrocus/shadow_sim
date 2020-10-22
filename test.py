@@ -322,7 +322,7 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
         if deck_type[i] in key_2_tsv_name:
             D[i] = tsv_to_deck(key_2_tsv_name[deck_type[i]][0])
             D[i].set_leader_class(key_2_tsv_name[deck_type[i]][1])
-            D[i].set_deck_type(Embedd_Network_model.deck_id_2_deck_type(deck_type[i][0]))
+            D[i].set_deck_type(Embedd_Network_model.deck_id_2_deck_type(deck_type[i]))
             continue
 
         if deck_type[i] == -1:
