@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock
 if __name__ == "__main__":
     try:
@@ -48,7 +47,6 @@ def tsv_to_deck(tsv_name):
                 assert False, "{} {}".format(card_category)
     return deck
 
-
 def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, deck_name_list=None):
     assert Player1.player_num != Player2.player_num, "same error"
     f = Field(5)
@@ -58,10 +56,12 @@ def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, d
     f.players[1].field = f
     f.players[0].deck = Deck()
     f.players[0].deck.set_leader_class(D1.leader_class.name)
+    f.players[0].deck.set_deck_type(D1.deck_type)
     for card in D1.deck:
         f.players[0].deck.deck.append(card.get_copy())
     f.players[1].deck = Deck()
     f.players[1].deck.set_leader_class(D2.leader_class.name)
+    f.players[1].deck.set_deck_type(D2.deck_type)
     for card in D2.deck:
         f.players[1].deck.deck.append(card.get_copy())
 
@@ -124,7 +124,6 @@ def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, d
                     deck_name_list[f.players[i].name][card_name]["win_num_when_drawn"] += win_flg[i]
     return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
 
-
 def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, deck_name_list=None,
                    history_flg=False):
     assert Player1.player_num != Player2.player_num, "same error"
@@ -135,10 +134,12 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
     f.players[1].field = f
     f.players[0].deck = Deck()
     f.players[0].deck.set_leader_class(D1.leader_class.name)
+     f.players[0].deck.set_deck_type(D1.deck_type)
     for card in D1.deck:
         f.players[0].deck.deck.append(card.get_copy())
     f.players[1].deck = Deck()
     f.players[1].deck.set_leader_class(D2.leader_class.name)
+     f.players[1].deck.set_deck_type(D2.deck_type)
     for card in D2.deck:
         f.players[1].deck.deck.append(card.get_copy())
     G = Game()
@@ -206,7 +207,6 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
 
     return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
 
-
 def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False,deck_name_list=None,pairwise_dict=None):
     assert Player1.player_num != Player2.player_num, "same error"
     f = Field(5)
@@ -216,12 +216,10 @@ def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, v
     f.players[1].field = f
     f.players[0].deck = Deck()
     f.players[0].deck.set_leader_class(D1.leader_class.name)
-    f.players[0].deck.set_deck_type(D1.deck_type)
     for card in D1.deck:
         f.players[0].deck.deck.append(card.get_copy())
     f.players[1].deck = Deck()
     f.players[1].deck.set_leader_class(D2.leader_class.name)
-    f.players[1].deck.set_deck_type(D2.deck_type)
     for card in D2.deck:
         f.players[1].deck.deck.append(card.get_copy())
 
@@ -792,7 +790,6 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                     writer.writerow(row)
                 writer.writerow([])
 
-
 def random_match(Player_1, Player_2, iteration, virtual_flg=False):
     Player1 = Player_1.get_copy(None)
     Player2 = Player_2.get_copy(None)
@@ -882,7 +879,6 @@ def random_match(Player_1, Player_2, iteration, virtual_flg=False):
     if win_lose[1] == 0:
         win_lose[1] = 1
     mylogger.info("mean_win_turn:{:.3f},{:.3f}".format(win_turns[0] / win_lose[0], win_turns[1] / win_lose[1]))
-
 
 def get_contributions(Player_1, Player_2, iteration, player1_deck_num=None, directory_name=None):
     assert player1_deck_num is not None
@@ -1014,7 +1010,6 @@ def get_contributions(Player_1, Player_2, iteration, player1_deck_num=None, dire
                     # mylogger.info("No.{} {}:{:.3f}".format(j+1,cell[0],cell[1]))
                 f.write("\n")
         mylogger.info("{}/{} complete".format((deck_id + 1), len(D)))
-
 
 def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, player1_deck_num=None,
                             directory_name=None):
@@ -1301,7 +1296,6 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
                     row.append(Results[(i, j)][0])
                 writer.writerow(row)
 
-
 def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_result.tsv"):
     Player1 = Player_1.get_copy(None)
     Player2 = Player_2.get_copy(None)
@@ -1353,7 +1347,6 @@ def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_re
                                                                                               lib_num,
                                                                                               virtual_flg=False)
             first_num += first
-
 
 def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, result_name="Policy_table_result.tsv"):
     deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
@@ -1432,7 +1425,6 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
             for j in range(len(policy_id_2_name)):
                 row.append(Results[(i, j)][0])
             writer.writerow(row)
-
 
 def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, player1_deck_num=None,
                              directory_name=None):
@@ -1591,7 +1583,6 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
                 f.write("\n")
 
         mylogger.info("{}/{} complete".format((deck_id + 1), len(D)))
-
 
 def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None,pairwise=False,out_put=False):
     if deck_lists is None:
