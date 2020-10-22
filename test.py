@@ -134,7 +134,7 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
     f.players[1].field = f
     f.players[0].deck = Deck()
     f.players[0].deck.set_leader_class(D1.leader_class.name)
-     f.players[0].deck.set_deck_type(D1.deck_type)
+    f.players[0].deck.set_deck_type(D1.deck_type)
     for card in D1.deck:
         f.players[0].deck.deck.append(card.get_copy())
     f.players[1].deck = Deck()
