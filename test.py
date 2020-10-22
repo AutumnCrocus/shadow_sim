@@ -216,10 +216,12 @@ def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, v
     f.players[1].field = f
     f.players[0].deck = Deck()
     f.players[0].deck.set_leader_class(D1.leader_class.name)
+    f.players[0].deck.set_deck_type(D1.deck_type)
     for card in D1.deck:
         f.players[0].deck.deck.append(card.get_copy())
     f.players[1].deck = Deck()
     f.players[1].deck.set_leader_class(D2.leader_class.name)
+    f.players[1].deck.set_deck_type(D2.deck_type)
     for card in D2.deck:
         f.players[1].deck.deck.append(card.get_copy())
 
@@ -528,7 +530,7 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
         if deck_type[i] in key_2_tsv_name:
             D[i] = tsv_to_deck(key_2_tsv_name[deck_type[i]][0])
             D[i].set_leader_class(key_2_tsv_name[deck_type[i]][1])
-            D[i].set_deck_type(Embedd_Network_model.deck_id_2_deck_type(deck_type[i][0]))
+            D[i].set_deck_type(Embedd_Network_model.deck_id_2_deck_type(deck_type[i]))
 
     Player1.class_num = class_pool[0]
     Player2.class_num = class_pool[1]
