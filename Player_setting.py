@@ -252,7 +252,11 @@ class Player:
                 mylogger.info(
                     "able_to_creature_attack:{} can_be_attacked:{}".format(able_to_creature_attack, can_be_attacked))
             mylogger.info("regal_targets:{}".format(regal_targets))
+        #mylogger.info("check1:")
+        #field.show_field()
         (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
+        #mylogger.info("check2:")
+        #field.show_field()
         #mylogger.info("{},{}".format(action_num,self.policy.policy_type))
         if action_num == Action_Code.ERROR.value:
             #self.policy.starting_node.print_node()
@@ -272,9 +276,10 @@ class Player:
         elif action_num != Action_Code.TURN_END.value and self.policy.policy_type == 4:
             #mylogger.info("adjust")
             sim_field = self.policy.prev_node.field
-
             action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,
                     action_code=(action_num, card_id, target_id), msg = action_num)
+
+
         self.error_count = 0
 
         if not virtual:
@@ -288,7 +293,6 @@ class Player:
     def execute_action(self, field, opponent, action_code=None, virtual=False):
         field.reset_time_stamp()
         (action_num, card_id, target_id) = action_code
-
         if action_num == Action_Code.EVOLVE.value:
             self.creature_evolve(field.card_location[self.player_num][card_id],
                                  field, virtual=virtual, target=target_id)
@@ -308,8 +312,10 @@ class Player:
 
             self.play_card(field, card_id, self, opponent, target=target_id, virtual=virtual)
 
+
         elif action_num == Action_Code.ATTACK_TO_FOLLOWER.value:
             self.attack_to_follower(field, card_id, target_id, virtual=virtual)
+
 
         elif action_num == Action_Code.ATTACK_TO_PLAYER.value:
             #assert len(field.get_ward_list(self.player_num)) == 0,"ward_ignore_error"

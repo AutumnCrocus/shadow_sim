@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock
 if __name__ == "__main__":
     try:
@@ -7,6 +8,8 @@ if __name__ == "__main__":
         #print('fork')
     except RuntimeError:
         pass
+#import random
+#random.seed(247165)
 import sys
 import numpy as np
 import random
@@ -46,6 +49,7 @@ def tsv_to_deck(tsv_name):
             else:
                 assert False, "{} {}".format(card_category)
     return deck
+
 
 def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, deck_name_list=None):
     assert Player1.player_num != Player2.player_num, "same error"
@@ -123,6 +127,7 @@ def game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, d
                     deck_name_list[f.players[i].name][card_name]["drawn_num"] += 1
                     deck_name_list[f.players[i].name][card_name]["win_num_when_drawn"] += win_flg[i]
     return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
+
 
 def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False, deck_name_list=None,
                    history_flg=False):
@@ -206,6 +211,7 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
         # mylogger.info(deck_name_list)
 
     return win, lose, lib_num, turn, first, (player1_win_turn, player2_win_turn)
+
 
 def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=False,deck_name_list=None,pairwise_dict=None):
     assert Player1.player_num != Player2.player_num, "same error"
@@ -792,6 +798,7 @@ def execute_demo_with_pairwise(Player_1, Player_2, iteration, virtual_flg=False,
                     writer.writerow(row)
                 writer.writerow([])
 
+
 def random_match(Player_1, Player_2, iteration, virtual_flg=False):
     Player1 = Player_1.get_copy(None)
     Player2 = Player_2.get_copy(None)
@@ -881,6 +888,7 @@ def random_match(Player_1, Player_2, iteration, virtual_flg=False):
     if win_lose[1] == 0:
         win_lose[1] = 1
     mylogger.info("mean_win_turn:{:.3f},{:.3f}".format(win_turns[0] / win_lose[0], win_turns[1] / win_lose[1]))
+
 
 def get_contributions(Player_1, Player_2, iteration, player1_deck_num=None, directory_name=None):
     assert player1_deck_num is not None
@@ -1012,6 +1020,7 @@ def get_contributions(Player_1, Player_2, iteration, player1_deck_num=None, dire
                     # mylogger.info("No.{} {}:{:.3f}".format(j+1,cell[0],cell[1]))
                 f.write("\n")
         mylogger.info("{}/{} complete".format((deck_id + 1), len(D)))
+
 
 def get_basic_contributions(Player_1, Player_2, iteration, virtual_flg=False, player1_deck_num=None,
                             directory_name=None):
@@ -1298,6 +1307,7 @@ def make_deck_table(Player_1, Player_2, iteration, same_flg=False, result_name=N
                     row.append(Results[(i, j)][0])
                 writer.writerow(row)
 
+
 def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_result.tsv"):
     Player1 = Player_1.get_copy(None)
     Player2 = Player_2.get_copy(None)
@@ -1349,6 +1359,7 @@ def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_re
                                                                                               lib_num,
                                                                                               virtual_flg=False)
             first_num += first
+
 
 def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, result_name="Policy_table_result.tsv"):
     deck_id_2_name = {0: "Sword_Aggro", 1: "Rune_Earth", 2: "Sword", 3: "Shadow", 4: "Dragon_PDK", 5: "Haven",
@@ -1427,6 +1438,7 @@ def make_policy_table(n, initial_players=None, deck_type=None, same_flg=False, r
             for j in range(len(policy_id_2_name)):
                 row.append(Results[(i, j)][0])
             writer.writerow(row)
+
 
 def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, player1_deck_num=None,
                              directory_name=None):
@@ -1586,6 +1598,7 @@ def get_custom_contributions(Player_1, Player_2, iteration, virtual_flg=False, p
 
         mylogger.info("{}/{} complete".format((deck_id + 1), len(D)))
 
+
 def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None,pairwise=False,out_put=False):
     if deck_lists is None:
         deck_lists = [0,1,2,3,4,5,6,7,8,9,10,11,12]
@@ -1609,11 +1622,13 @@ def make_mirror_match_table(Player_1, Player_2, iteration,deck_lists=None,pairwi
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='対戦実行コード')
 
-    parser.add_argument('--N', help='試行回数')
-    parser.add_argument('--playertype1', help='プレイヤー1のAIタイプ')
-    parser.add_argument('--playertype2', help='プレイヤー2のAIタイプ')
-    parser.add_argument('--decktype1', help='プレイヤー1のデッキタイプ')
-    parser.add_argument('--decktype2', help='プレイヤー2のデッキタイプ')
+    parser.add_argument('--N', help='試行回数',default=1)
+    parser.add_argument('--playertype1', help='プレイヤー1のAIタイプ',default=1)
+    parser.add_argument('--playertype2', help='プレイヤー2のAIタイプ',default=1)
+    parser.add_argument('--playertypes', help='プレイヤーのAIタイプ',default="1,1")
+    parser.add_argument('--decktype1', help='プレイヤー1のデッキタイプ',default=0)
+    parser.add_argument('--decktype2', help='プレイヤー2のデッキタイプ',default=0)
+    parser.add_argument('--decktypes', help='プレイヤーのデッキタイプ', default="0,0")
     parser.add_argument('--filename', help='ファイル名')
     parser.add_argument('--playerlist', help='対戦AIタイプリスト')
     parser.add_argument('--decklist', help='対戦デッキリスト')
@@ -1663,7 +1678,8 @@ if __name__ == '__main__':
     Players.append(Player(9, True, policy=New_GreedyPolicy(), mulligan=Simple_mulligan_policy()))  # 24
     Players.append(Player(9, True, policy=until_game_end_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 25
     Players.append(Player(9, True, policy=until_game_end_OM_MCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 26
-    Players.append(Player(9, True, policy=until_game_end_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 27
+    Players.append(Player(9, True, policy=Cheating_MO_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 27
+    #Players.append(Player(9, True, policy=until_game_end_OM_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy()))  # 27
     model_name = None
     if args.model_name is not None:
         model_name = args.model_name
@@ -1724,28 +1740,32 @@ if __name__ == '__main__':
     if args.mode == 'demo' or args.mode == 'background_demo':
         # cProfile.run('execute_demo(d1,d2,n,deck_type=[p1,p2])')
         n = int(args.N)
-        a = int(args.playertype1) - 1
-        b = int(args.playertype2) - 1
-        if args.playertype1 == '0':
+        #a = int(args.playertype1) - 1
+        #b = int(args.playertype2) - 1
+        a,b = map(lambda ele:int(ele)-1,args.playertypes.split(","))
+        if a == 0:#if args.playertype1 == '0':
             d1 = HumanPlayer(9, first=True)
         else:
             d1 = copy.deepcopy(Players[a])
-        if args.playertype2 == '0':
+        if b == 0:#args.playertype2 == '0':
             d2 = HumanPlayer(9, first=True)
         else:
             d2 = copy.deepcopy(Players[b])
-        p1 = int(args.decktype1)
-        p2 = int(args.decktype2)
+        #p1 = int(args.decktype1)
+        #p2 = int(args.decktype2)
+        p1, p2 = map(int, args.decktypes.split(","))
         virtual_flg = args.mode == "background_demo"
         graph = args.graph is not None
         if args.pairwise is not None:
             if args.cProfile is not None:
-                cProfile.run('execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)',sort="tottime")
+                cProfile.run('execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)',sort="tottime",\
+                             filename="profiling.stats")
             else:
                 execute_demo_with_pairwise(d1,d2,n,deck_type=[p1,p2],virtual_flg=virtual_flg)
         else:
             if args.cProfile is not None:
-                cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="tottime")
+                cProfile.run('execute_demo(d1, d2, n, deck_type=[p1, p2],virtual_flg = virtual_flg)',sort="tottime",\
+                             filename="profiling.stats")
             else:
                 execute_demo(d1, d2, n, deck_type=[p1, p2], virtual_flg=virtual_flg,graph=graph)
     # elif sys.argv[-1]=="-shadow":

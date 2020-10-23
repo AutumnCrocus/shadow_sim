@@ -317,6 +317,9 @@ def add_ability_until_end_of_player_turn(field, player, creature, virtual, add_a
 
 def ability_until_end_of_player_turn(field, player, opponent, virtual, target, self_creature):
     if field.turn_player_num == player.player_num:
+        if not virtual:
+            mylogger.info(
+                "{}'s {} are disabled".format(self_creature.name,self_creature.tmp_keyword_ability[0][1]))
         for ability in self_creature.tmp_keyword_ability[0][1]:
             if ability not in card_setting.creature_list[self_creature.card_id][3]\
                     and ability in self_creature.ability:

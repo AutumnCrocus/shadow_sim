@@ -422,11 +422,25 @@ class Creature(Card):
         self.time_stamp = 0
         self.card_id = card_id  # カードid
         self.card_category = "Creature"
+        target_follower_data = creature_list[card_id]
+        #self.cost = creature_list[card_id][0]  # カードのコスト
+        #self.origin_cost = creature_list[card_id][0]  # カードの元々のコスト
+        #self.power = creature_list[card_id][1]  # カードの攻撃力
+        #self.toughness = creature_list[card_id][2]  # カードの体力
+        #self.ability = creature_list[card_id][3][:]
+        self.cost,self.power,self.toughness,_, card_data = target_follower_data[0:5]
+        self.ability = target_follower_data[3][:]
+        self.origin_cost = int(self.cost)
+        self.card_class = LeaderClass(card_data[0])#LeaderClass(creature_list[card_id][4][0])
+        self.trait = Trait(card_data[-1])
+        if self.card_class.name == "RUNE":
+            self.spell_boost = None
+            #if creature_list[card_id][4][1][0]:
+            if card_data[1][0]:
+                self.spell_boost = 0
+                self.cost_down = card_data[1][1]#creature_list[card_id][4][1][1]
+        self.name = target_follower_data[-1]#creature_list[card_id][-1]
 
-        self.cost = creature_list[self.card_id][0]  # カードのコスト
-        self.origin_cost = creature_list[self.card_id][0]  # カードの元々のコスト
-        self.power = creature_list[self.card_id][1]  # カードの攻撃力
-        self.toughness = creature_list[self.card_id][2]  # カードの体力
         self.buff = [0, 0]  # スタッツ上昇量
         self.until_turn_end_buff = [0, 0]  # ターン終了時までのスタッツ上昇量
         self.target_regulation = card_id
@@ -435,10 +449,8 @@ class Creature(Card):
         self.player_attack_regulation = None
         if card_id in player_attack_regulation:
             self.player_attack_regulation = card_id#player_attack_regulation[card_id]
-        self.evo_stat = [2, 2]
-        if card_id in special_evo_stats_id:
-            self.evo_stat = evo_stats[special_evo_stats_id[card_id]]
-        self.ability = creature_list[self.card_id][3][:]
+        self.evo_stat = evo_stats[special_evo_stats_id[card_id]] if card_id in special_evo_stats_id else [2,2]
+
         self.tmp_keyword_ability = [[[],[]],[[],[]]]
         self.have_active_ability = card_id in creature_active_ability_card_id_list
         if self.have_active_ability:
@@ -486,7 +498,7 @@ class Creature(Card):
         #    self.trigger_ability.append(trigger_ability_dict[creature_trigger_ability_dict[card_id]]())
         #    self.trigger_ability_stack = []
 
-        self.name = creature_list[self.card_id][-1]
+        #self.name = creature_list[card_id][-1]
         self.is_in_field = False
         self.is_in_graveyard = False
         self.damage = 0
@@ -505,13 +517,6 @@ class Creature(Card):
         if card_id in creature_cost_change_ability_list:
             self.cost_change_ability = cost_change_ability_dict[creature_cost_change_ability_list[card_id]]
 
-        self.card_class = LeaderClass(creature_list[card_id][4][0])
-        self.trait = Trait(creature_list[card_id][4][-1])
-        if self.card_class.name == "RUNE":
-            self.spell_boost = None
-            if creature_list[card_id][4][1][0]:
-                self.spell_boost = 0
-                self.cost_down = creature_list[card_id][4][1][1]
 
         self.is_earth_rite = card_id in creature_earth_rite_list
         self.have_enhance = card_id in creature_enhance_list
@@ -548,9 +553,9 @@ class Creature(Card):
         creature.toughness = int(self.toughness)  # カードの体力
         creature.buff = self.buff[:]  # スタッツ上昇量
         creature.until_turn_end_buff = self.until_turn_end_buff[:]  # ターン終了時までのスタッツ上昇量
-        creature.ability = self.ability[:]
-        creature.tmp_keyword_ability = [[self.tmp_keyword_ability[0][0][:],self.tmp_keyword_ability[0][1][:]],
-                                        [self.tmp_keyword_ability[1][0][:],self.tmp_keyword_ability[1][1][:]]]
+        creature.ability = list(self.ability[:])
+        creature.tmp_keyword_ability = [[list(self.tmp_keyword_ability[0][0][:]),list(self.tmp_keyword_ability[0][1][:])],
+                                        [list(self.tmp_keyword_ability[1][0][:]),list(self.tmp_keyword_ability[1][1][:])]]
         creature.lastword_ability = self.lastword_ability[:]
         """
         if len(creature.turn_start_ability) != len(self.turn_start_ability):
@@ -685,6 +690,8 @@ class Creature(Card):
         if self.can_attack_to_follower() != other.can_attack_to_follower():
             return False
         if self.can_attack_to_player() != other.can_attack_to_player():
+            return False
+        if self.tmp_keyword_ability != other.tmp_keyword_ability:
             return False
 
         return True

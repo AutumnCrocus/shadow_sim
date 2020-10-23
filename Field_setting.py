@@ -400,7 +400,6 @@ class Field:
             self.set_card(tmp, player_num, virtual=virtual)
             if tmp.fanfare_ability is not None:
                 creature_ability_dict[tmp.fanfare_ability](self, player, opponent, virtual, target, tmp)
-                #tmp.fanfare_ability(self, player, opponent, virtual, target, tmp)
             self.play_cards.append(tmp.card_category, tmp.card_id, player_num)
             self.append_played_turn(card_name=tmp.name)
             self.check_death(player_num=player_num, virtual=virtual)
@@ -410,7 +409,7 @@ class Field:
             self.show_field()
             raise Exception('field is full!\n')
 
-    def play_spell(self, hand, card_id, player_num, player, opponent, virtual=False, target=None):
+    def play_spell(self, hand, card_id, player_num, player, opponent, virtual=False, target=None,check=None):
         tmp = hand.pop(card_id)
         self.stack_num += 1
         self.state_log.append([State_Code.PLAY.value, (player_num, tmp.card_category, tmp.card_id), self.stack_num])

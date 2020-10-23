@@ -11,22 +11,27 @@ import util_ability
 def creature_ability_001(field, player, opponent, virtual, target, itself):
     field.restore_player_life(player=player, num=2, virtual=virtual)
 
+
 def creature_ability_002(field, player, opponent, virtual, target, itself):
     if itself.active_enhance_code[0]:
         get_damage_to_player(opponent, virtual, num=3)
 
+
 def creature_ability_003(field, player, opponent, virtual, target, itself):
     draw_cards(player, virtual, num=1)
+
 
 def creature_ability_004(field, player, opponent, virtual, target, itself):
     if target is not None and field.get_can_be_targeted(player_num=player.player_num) != []:
         get_damage_to_creature(field, opponent, virtual, target, num=1)
+
 
 def creature_ability_005(field, player, opponent, virtual, target, itself):
     if field.get_can_be_targeted(player_num=player.player_num) != []:
         if target is None:
             raise Exception()
         get_damage_to_creature(field, opponent, virtual, target, num=4)
+
 
 def creature_ability_006(field, player, opponent, virtual, target, itself):
     if not virtual:
@@ -43,6 +48,7 @@ def creature_ability_006(field, player, opponent, virtual, target, itself):
                 thing.is_in_graveyard = True
     field.check_death(player_num=player.player_num, virtual=virtual)
 
+
 def creature_ability_007(field, player, opponent, virtual, target, itself):
     if not virtual:
         mylogger.info("Give +1/+1 to all other allied creatures")
@@ -51,11 +57,13 @@ def creature_ability_007(field, player, opponent, virtual, target, itself):
         if itself != creature and creature.card_category == "Creature":
             buff_creature(creature, params=[1, 1])
 
+
 def creature_ability_008(field, player, opponent, virtual, target, itself):
     """
     Summon Otohime's Bodyguards until your area is full
     """
     summon_creature(field, player, virtual, name="Otohime's Bodyguard", num=4)
+
 
 def creature_ability_009(field, player, opponent, virtual, target, itself):
     """
@@ -73,8 +81,10 @@ def creature_ability_009(field, player, opponent, virtual, target, itself):
         # itself.ability.append(KeywordAbility.CANT_BE_TARGETED.value)
         add_ability_to_creature(field, player, itself, virtual, add_ability=[KeywordAbility.CANT_BE_TARGETED.value])
 
+
 def creature_ability_010(field, player, opponent, virtual, target, itself):
     summon_creature(field, player, virtual, name="Steelclad Knight")
+
 
 def creature_ability_011(field, player, opponent, virtual, target, itself):
     """
@@ -82,9 +92,11 @@ def creature_ability_011(field, player, opponent, virtual, target, itself):
     """
     summon_creature(field, player, virtual, name="Knight")
 
+
 def creature_ability_012(field, player, opponent, virtual, target, itself):
     summon_creature(field, player, virtual, name="Steelclad Knight")
     summon_creature(field, player, virtual, name="Knight")
+
 
 def creature_ability_013(field, player, opponent, virtual, target, itself):
     """
@@ -98,33 +110,41 @@ def creature_ability_013(field, player, opponent, virtual, target, itself):
         else:
             get_damage_to_player(opponent, virtual, num=4)
 
+
 def creature_ability_014(field, player, opponent, virtual, target, itself):
     if field.get_can_be_targeted(player_num=player.player_num) != []:
         get_damage_to_creature(field, opponent, virtual, target, num=3)
 
+
 def creature_ability_015(field, player, opponent, virtual, target, itself):
     gain_max_pp(field, player, num=1, virtual=virtual)
+
 
 def creature_ability_016(field, player, opponent, virtual, target, itself):
     buff_creature(itself, params=[itself.spellboost, itself.spellboost])
     if not virtual:
         mylogger.info("{[0]} get +{[1]}/{[1]}".format(itself.name, itself.spellboost))
 
+
 def creature_ability_017(field, player, opponent, virtual, target, itself):
     get_damage_to_player(player, virtual, num=1)
     get_damage_to_player(opponent, virtual, num=1)
+
 
 def creature_ability_018(field, player, opponent, virtual, target, itself):
     if player.check_vengeance():
         buff_creature(itself, params=[1, 1])
 
+
 def creature_ability_019(field, player, opponent, virtual, target, itself):
     get_damage_to_player(player, virtual, num=2)
+
 
 def creature_ability_020(field, player, opponent, virtual, target, itself):
     if player.check_vengeance():
         add_ability_to_creature(field, player, itself, virtual, add_ability=[KeywordAbility.STORM.value])
         # itself.ability.append(KeywordAbility.STORM.value)
+
 
 def creature_ability_021(field, player, opponent, virtual, target, itself):
     # Wardrobe Raider's evolve ability
@@ -134,9 +154,11 @@ def creature_ability_021(field, player, opponent, virtual, target, itself):
         get_damage_to_creature(field, opponent, virtual, target, num=2)
     field.restore_player_life(player=player, num=2, virtual=virtual)
 
+
 def creature_ability_022(field, player, opponent, virtual, target, itself):
     if not player.check_vengeance():
         get_damage_to_player(player, virtual, num=2)
+
 
 def creature_ability_023(field, player, opponent, virtual, target, itself):
     get_damage_to_enemy(field, opponent, virtual, target, num=5)
@@ -148,6 +170,7 @@ def creature_ability_023(field, player, opponent, virtual, target, itself):
     """
     field.restore_player_life(player=player, num=5, virtual=virtual)
 
+
 def creature_ability_024(field, player, opponent, virtual, target, itself):
     if player.check_vengeance():
         add_ability_to_creature(field, player, itself, virtual,
@@ -156,9 +179,11 @@ def creature_ability_024(field, player, opponent, virtual, target, itself):
         if not virtual:
             mylogger.info("{} get bane and drain".format(itself.name))
 
+
 def creature_ability_025(field, player, opponent, virtual, target, itself):
     condition = lambda card: card.trait.name == "COMMANDER"
     search_cards(player, condition, virtual, num=1)
+
 
 def creature_ability_026(field, player, opponent, virtual, target, itself):
     if target is not None and target < len(field.card_location[opponent.player_num]):
@@ -171,6 +196,7 @@ def creature_ability_026(field, player, opponent, virtual, target, itself):
         field.show_field()
         mylogger.info("{} vs {}".format(player.policy.name, opponent.policy.name))
         assert False
+
 
 def creature_ability_027(field, player, opponent, virtual, target, itself):
     """
@@ -187,19 +213,23 @@ def creature_ability_027(field, player, opponent, virtual, target, itself):
             mylogger.info("{} get +1/0".format(target_creature.name))
         buff_creature(target_creature, params=[1, 0])
 
+
 def creature_ability_028(field, player, opponent, virtual, target, itself):
     destroy_random_creature(field, opponent, virtual)
+
 
 def creature_ability_029(field, player, opponent, virtual, target, itself):
     if target is not None:
         destroy_opponent_creature(field, player, virtual, target)
         draw_cards(player, virtual, num=2)
 
+
 def creature_ability_030(field, player, opponent, virtual, target, itself):
     if necromancy(field, player, num=1, virtual=virtual):
         if not virtual:
             mylogger.info("{} get +1/+1".format(itself.name))
         buff_creature(itself, params=[1, 1])
+
 
 def creature_ability_031(field, player, opponent, virtual, target, itself):
     # Ghost's end-of-turn  and removed-from-field-ability
@@ -211,6 +241,7 @@ def creature_ability_031(field, player, opponent, virtual, target, itself):
             raise Exception("Error")
         location = [player.player_num, field.card_location[player.player_num].index(itself)]
         field.banish_card(location, virtual=virtual)
+
 
 def creature_ability_032(field, player, opponent, virtual, target, itself):
     """
@@ -224,18 +255,23 @@ def creature_ability_032(field, player, opponent, virtual, target, itself):
             #card.lastword_ability.append(creature_ability_003)
             card.lastword_ability.append(3)
 
+
 def creature_ability_033(field, player, opponent, virtual, target, itself):
     get_damage_to_random_creature(field, opponent, virtual, num=1)
+
 
 def creature_ability_034(field, player, opponent, virtual, target, itself):
     # Lady Grey's evolve ability
     reanimate(field, player, virtual, num=2)
 
+
 def creature_ability_035(field, player, opponent, virtual, target, itself):
     get_damage_to_player(opponent, virtual, num=2)
 
+
 def creature_ability_036(field, player, opponent, virtual, target, itself):
     summon_creature(field, player, virtual, name="Mordecai the Duelist")
+
 
 def creature_ability_037(field, player, opponent, virtual, target, itself):
     power_list = []
@@ -251,6 +287,7 @@ def creature_ability_037(field, player, opponent, virtual, target, itself):
         destroy_opponent_creature(field, opponent, virtual, target_id)
         field.restore_player_life(player=player, num=max_power, virtual=virtual)
 
+
 def creature_ability_038(field, player, opponent, virtual, target, itself):
     while len(field.card_location[player.player_num]) < field.max_field_num:
         if necromancy(field, player, num=3, virtual=virtual):
@@ -259,45 +296,57 @@ def creature_ability_038(field, player, opponent, virtual, target, itself):
             break
     if not virtual:
         mylogger.info("Give all other allied followers +2/+0 and Rush until the end of the turn")
+    count = 0
     for thing in field.card_location[player.player_num]:
+        count += 1
         if thing.card_category == "Creature" and thing != itself:
             buff_creature_until_end_of_turn(thing, params=[2, 0])
             if KeywordAbility.RUSH.value not in thing.ability:
                 add_ability_until_end_of_player_turn(field, player, thing, virtual,
                                                      add_ability=[KeywordAbility.RUSH.value])
+
             #    thing.ability.append(4)
             # thing.turn_end_ability.append(ability_until_end_of_turn)
+
 
 def creature_ability_039(field, player, opponent, virtual, target, itself):
     field.graveyard.shadows[player.player_num] += 1
     if not virtual:
         mylogger.info("Gain 1 shadow")
 
+
 def creature_ability_040(field, player, opponent, virtual, target, itself):
     field.restore_player_life(player=player, num=3, virtual=virtual)
     draw_cards(player, virtual, num=1)
 
+
 def creature_ability_041(field, player, opponent, virtual, target, itself):
     field.restore_player_life(player=player, num=2, virtual=virtual)
+
 
 def creature_ability_042(field, player, opponent, virtual, target, itself):
     set_amulet(field, player, virtual, name="Elana's Prayer")
 
+
 def creature_ability_043(field, player, opponent, virtual, target, itself):
     put_card_in_hand(field, player, virtual, name="Earth Essence", card_category="Amulet")
+
 
 def creature_ability_044(field, player, opponent, virtual, target, itself):
     condition = lambda card: card.is_earth_rite is True
     search_cards(player, condition, virtual, num=1)
 
+
 def creature_ability_045(field, player, opponent, virtual, target, itself):
     if earth_rite(field, player, virtual):
         summon_creature(field, player, virtual, name="Magic Illusionist")
+
 
 def creature_ability_046(field, player, opponent, virtual, target, itself):
     if earth_rite(field, player, virtual):
         buff_creature(itself, params=[1, 1])
         add_ability_to_creature(field, player, itself, virtual, add_ability=[7])
+
 
 def creature_ability_047(field, player, opponent, virtual, target, itself):
     if earth_rite(field, player, virtual):
@@ -308,6 +357,7 @@ def creature_ability_047(field, player, opponent, virtual, target, itself):
         elif target in field.get_can_be_targeted(player_num=player.player_num):
             get_damage_to_creature(field, opponent, virtual, target, num=3)
         """
+
 
 def creature_ability_048(field, player, opponent, virtual, target, itself):
     if not earth_rite(field, player, virtual):
@@ -330,6 +380,7 @@ def creature_ability_048(field, player, opponent, virtual, target, itself):
             else:
                 card_id += 1
 
+
 def creature_ability_049(field, player, opponent, virtual, target, itself):
     count = 0
     while True:
@@ -346,14 +397,18 @@ def creature_ability_049(field, player, opponent, virtual, target, itself):
     if count >= 4:
         buff_creature(itself, params=[3, 3])
 
+
 def creature_ability_050(field, player, opponent, virtual, target, itself):
     put_card_in_hand(field, player, virtual, name="Fairy", card_category="Creature")
+
 
 def creature_ability_051(field, player, opponent, virtual, target, itself):
     put_card_in_hand(field, player, virtual, name="Fairy", card_category="Creature", num=2)
 
+
 def creature_ability_052(field, player, opponent, virtual, target, itself):
     buff_creature_until_end_of_turn(itself, params=[field.players_play_num, 0])
+
 
 def creature_ability_053(field, player, opponent, virtual, target, itself):
     i = 0
@@ -373,15 +428,18 @@ def creature_ability_053(field, player, opponent, virtual, target, itself):
             mylogger.info("{0} get +{1}/+{1}".format(itself.name, count))
         buff_creature(itself, params=[count, count])
 
+
 def creature_ability_054(field, player, opponent, virtual, target, itself):
     length = len(player.hand)
     faires = put_card_in_hand(field, player, virtual, name="Fairy", card_category="Creature", num=2)
     faires[0].cost = 0
     faires[1].cost = 0
 
+
 def creature_ability_055(field, player, opponent, virtual, target, itself):
     if field.players_play_num >= 2 and field.get_can_be_targeted(player_num=player.player_num) != []:
         get_damage_to_creature(field, opponent, virtual, target, num=2)
+
 
 def creature_ability_056(field, player, opponent, virtual, target, itself):
     creature = summon_creature(field, player, virtual, name="Crystalia Eve")
@@ -389,9 +447,11 @@ def creature_ability_056(field, player, opponent, virtual, target, itself):
         field.auto_evolve(creature, virtual=virtual)
         add_ability_to_creature(field, player, creature, virtual, add_ability=[3])
 
+
 def creature_ability_057(field, player, opponent, virtual, target, itself):
     if player.check_overflow():
         add_ability_to_creature(field, player, itself, virtual, add_ability=[1])
+
 
 #
 def creature_ability_058(field, player, opponent, virtual, target, itself):
@@ -402,14 +462,17 @@ def creature_ability_058(field, player, opponent, virtual, target, itself):
         target_creature = field.card_location[player.player_num][target]
         add_ability_to_creature(field, player, target_creature, virtual, add_ability=[KeywordAbility.STORM.value])
 
+
 def creature_ability_059(field, player, opponent, virtual, target, itself):
     if field.current_turn[player.player_num] >= 5:
         gain_max_pp(field, player, num=1, virtual=virtual)
+
 
 def creature_ability_060(field, player, opponent, virtual, target, itself):
     if field.turn_player_num == player.player_num:
         if player.check_overflow():
             field.restore_player_life(player=player, num=3, virtual=virtual)
+
 
 def creature_ability_061(field, player, opponent, virtual, target, itself):
     get_damage_to_enemy(field, opponent, virtual, target, num=3)
@@ -420,9 +483,11 @@ def creature_ability_061(field, player, opponent, virtual, target, itself):
         get_damage_to_creature(field, opponent, virtual, target, num=3)
     """
 
+
 def creature_ability_062(field, player, opponent, virtual, target, itself):
     field.restore_player_life(player=player, num=3, virtual=virtual)
     put_card_in_hand(field, player, virtual, name="Ouroboros", card_category="Creature", num=1)
+
 
 def creature_ability_063(field, player, opponent, virtual, target, itself):
     if field.turn_player_num == player.player_num:
@@ -430,6 +495,7 @@ def creature_ability_063(field, player, opponent, virtual, target, itself):
         if not virtual:
             mylogger.info("{} get +{}/0".format(itself.name, num))
         buff_creature(itself, params=[num, 0])
+
 
 def creature_ability_064(field, player, opponent, virtual, target, itself):
     if itself.active_enhance_code[0]:
@@ -442,6 +508,7 @@ def creature_ability_064(field, player, opponent, virtual, target, itself):
                 return
             field.check_death(player_num=player.player_num, virtual=virtual)
             count += 1
+
 
 def creature_ability_065(field, player, opponent, virtual, target, itself):
     if target is not None:
@@ -472,16 +539,20 @@ def creature_ability_065(field, player, opponent, virtual, target, itself):
         #creature.turn_end_ability.append(creature_ability_066)
         creature.turn_end_ability.append(66)
 
+
 def creature_ability_066(field, player, opponent, virtual, target, itself):
     target_location = [player.player_num, field.card_location[player.player_num].index(itself)]
     return_card_to_hand(field, target_location, virtual)
 
+
 def creature_ability_067(field, player, opponent, virtual, target, itself):
     field.restore_player_life(player=player, num=4, virtual=virtual)
+
 
 def creature_ability_068(field, player, opponent, virtual, target, itself):
     if itself.active_enhance_code[0]:
         buff_creature(itself, params=[3, 3])
+
 
 def creature_ability_069(field, player, opponent, virtual, target, itself):
     set_amulet(field, player, virtual, name="Earth Essence", num=2)
@@ -489,6 +560,7 @@ def creature_ability_069(field, player, opponent, virtual, target, itself):
     new_cards[0].cost = 7
     if not virtual:
         mylogger.info("{}'s cost is changed to 7".format(itself.name))
+
 
 def creature_ability_070(field, player, opponent, virtual, target, itself):
     """
@@ -502,6 +574,7 @@ def creature_ability_070(field, player, opponent, virtual, target, itself):
         buff_creature(itself, params=[1, 0])
         add_ability_to_creature(field, player, itself, virtual, add_ability=[KeywordAbility.WARD.value])
 
+
 def creature_ability_071(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Gain Storm if an allied Commander card is in play.
@@ -510,6 +583,7 @@ def creature_ability_071(field, player, opponent, virtual, target, itself):
         if card.trait.value == Trait.COMMANDER.value:
             add_ability_to_creature(field, player, itself, virtual, add_ability=[KeywordAbility.STORM.value])
             return
+
 
 def creature_ability_072(field, player, opponent, virtual, target, itself):
     """
@@ -526,6 +600,7 @@ def creature_ability_072(field, player, opponent, virtual, target, itself):
             destroy_opponent_creature(field, opponent, virtual, target)
             return
 
+
 def creature_ability_073(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Enhance (9) - Can attack 2 times per turn. Reduce damage to 0 until the end of the turn.
@@ -537,12 +612,14 @@ def creature_ability_073(field, player, opponent, virtual, target, itself):
         add_ability_until_end_of_player_turn(field, player, itself, virtual,
                                              add_ability=[KeywordAbility.REDUCE_DAMAGE_TO_ZERO.value])
 
+
 def creature_ability_074(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Summon a Kunoichi Trainee.
     """
 
     summon_creature(field, player, virtual, name="Kunoichi Trainee", num=1)
+
 
 def creature_ability_075(field, player, opponent, virtual, target, itself):
     """
@@ -551,6 +628,7 @@ def creature_ability_075(field, player, opponent, virtual, target, itself):
     if player.check_overflow() == True:
         draw_cards(player, virtual, num=1)
 
+
 def creature_ability_076(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Put a random Dragoncraft follower from your deck into your hand.
@@ -558,11 +636,13 @@ def creature_ability_076(field, player, opponent, virtual, target, itself):
     condition = lambda card: card.card_class.name == "DRAGON" and card.card_category == "Creature"
     search_cards(player, condition, virtual, num=1)
 
+
 def creature_ability_077(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Put a Fire Lizard into your hand.
     """
     put_card_in_hand(field, player, virtual, name="Fire Lizard", card_category="Creature")
+
 
 def creature_ability_078(field, player, opponent, virtual, target, itself):
     """
@@ -576,6 +656,7 @@ def creature_ability_078(field, player, opponent, virtual, target, itself):
     # ability_resolution(self,virtual=False,player_num=0)
     summon_creature(field, field.players[card_index[0]], virtual, name=card_name)
 
+
 def creature_ability_079(field, player, opponent, virtual, target, itself):
     """
     At the start of your turn, restore 2 defense to your leader.
@@ -583,11 +664,13 @@ def creature_ability_079(field, player, opponent, virtual, target, itself):
     if field.turn_player_num == player.player_num:
         field.restore_player_life(player=player, num=2, virtual=virtual)
 
+
 def creature_ability_080(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Gain Ambush until the end of your opponent's turn.
     """
     add_ability_until_end_of_opponent_turn(field, player, itself, virtual, add_ability=[KeywordAbility.AMBUSH.value])
+
 
 def creature_ability_081(field, player, opponent, virtual, target, itself):
     """
@@ -607,6 +690,7 @@ def creature_ability_081(field, player, opponent, virtual, target, itself):
             assert False
         destroy_opponent_creature(field, opponent, virtual, target)
 
+
 def creature_ability_082(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Give all allied followers Last Words - Summon a Skeleton.
@@ -620,11 +704,13 @@ def creature_ability_082(field, player, opponent, virtual, target, itself):
         if card.card_category == "Creature":
             card.lastword_ability.append(-3)
 
+
 def creature_ability_083(field, player, opponent, virtual, target, itself):
     """
     Last Words: Summon 2 Skeletons.
     """
     summon_creature(field, player, virtual, name="Skeleton", num=2)
+
 
 def creature_ability_084(field, player, opponent, virtual, target, itself):
     """
@@ -638,6 +724,7 @@ def creature_ability_084(field, player, opponent, virtual, target, itself):
         add_ability_to_creature(field, player, itself, virtual,
                                 add_ability=[KeywordAbility.WARD.value])
 
+
 def creature_ability_085(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Gain +2/+2 if at least 2 other cards were played this turn.
@@ -647,12 +734,14 @@ def creature_ability_085(field, player, opponent, virtual, target, itself):
         if not virtual:
             mylogger.info("{} get +2/+2".format(itself.name))
 
+
 def creature_ability_086(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Deal 1 damage to a random enemy follower 2 times.
     """
     get_damage_to_random_creature(field, opponent, virtual, num=1)
     get_damage_to_random_creature(field, opponent, virtual, num=1)
+
 
 def creature_ability_087(field, player, opponent, virtual, target, itself):
     """
@@ -665,6 +754,7 @@ def creature_ability_087(field, player, opponent, virtual, target, itself):
                 buff_creature(card, params=[1, 1])
                 if not virtual:
                     mylogger.info("{} get +1/+1".format(card.name))
+
 
 def creature_ability_088(field, player, opponent, virtual, target, itself):
     """
@@ -680,6 +770,7 @@ def creature_ability_088(field, player, opponent, virtual, target, itself):
     if not virtual:
         mylogger.info("{} get +2/0".format(target_creature.name))
 
+
 def creature_ability_089(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Both players draw a card.
@@ -689,12 +780,14 @@ def creature_ability_089(field, player, opponent, virtual, target, itself):
         return
     draw_cards(opponent, virtual)
 
+
 def creature_ability_090(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Necromancy (4) - Summon a Zombie.
     """
     if necromancy(field, player, num=4, virtual=virtual):
         summon_creature(field, player, virtual, name="Zombie")
+
 
 def creature_ability_091(field, player, opponent, virtual, target, itself):
     """
@@ -704,11 +797,13 @@ def creature_ability_091(field, player, opponent, virtual, target, itself):
     if not virtual:
         mylogger.info("Gain 2 shadow")
 
+
 def creature_ability_092(field, player, opponent, virtual, target, itself):
     """
     Last Words: Summon a Zombie.
     """
     summon_creature(field, player, virtual, name="Zombie")
+
 
 def creature_ability_093(field, player, opponent, virtual, target, itself):
     """
@@ -720,11 +815,13 @@ def creature_ability_093(field, player, opponent, virtual, target, itself):
         target_creature = field.card_location[player.player_num][target_id]
         add_ability_to_creature(field, player, target_creature, virtual, add_ability=[KeywordAbility.WARD.value])
 
+
 def creature_ability_094(field, player, opponent, virtual, target, itself):
     """
     Last Words: Summon 2 Zombies.
     """
     summon_creature(field, player, virtual, name="Zombie", num=2)
+
 
 def creature_ability_095(field, player, opponent, virtual, target, itself):
     """
@@ -732,6 +829,7 @@ def creature_ability_095(field, player, opponent, virtual, target, itself):
     """
     if player.check_vengeance():
         buff_creature(itself, params=[2, 0])
+
 
 def creature_ability_096(field, player, opponent, virtual, target, itself):
     """
@@ -742,6 +840,7 @@ def creature_ability_096(field, player, opponent, virtual, target, itself):
     if player.check_vengeance():
         assert target < len(field.card_location[opponent.player_num]), "Out-of-range"
         get_damage_to_creature(field, opponent, virtual, target, num=5)
+
 
 def creature_ability_097(field, player, opponent, virtual, target, itself):
     """
@@ -755,6 +854,7 @@ def creature_ability_097(field, player, opponent, virtual, target, itself):
             "illegal target error {} not in {}".format(target, field.get_creature_location()[player.player_num])
         target_follower = field.card_location[player.player_num][target]
         field.restore_follower_toughness(follower=target_follower, num=5, virtual=virtual)
+
 
 def creature_ability_098(field, player, opponent, virtual, target, itself):
     """
@@ -771,6 +871,7 @@ def creature_ability_098(field, player, opponent, virtual, target, itself):
         add_ability_to_creature(field, player, target_follower, virtual,
                                 add_ability=[KeywordAbility.BANE.value])
 
+
 def creature_ability_099(field, player, opponent, virtual, target, itself):
     """
     Fanfare: If Resonance is active for you, gain Rush.
@@ -778,6 +879,7 @@ def creature_ability_099(field, player, opponent, virtual, target, itself):
     if player.check_resonance():
         add_ability_to_creature(field, player, itself, virtual,
                                 add_ability=[KeywordAbility.RUSH.value])
+
 
 def creature_ability_100(field, player, opponent, virtual, target, itself):
     """
@@ -788,11 +890,13 @@ def creature_ability_100(field, player, opponent, virtual, target, itself):
     cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
     put_cards_into_deck(field, player, cards, virtual)
 
+
 def creature_ability_101(field, player, opponent, virtual, target, itself):
     """
     Put a Puppet into your hand.
     """
     put_card_in_hand(field, player, virtual, name="Puppet", card_category="Creature")
+
 
 def creature_ability_102(field, player, opponent, virtual, target, itself):
     """
@@ -803,6 +907,7 @@ def creature_ability_102(field, player, opponent, virtual, target, itself):
     cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
     put_cards_into_deck(field, player, cards, virtual)
 
+
 def creature_ability_103(field, player, opponent, virtual, target, itself):
     """
     Put a random Artifact card from your deck into your hand.
@@ -810,15 +915,18 @@ def creature_ability_103(field, player, opponent, virtual, target, itself):
     condition = lambda card: card.trait.name == "ARTIFACT"
     search_cards(player, condition, virtual)
 
+
 def creature_ability_104(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Summon a Heavy Knight.
     """
     summon_creature(field, player, virtual, name="Heavy Knight")
 
+
 def creature_ability_105(field, player, opponent, virtual, target, itself):
     if target is not None and field.get_can_be_targeted(player_num=player.player_num) != []:
         get_damage_to_creature(field, opponent, virtual, target, num=2)
+
 
 def creature_ability_106(field, player, opponent, virtual, target, itself):
     """
@@ -831,6 +939,7 @@ def creature_ability_106(field, player, opponent, virtual, target, itself):
             mylogger.info("Banish all cards in Player{}'s hand, then draw 9 cards.".format(player.player_num + 1))
         player.hand.clear()
         draw_cards(player, virtual, num=9)
+
 
 """
 def restore_1_defense_to_all_allies(field, player, virtual, state_log=None):
@@ -845,6 +954,7 @@ def restore_1_defense_to_all_allies(field, player, virtual, state_log=None):
         if follower.card_category == "Creature":
             field.restore_follower_toughness(follower=follower, num=1, virtual=virtual, at_once=True)
 """
+
 
 def creature_ability_107(field, player, opponent, virtual, target, itself):
     """
@@ -866,6 +976,7 @@ def creature_ability_107(field, player, opponent, virtual, target, itself):
             #mylogger.info("names:{}".format([ability.name for ability in field.player_ability[player.player_num]]))
             assert False
 
+
 def creature_ability_108(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Restore 1 defense to all allies.
@@ -882,12 +993,14 @@ def creature_ability_108(field, player, opponent, virtual, target, itself):
         if follower.card_category == "Creature":
             field.restore_follower_toughness(follower=follower, num=value, virtual=virtual, at_once=True)
 
+
 def creature_ability_109(field, player, opponent, virtual, target, itself):
     """
     Evolve: Spellboost the cards in your hand 2 times.
     """
     field.spell_boost(player.player_num)
     field.spell_boost(player.player_num)
+
 
 def creature_ability_110(field, player, opponent, virtual, target, itself):
     """
@@ -909,11 +1022,13 @@ def creature_ability_110(field, player, opponent, virtual, target, itself):
                 return
     get_damage_to_player(opponent,virtual,num=amount)
 
+
 def creature_ability_111(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Restore X defense to your leader. X equals the number of other cards in your hand.
     """
     restore_player_life(player,virtual,num=len(player.hand))
+
 
 def creature_ability_112(field, player, opponent, virtual, target, itself):
     """
@@ -921,6 +1036,7 @@ def creature_ability_112(field, player, opponent, virtual, target, itself):
     Last Words: Summon a Lich.
     """
     summon_creature(field,player,virtual,name="Lich")
+
 
 def creature_ability_113(field, player, opponent, virtual, target, itself):
     """
@@ -935,6 +1051,7 @@ def creature_ability_113(field, player, opponent, virtual, target, itself):
     follower = field.card_location[player.player_num][target_id]
     buff_creature(follower,params=[2,0])
 
+
 def creature_ability_114(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Summon a Ghost if an evolved allied follower is in play.
@@ -942,6 +1059,7 @@ def creature_ability_114(field, player, opponent, virtual, target, itself):
     if any(follower.card_category == "Creature" and
            follower.evolved for follower in field.card_location[player.player_num]):
         summon_creature(field,player,virtual,name="Ghost")
+
 
 def creature_ability_115(field, player, opponent, virtual, target, itself):
     """
@@ -955,12 +1073,14 @@ def creature_ability_115(field, player, opponent, virtual, target, itself):
         get_damage_to_creature(field,opponent,virtual,target,num=1)
     """
 
+
 def creature_ability_116(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Put Coco and Mimi into your hand.
     """
     put_card_in_hand(field,player,virtual,name="Mimi",card_category="Spell")
     put_card_in_hand(field, player, virtual, name="Coco", card_category="Spell")
+
 
 def creature_ability_117(field, player, opponent, virtual, target, itself):
     """
@@ -971,6 +1091,7 @@ def creature_ability_117(field, player, opponent, virtual, target, itself):
             continue
         if follower.card_class.value == LeaderClass.NEUTRAL.value and follower is not itself:
             buff_creature(follower,params=[1,1])
+
 
 def creature_ability_118(field, player, opponent, virtual, target, itself):
     """
@@ -1014,12 +1135,14 @@ def creature_ability_121(field, player, opponent, virtual, target, itself):
     if not player.check_vengeance():
         get_damage_to_player(player,virtual,num=2)
 
+
 def creature_ability_122(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Deal 2 damage to an enemy. Then restore 2 defense to your leader.
     """
     get_damage_to_enemy(field,opponent,virtual,target,num=2)
     restore_player_life(player,virtual,num=2)
+
 
 def creature_ability_123(field, player, opponent, virtual, target, itself):
     """
@@ -1028,6 +1151,7 @@ def creature_ability_123(field, player, opponent, virtual, target, itself):
     if player.check_vengeance():
         restore_player_life(player,virtual,num=4)
 
+
 def creature_ability_124(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Destroy an enemy follower or amulet. Gain Storm if Vengeance is active for you.
@@ -1035,6 +1159,7 @@ def creature_ability_124(field, player, opponent, virtual, target, itself):
     destroy_opponent_card(field,opponent,virtual,target)
     if player.check_vengeance():
         add_ability_to_creature(field,player,itself,virtual,add_ability=[KeywordAbility.STORM.value])
+
 
 def creature_ability_125(field, player, opponent, virtual, target, itself):
     """
@@ -1054,6 +1179,7 @@ def token_creature_ability_001(field, player, opponent, virtual, target, itself)
     else:
         draw_cards(player, virtual)
 
+
 def token_creature_ability_002(field, player, opponent, virtual, target, itself):
     """
     At the end of your opponent's turn, destroy this follower.
@@ -1068,6 +1194,7 @@ def token_creature_ability_003(field, player, opponent, virtual, target, itself)
     summon skelton
     """
     summon_creature(field, player, virtual, name="Skeleton", num=1)
+
 
 creature_ability_dict = {
     0: None, 1: creature_ability_001, 2: creature_ability_002, 3: creature_ability_003,
