@@ -1858,7 +1858,7 @@ if __name__ == '__main__':
             d1 = copy.deepcopy(human_player)
         else:
             d1 = copy.deepcopy(Players[a])
-        if b = 0:
+        if b == 0:
             d2 = copy.deepcopy(human_player)
         else:
             d2 = Player(9, True,
