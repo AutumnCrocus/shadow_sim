@@ -10,14 +10,14 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_10_21_23_23_36_17_256_cuda.pth
-      O_MODEL_NAME: Multi_Dual_2020_10_21_23_23_36_17_256_cuda.pth
-      OPPONENT_PLAYER_TYPE: 13
+      MODEL_NAME: Multi_Dual_2020_10_21_23_23_36_23_256_cuda.pth
+      O_MODEL_NAME: Multi_Dual_2020_10_21_23_23_36_23_256_cuda.pth
+      PLAYER_TYPES1: "29,2"
+      PLAYER_TYPES2: "29,13"
       MODE: mirror
-      PLAYER1: 29
       N: 200
-      DECK_ID: 5
       DECK_LIST: "100"
+
       NODE_NUM: 100
     runs-on: ubuntu-latest
     steps:
@@ -44,7 +44,10 @@ jobs:
     
     - name: Run Test1     
       run: |
-       python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 $OPPONENT_PLAYER_TYPE --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
+       python3 test.py --N  $N --playertypes PLAYERTYPES1 --deck1list $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
+    - name: Run Test2     
+      run: |
+       python3 test.py --N  $N --playertypes PLAYERTYPES2 --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
        
     #- name: Run Test2     
     #  run: |
