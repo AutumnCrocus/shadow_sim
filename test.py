@@ -1851,14 +1851,12 @@ if __name__ == '__main__':
 
     elif args.mode == "mirror":
         n = int(args.N)
-        a,b = list(int,args.playertypes.split(","))
-        #a = int(args.playertype1) - 1
-        #b = int(args.playertype2) - 1
-        if a == 0:
+        a,b = map(lambda ele:int(ele)-1,args.playertypes.split(","))
+        if args.playertype1 == '0':
             d1 = copy.deepcopy(human_player)
         else:
             d1 = copy.deepcopy(Players[a])
-        if b == 0:
+        if args.playertype2 == '0':
             d2 = copy.deepcopy(human_player)
         else:
             d2 = Player(9, True,
