@@ -12,8 +12,8 @@ jobs:
     env:
       MODEL_NAME: 100_decklist_20_nodes.pth
       O_MODEL_NAME: 100_decklist_20_nodes.pth
-      PLAYER_TYPES_A: "29,2"
-      PLAYER_TYPES_B: "29,13"
+      PLAYER_TYPES_A: "29,15"
+      PLAYER_TYPES_B: "29,17"
       MODE: mirror
       N: 200
       DECK_LIST: "100"
