@@ -10,8 +10,8 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_10_21_23_23_36_23_256_cuda.pth
-      O_MODEL_NAME: Multi_Dual_2020_10_21_23_23_36_23_256_cuda.pth
+      MODEL_NAME: 100_decklist_20_nodes.pth
+      O_MODEL_NAME: 100_decklist_20_nodes.pth
       PLAYER_TYPES_A: "29,2"
       PLAYER_TYPES_B: "29,13"
       MODE: mirror
