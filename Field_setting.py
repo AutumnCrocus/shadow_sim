@@ -68,37 +68,47 @@ class Field:
             return False
         observable = self.get_observable_data(player_num=0)
         other_observable = other.get_observable_data(player_num=0)
-        for key in list(observable.keys()):
-            player_first = observable[key]
-            other_first = other_observable[key]
-            for second_key in list(observable[key].keys()):
-                if player_first[second_key] !=other_first[second_key]:
-                    print("first:{} second:{} {} != {}".format(key,second_key,
-                       player_first[second_key],other_first[second_key])) if debug else None
 
-                    return False
+        # for key in list(observable.keys()):
+        #     player_first = observable[key]
+        #     other_first = other_observable[key]
+        #     for second_key in list(observable[key].keys()):
+        #         if player_first[second_key] !=other_first[second_key]:
+        #             print("first:{} second:{} {} != {}".format(key,second_key,
+        #                player_first[second_key],other_first[second_key])) if debug else None
+        #
+        #             return False
+
+        tmp=any(any(observable[key][second_key] != other_observable[key][second_key] for second_key\
+             in tuple(observable[key].keys())) for key in tuple(observable.keys()))
+        if tmp: return False
 
         observable = self.get_observable_data(player_num=1)
         other_observable = other.get_observable_data(player_num=1)
-        for key in list(observable.keys()):
-            player_first = observable[key]
-            other_first = other_observable[key]
-            for second_key in list(observable[key].keys()):
-                if player_first[second_key] !=other_first[second_key]:
-                    print("first:{} second:{} {} != {}".format(key,second_key,
-                       player_first[second_key],other_first[second_key])) if debug else None
-                    return False
+        # for key in list(observable.keys()):
+        #     player_first = observable[key]
+        #     other_first = other_observable[key]
+        #     for second_key in list(observable[key].keys()):
+        #         if player_first[second_key] !=other_first[second_key]:
+        #             print("first:{} second:{} {} != {}".format(key,second_key,
+        #                player_first[second_key],other_first[second_key])) if debug else None
+        #             return False
+        tmp=any(any(observable[key][second_key] != other_observable[key][second_key] for second_key\
+             in tuple(observable[key].keys())) for key in tuple(observable.keys()))
+        if tmp: return False
         #仮実装
         self.play_cards.play_cards_set()
         other.play_cards.play_cards_set()
         for i in range(2):
             i_len = len(self.card_location[i])
-            for j in range(i_len):
-                first_card = self.card_location[i][j]
-                second_card = other.card_location[i][j]
-                if not first_card.eq(second_card):
-                    print("{}!={}".format(first_card,second_card)) if debug else None
-                    return False
+            tmp = any(not self.card_location[i][j].eq(other.card_location[i][j]) for j in range(i_len))
+            if tmp: return False
+            # for j in range(i_len):
+            #     first_card = self.card_location[i][j]
+            #     second_card = other.card_location[i][j]
+            #     if not first_card.eq(second_card):
+            #         print("{}!={}".format(first_card,second_card)) if debug else None
+            #         return False
             player_name_list = self.play_cards.name_list[i]
             for cost_key in sorted(list(player_name_list.keys())):
                 other_name_list = other.play_cards.name_list[i]
@@ -113,20 +123,23 @@ class Field:
                         return False
                     player_category_list = player_cost_list[category_key]
                     other_category_list = other_cost_list[category_key]
-                    for name_key in sorted(list(player_category_list.keys())):
-                        if name_key not in other_category_list:
-                            print("{} not in {}".format(name_key, other_category_list)) if debug else None
-                            return False
-                        if other_category_list[name_key] !=\
-                            player_category_list[name_key]:
-                            print("{} != {}".format(other_category_list[name_key], player_category_list[name_key])) if debug else None
-                            return False
+                    tmp = any((name_key not in other_category_list) or \
+                        other_category_list[name_key] != player_category_list[name_key] for name_key in tuple(player_category_list.keys()))
+                    if tmp:return False
+                    # for name_key in sorted(list(player_category_list.keys())):
+                    #     if name_key not in other_category_list:
+                    #         print("{} not in {}".format(name_key, other_category_list)) if debug else None
+                    #         return False
+                    #     if other_category_list[name_key] !=\
+                    #         player_category_list[name_key]:
+                    #         print("{} != {}".format(other_category_list[name_key], player_category_list[name_key])) if debug else None
+                    #         return False
 
         return True
 
     def set_data(self, field):
-        self.card_location[0].clear()
-        self.card_location[1].clear()
+        #self.card_location[0].clear()
+        #self.card_location[1].clear()
         self.card_location[0] = list(map(self.copy_func,field.card_location[0]))
         self.card_location[1] = list(map(self.copy_func,field.card_location[1]))
 
@@ -135,12 +148,12 @@ class Field:
         self.remain_cost = field.remain_cost[:]
         self.turn_end = field.turn_end
 
-        self.graveyard.shadows = [int(field.graveyard.shadows[0]),int(field.graveyard.shadows[1])]
-        #for i in range(2):
-        #    self.drawn_cards.name_list[i] = field.drawn_cards.name_list[i][:]
-        #    self.play_cards.play_cards[i] = field.play_cards.play_cards[i][:]
-        #    self.play_cards.played_turn_dict[i] = copy.copy(field.play_cards.played_turn_dict[i])
-        #    self.graveyard.graveyard[i] = field.graveyard.graveyard[i][:]
+        self.graveyard.shadows = field.graveyard.shadows[:]
+        self.drawn_cards.name_list = [side[:] for side in field.drawn_cards.name_list]
+        self.play_cards.play_cards = [side[:] for side in field.play_cards.play_cards]
+        self.play_cards.played_turn_dict = [copy.copy(side) for side in field.play_cards.played_turn_dict]
+        self.graveyard.graveyard= [side[:] for side in field.graveyard.graveyard]#[field.graveyard.graveyard[0][:],field.graveyard.graveyard[1][:]]
+        """
         self.drawn_cards.name_list[0] = field.drawn_cards.name_list[0][:]
         self.play_cards.play_cards[0] = field.play_cards.play_cards[0][:]
         self.play_cards.played_turn_dict[0] = copy.copy(field.play_cards.played_turn_dict[0])
@@ -149,10 +162,11 @@ class Field:
         self.play_cards.play_cards[1] = field.play_cards.play_cards[1][:]
         self.play_cards.played_turn_dict[1] = copy.copy(field.play_cards.played_turn_dict[1])
         self.graveyard.graveyard[1] = field.graveyard.graveyard[1][:]
+        """
 
-
-        self.players[0] = field.players[0].get_copy(field)
-        self.players[1] = field.players[1].get_copy(field)
+        self.players = [side.get_copy(field) for side in field.players]
+        #self.players[0] = field.players[0].get_copy(field)
+        #self.players[1] = field.players[1].get_copy(field)
         self.players[0].field = self
         self.players[1].field = self
         self.update_hand_cost(player_num=0)
@@ -163,9 +177,9 @@ class Field:
         self.ex_turn_count = field.ex_turn_count[:]
         self.turn_player_num = int(field.turn_player_num)
         self.players_play_num = int(field.players_play_num)
-        if field.player_ability[0] != []:
+        if len(field.player_ability[0]) > 0:
             self.player_ability[0] = field.player_ability[0][:]
-        if field.player_ability[1] != []:
+        if len(field.player_ability[1]) > 0:
             self.player_ability[1] = field.player_ability[1][:]
         self.reset_time_stamp()
 

@@ -2,7 +2,7 @@
 
 import torch
 import os
-os.environ["OMP_NUM_THREADS"] = "4" if torch.cuda.is_available() else "6"
+#os.environ["OMP_NUM_THREADS"] = "4" if torch.cuda.is_available() else "6"
 os.environ["PYTHONWARNINGS"] = 'ignore:semaphore_tracker:UserWarning'
 #import torchvision
 #import torchvision.transforms as transforms
@@ -69,7 +69,7 @@ class New_Dual_Net(nn.Module):
 
         #self.small_layer = nn.Linear(n_mid,n_mid//10)
         #self.big_layer = nn.Linear(n_mid//10, n_mid)
-        layer = [Dual_ResNet(2*n_mid, 2*n_mid) for _ in range(20)]
+        layer = [Dual_ResNet(2*n_mid, 2*n_mid) for _ in range(3)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
 
@@ -104,11 +104,64 @@ class New_Dual_Net(nn.Module):
         self.prelu = nn.PReLU(init=0.01)
         self.integrate_layer = nn.Linear(2*n_mid,n_mid)
         self.rnn = nn.LSTM(input_size=n_mid,hidden_size=n_mid,batch_first=True)
+        ans = {'values': {'life_datas': None,
+                          'class_datas': None,
+                          'deck_type_datas': None,
+                          'hand_card_costs': None,
+                          'follower_stats': None,
+                          'pp_datas': None,
+                          'able_to_play': None,
+                          'able_to_attack': None,
+                          'able_to_creature_attack': None,
+                          },
+               'hand_ids': None,
+               'follower_card_ids': None,
+               'amulet_card_ids': None,
+               'follower_abilities': None,
+               'able_to_evo': None,
+               'deck_datas': None,
+               'detailed_action_codes': {'action_categories': None,
+                         'play_card_ids': None,
+                         'field_card_ids': None,
+                         'able_to_choice': None,
+                         'action_choice_len':None},
+               'before_states':{'values': {'life_datas': None,
+                          'class_datas': None,
+                          'deck_type_datas': None,
+                          'hand_card_costs': None,
+                          'follower_stats': None,
+                          'pp_datas': None,
+                          'able_to_play': None,
+                          'able_to_attack': None,
+                          'able_to_creature_attack': None,
+                          },
+                   'hand_ids': None,
+                   'follower_card_ids': None,
+                   'amulet_card_ids': None,
+                   'follower_abilities': None,
+                   'able_to_evo': None,
+                   'deck_datas': None}
+               }
+        self.states_keys = tuple(ans.keys())
+        self.normal_states_keys = tuple(set(self.states_keys) - {'values', 'detailed_action_codes', 'before_states'})
+        self.value_keys = tuple(ans['values'].keys())
+        self.action_code_keys = tuple(ans['detailed_action_codes'].keys())
+        self.cuda_flg = False
 
 
 
     #@profile
     def forward(self, states,target=False):
+        if self.cuda_flg:
+            states.update({dict_key: states[dict_key].cuda() for dict_key in self.normal_states_keys})
+            states['values'] = {sub_key: states['values'][sub_key].cuda() \
+                                for sub_key in self.value_keys}
+            states['detailed_action_codes'] = {sub_key: states['detailed_action_codes'][sub_key].cuda()
+                                for sub_key in self.action_code_keys}
+            orig_before_states = states["before_states"]
+            states['before_states'] = {dict_key : orig_before_states[dict_key].cuda() for dict_key in self.normal_states_keys}
+            states['before_states']['values'] = {sub_key: orig_before_states['values'][sub_key].cuda() \
+                                for sub_key in self.value_keys}
 
         values = states['values']
         detailed_action_codes = states['detailed_action_codes']
@@ -134,11 +187,28 @@ class New_Dual_Net(nn.Module):
 
         out_v = torch.tanh(self.final_layer(x))
         if target:
+            if self.cuda_flg:states['target'] = {key:states['target'][key].cuda() \
+                                                 for key in ('rewards','actions')}
             z = states['target']['rewards']
             pai = states['target']['actions']
             return out_p, out_v, self.loss_fn(out_p, out_v, z, pai,action_choice_len)
         else:
             return out_p, out_v
+
+    def cuda(self):
+        self.state_net.cuda_all()
+        self.action_value_net.cuda_all()
+        print("model is formed to cuda")
+        self.cuda_flg = True
+        return super(New_Dual_Net, self).cuda()
+
+
+    def cpu(self):
+        self.state_net.cpu()
+        self.action_value_net.cpu()
+        print("model is formed to cpu")
+        self.cuda_flg = False
+        return super(New_Dual_Net, self).cpu()
 
 class Dual_State_Net(nn.Module):
     def __init__(self, n_mid):
@@ -182,25 +252,41 @@ class Dual_State_Net(nn.Module):
         #layer = [nn.Linear(n_mid,n_mid) for _ in range(3)]
         #self.layer = nn.ModuleList(layer)
 
+    def cuda_all(self):
+        self.class_eye = self.class_eye.cuda()
+        self.ability_eye = self.ability_eye.cuda()
+        self.deck_type_eye = self.deck_type_eye.cuda()
+        return super(Dual_State_Net, self).cuda()
+
+    def cpu(self):
+        self.class_eye = self.class_eye.cpu()
+        self.ability_eye = self.ability_eye.cpu()
+        self.deck_type_eye = self.deck_type_eye.cpu()
+        return super(Dual_State_Net, self).cpu()
+
     def forward(self, states):
         values = states['values']
         hand_ids = states['hand_ids']
         follower_card_ids = states['follower_card_ids']
         amulet_card_ids = states['amulet_card_ids']
         follower_abilities = states['follower_abilities']
+        life_datas = values['life_datas']
         class_datas = values['class_datas']
         deck_type_datas = values['deck_type_datas']
         stats = values['follower_stats']
         deck_datas = states["deck_datas"]
+        """
+
+        """
         #class_values = self.class_eye[class_datas].view(-1,16).to(stats.device)
         #deck_type_values = self.deck_type_eye[deck_type_datas].view(-1,8).to(stats.device)
-        class_values = self.class_eye[class_datas].view(-1, 16).unsqueeze(-1).to(stats.device)
+        class_values = self.class_eye[class_datas].view(-1, 16).unsqueeze(-1)#.to(stats.device)
         class_values = class_values.expand(-1, 16, self.n_mid)
-        deck_type_values = self.deck_type_eye[deck_type_datas].view(-1, 8).unsqueeze(-1).to(stats.device)
+        deck_type_values = self.deck_type_eye[deck_type_datas].view(-1, 8).unsqueeze(-1)#.to(stats.device)
         deck_type_values = deck_type_values.expand(-1, 8, self.n_mid)
         x4 = self.ability_eye[follower_abilities]
         x4 = torch.sum(x4,dim=2)
-        abilities = x4.to(stats.device)
+        abilities = x4#.to(stats.device)
 
 
         follower_cards = self.prelu_layer[0](self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10, self.n_mid)
@@ -236,7 +322,7 @@ class Dual_State_Net(nn.Module):
         """
 
 
-        life_values = self.prelu_layer[2](self.life_layer(values['life_datas'])).view(-1, 1,self.n_mid)
+        life_values = self.prelu_layer[2](self.life_layer(life_datas)).view(-1, 1,self.n_mid)
 
         #hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
         # hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
@@ -305,6 +391,14 @@ class Action_Value_Net(nn.Module):
 
         self.prelu_3 = nn.PReLU(init=0.01)
         self.prelu_4 = nn.PReLU(init=0.01)
+
+    def cuda_all(self):
+        self.action_catgory_eye = self.action_catgory_eye.cuda()
+        return super(Action_Value_Net, self).cuda()
+
+    def cpu(self):
+        self.action_catgory_eye = self.action_catgory_eye.cpu()
+        return super(Action_Value_Net, self).cpu()
 
 
     def forward(self, states, action_categories, play_card_ids, field_card_ids,values,label,target=False):

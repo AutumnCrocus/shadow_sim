@@ -4,7 +4,7 @@
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support, Value, Array, Manager
 import ctypes
 import os
-os.environ["OMP_NUM_THREADS"] = "4"
+#os.environ["OMP_NUM_THREADS"] = "4"
 try:
     set_start_method('spawn')
     print("spawn is run.")
@@ -30,41 +30,44 @@ from torch.autograd import detect_anomaly
 GAMMA = 0.9
 parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')
 
-parser.add_argument('--episode_num', help='試行回数')
-parser.add_argument('--iteration_num', help='イテレーション数')
-parser.add_argument('--epoch_num', help='エポック数')
-parser.add_argument('--batch_size', help='バッチサイズ')
+parser.add_argument('--episode_num', help='試行回数', type=int,default=128)
+parser.add_argument('--iteration_num', help='イテレーション数', type=int,default=1000)
+parser.add_argument('--epoch_num', help='エポック数', type=int,default=64)
+parser.add_argument('--batch_size', help='バッチサイズ', type=int,default=32)
 parser.add_argument('--mcts', help='サンプリングAIをMCTSにする(オリジナルの場合は[OM])')
 parser.add_argument('--deck', help='サンプリングに用いるデッキの選び方')
 parser.add_argument('--cuda', help='gpuを使用するかどうか')
 parser.add_argument('--multi_train', help="学習時も並列化するかどうか")
-parser.add_argument('--epoch_interval', help="モデルの保存間隔")
-parser.add_argument('--fixed_deck_ids', help="使用デッキidリストの固定")
-parser.add_argument('--cpu_num', help="使用CPU数",default=2 if torch.cuda.is_available() else 3)
+parser.add_argument('--save_interval', help="モデルの保存間隔", type=int,default=10)
+parser.add_argument('--fixed_deck_ids', help="使用デッキidリストの固定",type=\
+    lambda str:list(map(int,str.split(","))))
+parser.add_argument('--cpu_num', help="使用CPU数",default=2 if torch.cuda.is_available() else 3,type=int)
 parser.add_argument('--batch_num', help='サンプルに対するバッチの数')
 parser.add_argument('--fixed_opponent', help='対戦相手を固定')
-parser.add_argument('--node_num', help='node_num', default=100)
-parser.add_argument('--weight_decay', help='weight_decay', default=1e-2)
+parser.add_argument('--node_num', help='node_num', default=100,type=int)
+parser.add_argument('--weight_decay', help='weight_decay', default=1e-2,type=float)
 parser.add_argument('--check', help='check score')
 parser.add_argument('--deck_list', help='deck_list',default="0,1,4,5,10,11")
 parser.add_argument('--model_name', help='model_name', default=None)
 parser.add_argument('--opponent_model_name', help='opponent_model_name', default=None)
-parser.add_argument('--th', help='threshold',default=1e-3)
-parser.add_argument('--WR_th', help='WR_threshold',default=0.55)
+parser.add_argument('--th', help='threshold',default=1e-3,type=float)
+parser.add_argument('--WR_th', help='WR_threshold',default=0.55,type=float)
 parser.add_argument('--check_deck_id', help='check_deck_id')
-parser.add_argument('--evaluate_num', help='evaluate_num',default=100)
+parser.add_argument('--evaluate_num', help='evaluate_num',default=100,type=int)
+parser.add_argument('--max_update_interval', help='max_update_interval',default=10,type=int)
+parser.add_argument('--limit_OMP',help="limit OMP_NUM_THREADS for quadro",default=False,type=bool)
 args = parser.parse_args()
 
-deck_flg = list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
-weight_decay = float(args.weight_decay)
-evaluate_num = int(args.evaluate_num)
+deck_flg = args.fixed_deck_ids#list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
+weight_decay = args.weight_decay
+evaluate_num = args.evaluate_num
 
 
 #Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
 #                                           'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
 #                                           'life_data', 'pp_data', 'able_to_play', 'able_to_attack',
 #                                           'able_to_creature_attack'))
-cpu_num = int(args.cpu_num)
+cpu_num = args.cpu_num
 batch_num = int(args.batch_num) if args.batch_num is not None else None
 G = Game()
 fixed_opponent = args.fixed_opponent
@@ -285,7 +288,7 @@ def multi_battle(episode_data):
     for _ in tqdm(range(deck_data_len*count_limit), desc=info, position=p_id):
         if all(shared_array[3*ele] >= count_limit for ele in range(deck_data_len)):
             break
-        available_deck_ids = [(index,ele) for index,ele in enumerate(deck_id_data) if shared_array[index]< count_limit]
+        available_deck_ids = [(index,ele) for index,ele in enumerate(deck_id_data) if shared_array[3*index]< count_limit]
 
         current_deck_id_data = random.choice(available_deck_ids)
         deck_index,current_deck_id = current_deck_id_data
@@ -345,33 +348,38 @@ def multi_train(data):
     all_loss, MSE, CEE = 0, 0, 0
 
     all_states, all_actions, all_rewards = memory
-    states_keys = list(all_states.keys())
-    value_keys = list(all_states['values'].keys())
-    action_code_keys = list(all_states['detailed_action_codes'].keys())
-    #memory_len = all_actions.size()[0]
-    batch_id_list = train_ids#list(range(memory_len))
+    states_keys = tuple(all_states.keys())
+    normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
+    value_keys = tuple(all_states['values'].keys())
+    action_code_keys = tuple(all_states['detailed_action_codes'].keys())
+    batch_id_list = train_ids
     all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
     info = f'#{p_num:>2} '
     for i in tqdm(range(iteration_num),desc=info,position=p_num):
         optimizer.zero_grad()
-        states = all_states
-        #key = [random.randint(0, memory_len-1) for _ in range(batch_size)]
-
         key = random.sample(batch_id_list,k=batch_size)
-        #key = random.sample(train_ids, k=batch)
+        states = {}
+        states.update({dict_key : torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+        states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
+                            for sub_key in value_keys}
+        states['detailed_action_codes'] = {sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                            for sub_key in action_code_keys}
+        orig_before_states = all_states["before_states"]
+        states['before_states'] = {dict_key : torch.clone(orig_before_states[dict_key][key]) for dict_key in normal_states_keys}
+        states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
+                            for sub_key in value_keys}
+        """
         states = {}
         for dict_key in states_keys:
             if dict_key == 'values':
                 states['values'] = {}
                 for sub_key in value_keys:
                     states['values'][sub_key] = torch.clone(all_states['values'][sub_key][key])
-                    # states['values'][sub_key].grad=None
             elif dict_key == 'detailed_action_codes':
                 states['detailed_action_codes'] = {}
                 for sub_key in action_code_keys:
                     states['detailed_action_codes'][sub_key] = \
                         torch.clone(all_states['detailed_action_codes'][sub_key][key])
-                    # states['detailed_action_codes'][sub_key].grad=None
             elif dict_key == 'before_states':
                 orig_before_states = all_states["before_states"]
                 before_states = {}
@@ -381,7 +389,6 @@ def multi_train(data):
                         for sub_key in value_keys:
                             before_states['values'][sub_key] = \
                                 torch.clone(orig_before_states['values'][sub_key][key])
-                            # states['values'][sub_key].grad=None
                     elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
                         pass
                     else:
@@ -389,8 +396,7 @@ def multi_train(data):
                 states["before_states"] = before_states
             else:
                 states[dict_key] = torch.clone(all_states[dict_key][key])
-                # states[dict_key].grad=None
-
+        """
         actions = all_actions[key]
         rewards = all_rewards[key]
 
@@ -404,8 +410,6 @@ def multi_train(data):
         p, v, loss = net(states, target=True)
         z = all_rewards
         pai = all_actions  # 45種類の抽象化した行動
-        # loss.backward()
-        #with detect_anomaly():
         loss[0].backward()
         all_loss += float(loss[0].item())
         MSE += float(loss[1].item())
@@ -476,38 +480,35 @@ def run_main():
     p_size = cpu_num
     print("use cpu num:{}".format(p_size))
     print("w_d:{}".format(weight_decay))
-    std_th = float(args.th)
-
+    std_th = args.th
+    if args.limit_OMP:
+        os.environ["MXNET_CPU_WORKER_NTHREADS"] =str(int(36/p_size))
+        os.environ["MXNET_CPU_PRIORITY_NTHREADS"] =str(int(36/p_size))
+        os.environ["OMP_NUM_THREADS"] ="100"
+        os.environ["MXNET_CPU_NNPACK_NTHREAD"] = "4"
+        os.environ["MXNET_MP_OPENCV_NUM_THREADS"] ="1"
+    
     loss_history = []
 
-    cuda_flg = args.cuda == "True"
-    node_num = int(args.node_num)
+    cuda_flg = args.cuda is not None
+    node_num = args.node_num
     net = New_Dual_Net(node_num)
+    print(next(net.parameters()).is_cuda)
+    
     if args.model_name is not None:
         PATH = 'model/' + args.model_name
         net.load_state_dict(torch.load(PATH))
     if torch.cuda.is_available() and cuda_flg:
         net = net.cuda()
-        print("cuda is available.")
+        print(next(net.parameters()).is_cuda)
     net.zero_grad()
-    epoch_interval = int(args.epoch_interval) if args.epoch_interval is not None else 10
+    epoch_interval = args.save_interval
     G = Game()
     #Over_all_R = New_Dual_ReplayMemory(100000)
-    episode_len = 100
-    if args.episode_num is not None:
-        episode_len = int(args.episode_num)
-    batch_size = 100
-    if args.batch_size is not None:
-        batch_size = int(args.batch_size)
-    iteration = 100
-    if args.iteration_num is not None:
-        iteration = int(args.iteration_num)
-    epoch_num = 2
-    if args.epoch_num is not None:
-        epoch_num = int(args.epoch_num)
-    mcts = False
-    if args.mcts is not None:
-        mcts = True
+    episode_len = args.episode_num
+    batch_size = args.batch_size
+    iteration = args.iteration_num
+    epoch_num = args.epoch_num
     import datetime
     t1 = datetime.datetime.now()
     print(t1)
@@ -518,15 +519,14 @@ def run_main():
     LOG_PATH = "log_{}_{}_{}_{}_{}_{}/".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                              t1.second)
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
-    th = float(args.WR_th)
+    th = args.WR_th
     last_updated = 0
     min_loss = 100
     #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
-        net.cpu()
-        #net.class_eye.cpu()
-        #et.ability_eye.cpu()
-        prev_net.cpu()
+
+        #net.cpu()
+        #prev_net.cpu()
 
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
@@ -539,14 +539,6 @@ def run_main():
                     ,mulligan=Min_cost_mulligan_policy())
         #p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
-
-        #import cProfile
-        #cProfile.run("memories = multi(episode_len,p1,p2)",sort="tottime")
-        #assert False
-        #memories = multi(episode_len,p1,p2)
-        #iter_data = [(i, p1, p2) for i in range(episode_len)]
-        #p_size = 5 if epoch < 5 else cpu_num
-        #single_iter = episode_len//double_p_size
         manager = Manager()
         shared_value = manager.Value("i",0)
         #iter_data = [[p1, p2,shared_value,single_iter,i] for i in range(double_p_size)]
@@ -605,9 +597,9 @@ def run_main():
         batch = len(R.memory) // batch_num if batch_num is not None else batch_size
         print("batch_size:{}".format(batch))
         if args.multi_train is not None:
-            p_size = cpu_num
-            if cuda_flg:
-                net = net.cuda()
+            p_size = 2
+            #if cuda_flg:
+            #    net = net.cuda()
             net.share_memory()
 
             all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
@@ -619,6 +611,7 @@ def run_main():
             iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
                          for i in range(p_size)]
             freeze_support()
+
             pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
             loss_data = pool.map(multi_train, iter_data)
             pool.terminate()  # add this.
@@ -641,11 +634,25 @@ def run_main():
             test_objective_loss = 0
             test_MSE = 0
             test_CEE = 0
-            states_keys = list(all_states.keys())
-            value_keys = list(all_states['values'].keys())
-            action_code_keys = list(all_states['detailed_action_codes'].keys())
+            states_keys = tuple(all_states.keys())
+            value_keys = tuple(all_states['values'].keys())
+            normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
+            action_code_keys = tuple(all_states['detailed_action_codes'].keys())
             for i in tqdm(range(separate_num)):
                 key = [test_ids[i]]
+                states = {}
+                states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+                states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
+                                    for sub_key in value_keys}
+                states['detailed_action_codes'] = {
+                    sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                    for sub_key in action_code_keys}
+                orig_before_states = all_states["before_states"]
+                states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
+                                           normal_states_keys}
+                states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
+                                                     for sub_key in value_keys}
+                """
                 states = {}
                 for dict_key in states_keys:
                     if dict_key == 'values':
@@ -674,6 +681,7 @@ def run_main():
                         states["before_states"] = before_states
                     else:
                         states[dict_key] = all_states[dict_key][key]
+                """
 
                 actions = all_actions[key]
                 rewards = all_rewards[key]
@@ -698,22 +706,7 @@ def run_main():
             print("AVE | Over_All_Loss(test ): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                   .format(test_objective_loss, test_MSE, test_CEE))
             print(test_MSE, separate_num)
-            """
-            #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
-            p, v, loss = net(all_states, target=True)
 
-            print("loss:{:.3f} MSE:{:.3f} CEE:{:.3f}".format(loss[0].item(), loss[1].item(), loss[2].item()))
-            test_objective_loss = loss[0].item()
-            test_MSE = loss[1].item()
-            test_CEE = loss[2].item()
-            """
-
-
-
-            #writer.add_scalar(LOG_PATH + "Over_All_Loss", sum_of_loss / iteration, epoch)
-            #writer.add_scalar(LOG_PATH + "MSE", sum_of_MSE / iteration, epoch)
-            #writer.add_scalar(LOG_PATH + "CEE", sum_of_CEE / iteration, epoch)
-            #writer.add_scalar(LOG_PATH + "WIN_RATE", win_num / episode_len, epoch)
             writer.add_scalars(LOG_PATH+'Over_All_Loss', {'train': train_objective_loss,
                                                 'test': test_objective_loss
                                                 }, epoch)
@@ -723,9 +716,9 @@ def run_main():
             writer.add_scalars(LOG_PATH+'CEE', {'train': train_CEE,
                                                 'test': test_CEE
                                                 }, epoch)
-            #print("AVE | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
-            #      .format(sum_of_loss / iteration, sum_of_MSE / iteration, sum_of_CEE / iteration))
+
             loss_history.append(sum_of_loss / iteration)
+            p_size = cpu_num
 
         else:
             prev_optimizer = copy.deepcopy(optimizer)
@@ -742,6 +735,7 @@ def run_main():
             #print("rewards:{}".format(rewards))
             states_keys = list(all_states.keys())
             value_keys = list(all_states['values'].keys())
+            normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
             action_code_keys = list(all_states['detailed_action_codes'].keys())
             memory_len = all_actions.size()[0]
             all_data_ids = list(range(memory_len))
@@ -755,36 +749,17 @@ def run_main():
             for i in tqdm(range(train_num)):
                 key = random.sample(train_ids,k=batch)
                 states = {}
-                for dict_key in states_keys:
-                    if dict_key == 'values':
-                        states['values'] = {}
-                        for sub_key in value_keys:
-                            states['values'][sub_key] = torch.clone(all_states['values'][sub_key][key])
-                            #states['values'][sub_key].grad=None
-                    elif dict_key == 'detailed_action_codes':
-                        states['detailed_action_codes'] = {}
-                        for sub_key in action_code_keys:
-                            states['detailed_action_codes'][sub_key] = \
-                                torch.clone(all_states['detailed_action_codes'][sub_key][key])
-                            #states['detailed_action_codes'][sub_key].grad=None
-                    elif dict_key == 'before_states':
-                        orig_before_states = all_states["before_states"]
-                        before_states = {}
-                        for dict_key in states_keys:
-                            if dict_key == 'values':
-                                before_states['values'] = {}
-                                for sub_key in value_keys:
-                                    before_states['values'][sub_key] = \
-                                        torch.clone(orig_before_states['values'][sub_key][key])
-                                    # states['values'][sub_key].grad=None
-                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
-                                pass
-                            else:
-                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
-                        states["before_states"] = before_states
-                    else:
-                        states[dict_key] = torch.clone(all_states[dict_key][key])
-                        #states[dict_key].grad=None
+                states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+                states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
+                                    for sub_key in value_keys}
+                states['detailed_action_codes'] = {
+                    sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                    for sub_key in action_code_keys}
+                orig_before_states = all_states["before_states"]
+                states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
+                                           normal_states_keys}
+                states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
+                                                     for sub_key in value_keys}
                 
                 actions = all_actions[key]
                 rewards = all_rewards[key]
@@ -819,33 +794,17 @@ def run_main():
                 key = [train_ids[i]]
                 #train_ids[2*i:2*i+2] if 2*i+2 < train_ids_len else train_ids[train_ids_len-2:train_ids_len]
                 states = {}
-                for dict_key in states_keys:
-                    if dict_key == 'values':
-                        states['values'] = {}
-                        for sub_key in value_keys:
-                            states['values'][sub_key] = all_states['values'][sub_key][key]
-                    elif dict_key == 'detailed_action_codes':
-                        states['detailed_action_codes'] = {}
-                        for sub_key in action_code_keys:
-                            states['detailed_action_codes'][sub_key] = \
-                                all_states['detailed_action_codes'][sub_key][key]
-                    elif dict_key == 'before_states':
-                        orig_before_states = all_states["before_states"]
-                        before_states = {}
-                        for dict_key in states_keys:
-                            if dict_key == 'values':
-                                before_states['values'] = {}
-                                for sub_key in value_keys:
-                                    before_states['values'][sub_key] = \
-                                        torch.clone(orig_before_states['values'][sub_key][key])
-                                    # states['values'][sub_key].grad=None
-                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
-                                pass
-                            else:
-                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
-                        states["before_states"] = before_states
-                    else:
-                        states[dict_key] = all_states[dict_key][key]
+                states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+                states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
+                                    for sub_key in value_keys}
+                states['detailed_action_codes'] = {
+                    sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                    for sub_key in action_code_keys}
+                orig_before_states = all_states["before_states"]
+                states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
+                                           normal_states_keys}
+                states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
+                                                     for sub_key in value_keys}
 
                 actions = all_actions[key]
                 rewards = all_rewards[key]
@@ -882,34 +841,17 @@ def run_main():
             for i in tqdm(range(separate_num)):
                 key = [test_ids[i]]#test_ids[i*batch_len:min(test_ids_len,(i+1)*batch_len)] # [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
                 states = {}
-                for dict_key in states_keys:
-                    if dict_key == 'values':
-                        states['values'] = {}
-                        for sub_key in value_keys:
-                            states['values'][sub_key] = all_states['values'][sub_key][key]
-                    elif dict_key == 'detailed_action_codes':
-                        states['detailed_action_codes'] = {}
-                        for sub_key in action_code_keys:
-                            states['detailed_action_codes'][sub_key] = \
-                                all_states['detailed_action_codes'][sub_key][key]
-                    elif dict_key == 'before_states':
-                        orig_before_states = all_states["before_states"]
-                        before_states = {}
-                        for dict_key in states_keys:
-                            if dict_key == 'values':
-                                before_states['values'] = {}
-                                for sub_key in value_keys:
-                                    before_states['values'][sub_key] = \
-                                        torch.clone(orig_before_states['values'][sub_key][key])
-                                    # states['values'][sub_key].grad=None
-                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
-                                pass
-                            else:
-                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
-                        states["before_states"] = before_states
-                    else:
-                        states[dict_key] = all_states[dict_key][key]
-
+                states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+                states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
+                                    for sub_key in value_keys}
+                states['detailed_action_codes'] = {
+                    sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                    for sub_key in action_code_keys}
+                orig_before_states = all_states["before_states"]
+                states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
+                                           normal_states_keys}
+                states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
+                                                     for sub_key in value_keys}
                 actions = all_actions[key]
                 rewards = all_rewards[key]
                 states['target'] = {'actions': actions, 'rewards': rewards}
@@ -953,8 +895,9 @@ def run_main():
             
             loss_history.append(test_objective_loss)
 
-        net.cpu()
-        prev_net.cpu()
+
+        #net.cpu()
+        #prev_net.cpu()
 
         p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
                     ,mulligan=Min_cost_mulligan_policy())
@@ -965,14 +908,7 @@ def run_main():
         test_deck_list = (0, 1, 2, 4, 5, 10, 12)  if deck_flg is None else deck_flg# (0,1,4,10,13)
         test_episode_len = evaluate_num#100
         match_num = len(test_deck_list)
-        
-        #iter_data = [(p1, p2,test_episode_len//p_size,i) for i in range(p_size)]
-        #freeze_support()
-        #pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
-        #memory = pool.map(multi_preparation, iter_data)
-        #print("\n" * p_size)
-        #pool.close()  # add this.
-        #pool.terminate()  # add this.
+
 
         deck_pairs = ((d,d) for d in test_deck_list) #if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
         manager = Manager()
@@ -1012,7 +948,8 @@ def run_main():
         win_flg = False
         #WR=1.0
         writer.add_scalars(LOG_PATH + 'win_rate', {'mean': WR,
-                                              'min': min_WR
+                                              'min': min_WR,
+                                              'threthold': th
                                               }, epoch)
         if WR < th: #and min_WR < 0.5:
             net = prev_net
@@ -1031,28 +968,30 @@ def run_main():
 
         t4 = datetime.datetime.now()
         print(t4-t3)
-        if win_flg or (epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num):
-            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+        # or (epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num)
+        if win_flg:
+            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_{}nodes_W.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                  t1.second, epoch+1,epoch_num,node_num)
             if torch.cuda.is_available() and cuda_flg:
-                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_W_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
                                                                         t1.second, epoch + 1 , epoch_num)
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
+            last_updated = 0
+        else:
+            last_updated += 1
+            print("last_updated:",last_updated)
+            if last_updated > args.max_update_interval:
+                print("update finished.")
+                break
         if len(loss_history) > epoch_interval-1:
             #UB = np.std(loss_history[-epoch_interval:-1])/(np.sqrt(2*epoch) + 1)
             UB = np.std(loss_history) / (np.sqrt(epoch) + 1)
             print("{:<2} std:{}".format(epoch,UB))
             if UB < std_th:
                 break
-        if min_loss > test_objective_loss:
-            last_updated = 0
-            min_loss = test_objective_loss
-        else:
-            last_updated += 1
-            if last_updated > 20:
-                print("update finished.")
-                break
+
+ 
 
     writer.close()
     print('Finished Training')
@@ -1116,7 +1055,7 @@ def check_score():
             p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy(),
                         mulligan=Min_cost_mulligan_policy())
         else:
-            p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=prev_net))
+            p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=net))
     else:
         if opponent_net is not None:  # epoch < 5:
             p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
