@@ -15,10 +15,9 @@ jobs:
       PLAYER_TYPES_A: "29,28"
       PLAYER_TYPES_B: "29,28"
       MODE: mirror
-      N: 10
+      N: 100
       DECK_LIST: "0,3,5"
-
-      NODE_NUM: 100
+      NODE_NUM: 10
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
