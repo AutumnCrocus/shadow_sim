@@ -15,7 +15,7 @@ jobs:
       PLAYER_TYPES_A: "29,28"
       PLAYER_TYPES_B: "29,28"
       MODE: mirror
-      N: 100
+      N: 10
       DECK_LIST: "0,3,5"
 
       NODE_NUM: 100
