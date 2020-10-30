@@ -482,11 +482,7 @@ def run_main():
     print("w_d:{}".format(weight_decay))
     std_th = args.th
     if args.limit_OMP:
-        os.environ["MXNET_CPU_WORKER_NTHREADS"] =str(int(36/p_size))
-        os.environ["MXNET_CPU_PRIORITY_NTHREADS"] =str(int(36/p_size))
-        os.environ["OMP_NUM_THREADS"] ="100"
-        os.environ["MXNET_CPU_NNPACK_NTHREAD"] = "4"
-        os.environ["MXNET_MP_OPENCV_NUM_THREADS"] ="1"
+        os.environ["OMP_NUM_THREADS"] = "6"
     
     loss_history = []
 
