@@ -10,13 +10,13 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: 100_decklist_20_nodes.pth
-      O_MODEL_NAME: 100_decklist_20_nodes.pth
-      PLAYER_TYPES_A: "29,2"
-      PLAYER_TYPES_B: "29,13"
+      MODEL_NAME: Multi_Dual_2020_10_28_16_11_41_8_64_10nodes_W.pth
+      O_MODEL_NAME: Multi_Dual_2020_10_28_16_11_41_8_64_10nodes_W.pth
+      PLAYER_TYPES_A: "29,28"
+      PLAYER_TYPES_B: "29,28"
       MODE: mirror
-      N: 200
-      DECK_LIST: "100"
+      N: 100
+      DECK_LIST: "0,3,5"
 
       NODE_NUM: 100
     runs-on: ubuntu-latest
@@ -45,9 +45,9 @@ jobs:
     - name: Run Test1     
       run: |
        python3 test.py --N  $N --playertypes $PLAYER_TYPES_A --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
-    - name: Run Test2     
-      run: |
-       python3 test.py --N  $N --playertypes $PLAYER_TYPES_B --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
+    #- name: Run Test2     
+    #  run: |
+    #  python3 test.py --N  $N --playertypes $PLAYER_TYPES_B --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
        
     #- name: Run Test2     
     #  run: |
