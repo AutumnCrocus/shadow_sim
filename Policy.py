@@ -5671,30 +5671,42 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
 
 class Dual_NN_GreedyPolicy(New_GreedyPolicy):
-    def __init__(self, model_name=None, origin_model=None, node_num=100):
+    def __init__(self, model_name=None, origin_model=None, cuda=False,node_num=100):
         super().__init__()
         self.policy_type = 2
         from Embedd_Network_model import New_Dual_Net, Detailed_State_data_2_Tensor
         self.net = None
         self.model_name = PATH
+        self.cuda = False
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
+            #short_name = short_name.split("/")[1]
             self.name = "DN_Greedy(model_name={})Policy".format(short_name)
             self.net = New_Dual_Net(node_num)
-            self.model_name = 'model/{}'.format(model_name)
-            self.net.load_state_dict(torch.load(self.model_name))
+            if torch.cuda.is_available() and cuda:
+                self.net = self.net.cuda()
+            self.model_name = model_name
+            self.net.load_state_dict(torch.load('model/{}'.format(model_name)))
             self.net.eval()
         else:
             if origin_model is not None:
                 self.net = origin_model
                 self.net.eval()
+                if torch.cuda.is_available() and cuda:
+                    self.net = self.net.cuda()
+                    self.cuda = True
             else:
-                assert False, "non-model error"
+                assert False,"non-model error"
 
         self.state_convertor = Detailed_State_data_2_Tensor
+        self.origin_field_data = None
+        self.current_player_num = 0
 
     def decide(self, player, opponent, field):
+        self.origin_field_data = field.before_observable_fields
+
         player_num = player.player_num
+        self.current_player_num =  player_num
         starting_field = Field_setting.Field(5)
         starting_field.set_data(field)
         starting_field.get_regal_target_dict(starting_field.players[player.player_num],
@@ -5707,13 +5719,14 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         if not field.secret:
             mylogger.info("able_actions:{}".format(able_actions))
         for action in able_actions:
-            if action == (0, 0, 0):
-                continue
             sim_field = Field_setting.Field(5)
             sim_field.set_data(starting_field)
-            sim_player = sim_field.players[player_num]
-            sim_opponent = sim_field.players[1 - player_num]
-            sim_player.execute_action(sim_field, sim_opponent, action_code=action, virtual=True)
+            if action[0] == Action_Code.TURN_END.value:
+                sim_field.end_of_turn(player_num, virtual=True)
+            else:
+                sim_player = sim_field.players[player_num]
+                sim_opponent = sim_field.players[1 - player_num]
+                sim_player.execute_action(sim_field, sim_opponent, action_code=action, virtual=True)
             value = self.state_value(sim_field, player_num)
             if not field.secret:
                 mylogger.info("action:{},state_value:{:.3f}".format(action, value))
@@ -5726,23 +5739,25 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         return max_value_action
 
     def state_value(self, field, player_num):
-
+        player = field.players[player_num]
         if field.check_game_end():
-            player = field.players[player_num]
-            return 2*int(player.life > 0 and not player.lib_out_flg) - 1
+            return int(player.life > 0 and not player.lib_out_flg)
         states = self.get_data(field, player_num=player_num)
 
-        states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
-            ([field.get_detailed_action_code(field.players[player_num])])
-        _, value = self.net(states)
+        before_states = self.origin_field_data
+        before_states = [before_states]
+        before_states = self.state_convertor(before_states,cuda=self.cuda)
 
-        return float(value[0])
+        states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
+            ([field.get_detailed_action_code(field.players[self.current_player_num])],cuda=self.cuda)
+        states['before_states'] = before_states
+        pai, value = self.net(states)
+        out_value = float(value[0])
+
+        return out_value
 
     def get_data(self,f,player_num = 0):
-        tmp = Game_setting.get_data(f,player_num=player_num)
-        #states = [tmp]*2
-        states = [tmp]
-        states = self.state_convertor(states)
 
-        return states
+        return New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy.get_data(f,player_num=player_num)
+
 
