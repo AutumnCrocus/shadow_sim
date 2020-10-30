@@ -12,8 +12,8 @@ jobs:
     env:
       MODEL_NAME: Multi_Dual_2020_10_28_16_11_41_8_64_10nodes_W.pth
       O_MODEL_NAME: Multi_Dual_2020_10_28_16_11_41_8_64_10nodes_W.pth
-      PLAYER_TYPES_A: "29,28"
-      PLAYER_TYPES_B: "29,28"
+      PLAYER_TYPES_A: "29,13"
+      PLAYER_TYPES_B: "29,13"
       MODE: mirror
       N: 100
       DECK_LIST: "0,3,5"
