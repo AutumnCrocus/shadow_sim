@@ -5703,10 +5703,11 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         self.current_player_num = 0
 
     def decide(self, player, opponent, field):
-        self.origin_field_data = field.before_observable_fields
+
 
         player_num = player.player_num
         self.current_player_num =  player_num
+        self.origin_field_data = Game_setting.get_data(field, player_num=player_num)
         starting_field = Field_setting.Field(5)
         starting_field.set_data(field)
         starting_field.get_regal_target_dict(starting_field.players[player.player_num],
