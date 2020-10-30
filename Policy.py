@@ -5757,7 +5757,9 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         return out_value
 
     def get_data(self,f,player_num = 0):
+        tmp = Game_setting.get_data(f,player_num=player_num)
+        states = [tmp]
+        states = self.state_convertor(states)
 
-        return New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy.get_data(f,player_num=player_num)
-
+        return states
 
