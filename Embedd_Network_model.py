@@ -152,16 +152,16 @@ class New_Dual_Net(nn.Module):
 
     #@profile
     def forward(self, states,target=False):
-        if self.cuda_flg:
-            states.update({dict_key: states[dict_key].cuda() for dict_key in self.normal_states_keys})
-            states['values'] = {sub_key: states['values'][sub_key].cuda() \
-                                for sub_key in self.value_keys}
-            states['detailed_action_codes'] = {sub_key: states['detailed_action_codes'][sub_key].cuda()
-                                for sub_key in self.action_code_keys}
-            orig_before_states = states["before_states"]
-            states['before_states'] = {dict_key : orig_before_states[dict_key].cuda() for dict_key in self.normal_states_keys}
-            states['before_states']['values'] = {sub_key: orig_before_states['values'][sub_key].cuda() \
-                                for sub_key in self.value_keys}
+#         if self.cuda_flg:
+#             states.update({dict_key: states[dict_key].cuda() for dict_key in self.normal_states_keys})
+#             states['values'] = {sub_key: states['values'][sub_key].cuda() \
+#                                 for sub_key in self.value_keys}
+#             states['detailed_action_codes'] = {sub_key: states['detailed_action_codes'][sub_key].cuda()
+#                                 for sub_key in self.action_code_keys}
+#             orig_before_states = states["before_states"]
+#             states['before_states'] = {dict_key : orig_before_states[dict_key].cuda() for dict_key in self.normal_states_keys}
+#             states['before_states']['values'] = {sub_key: orig_before_states['values'][sub_key].cuda() \
+#                                 for sub_key in self.value_keys}
 
         values = states['values']
         detailed_action_codes = states['detailed_action_codes']
@@ -187,8 +187,8 @@ class New_Dual_Net(nn.Module):
 
         out_v = torch.tanh(self.final_layer(x))
         if target:
-            if self.cuda_flg:states['target'] = {key:states['target'][key].cuda() \
-                                                 for key in ('rewards','actions')}
+            #if self.cuda_flg:states['target'] = {key:states['target'][key].cuda() \
+            #                                    for key in ('rewards','actions')}
             z = states['target']['rewards']
             pai = states['target']['actions']
             return out_p, out_v, self.loss_fn(out_p, out_v, z, pai,action_choice_len)

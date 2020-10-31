@@ -355,6 +355,7 @@ def multi_train(data):
     batch_id_list = train_ids
     all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
     info = f'#{p_num:>2} '
+    min_loss = 100
     for i in tqdm(range(iteration_num),desc=info,position=p_num):
         optimizer.zero_grad()
         key = random.sample(batch_id_list,k=batch_size)
@@ -368,49 +369,20 @@ def multi_train(data):
         states['before_states'] = {dict_key : torch.clone(orig_before_states[dict_key][key]) for dict_key in normal_states_keys}
         states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
                             for sub_key in value_keys}
-        """
-        states = {}
-        for dict_key in states_keys:
-            if dict_key == 'values':
-                states['values'] = {}
-                for sub_key in value_keys:
-                    states['values'][sub_key] = torch.clone(all_states['values'][sub_key][key])
-            elif dict_key == 'detailed_action_codes':
-                states['detailed_action_codes'] = {}
-                for sub_key in action_code_keys:
-                    states['detailed_action_codes'][sub_key] = \
-                        torch.clone(all_states['detailed_action_codes'][sub_key][key])
-            elif dict_key == 'before_states':
-                orig_before_states = all_states["before_states"]
-                before_states = {}
-                for dict_key in states_keys:
-                    if dict_key == 'values':
-                        before_states['values'] = {}
-                        for sub_key in value_keys:
-                            before_states['values'][sub_key] = \
-                                torch.clone(orig_before_states['values'][sub_key][key])
-                    elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
-                        pass
-                    else:
-                        before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
-                states["before_states"] = before_states
-            else:
-                states[dict_key] = torch.clone(all_states[dict_key][key])
-        """
+        
         actions = all_actions[key]
         rewards = all_rewards[key]
 
         states['target'] = {'actions': actions, 'rewards': rewards}
-
-        actions = all_actions[key]
-        rewards = all_rewards[key]
-        states['target'] = {'actions': actions, 'rewards': rewards}
-
 
         p, v, loss = net(states, target=True)
         z = all_rewards
         pai = all_actions  # 45種類の抽象化した行動
-        loss[0].backward()
+        current_loss = float(loss[0].item())
+        if min_loss >= current_loss:
+            min_loss = current_loss
+        else:
+            loss[0].backward()
         all_loss += float(loss[0].item())
         MSE += float(loss[1].item())
         CEE += float(loss[2].item())

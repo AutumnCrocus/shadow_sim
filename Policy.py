@@ -5462,7 +5462,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
     def get_data(self,f,player_num = 0):
         tmp = Game_setting.get_data(f,player_num=player_num)
         states = [tmp]
-        states = self.state_convertor(states)
+        states = self.state_convertor(states,cuda=self.cuda)
 
         return states
 
@@ -5760,7 +5760,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
     def get_data(self,f,player_num = 0):
         tmp = Game_setting.get_data(f,player_num=player_num)
         states = [tmp]
-        states = self.state_convertor(states)
+        states = self.state_convertor(states,cuda=self.cuda)
 
         return states
 
