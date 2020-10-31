@@ -32,6 +32,7 @@ max_life_value = math.exp(-1) - math.exp(-20)
 from my_enum import *
 import warnings
 import Embedd_Network_model
+import card_setting
 ACTION_SIZE = 45
 
 # warnings.simplefilter('ignore')
@@ -205,8 +206,10 @@ class AggroPolicy(Policy):
                     creature_attack_flg = False
 
             if not creature_attack_flg:
-                if attack_creature.player_attack_regulation is None or attack_creature.player_attack_regulation(
+                    if attack_creature.player_attack_regulation is None or card_setting.player_attack_regulation[attack_creature.player_attack_regulation](
                         player):
+#                 if attack_creature.player_attack_regulation is None or attack_creature.player_attack_regulation(
+#                         player):
                     return Action_Code.ATTACK_TO_PLAYER.value, card_id, None
 
             if len(opponent_creatures_stats) > 0 and target_id is not None:
