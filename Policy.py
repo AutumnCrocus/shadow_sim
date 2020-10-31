@@ -5268,18 +5268,25 @@ class Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         from Network_model import state_change_to_full
         self.net = None
         self.model_name = PATH
+        device = "cpu"
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
-            self.name = "DN_NR_OMISMCTS(model_name={})Policy".format(short_name)
-            self.net = Dual_Net(19218, 100, 1)
-            if torch.cuda.is_available():
+            #short_name = short_name.split("/")[1]
+            self.name = "DN_Greedy(model_name={})Policy".format(short_name)
+            self.net = New_Dual_Net(node_num)
+            if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
-            self.model_name = 'model/{}'.format(model_name)
-            self.net.load_state_dict(torch.load(self.model_name))
+                device = "cuda:0"
+            self.model_name = model_name
+            self.net.load_state_dict(torch.load('model/{}'.format(model_name), map_location=torch.device(device)))
             self.net.eval()
         else:
             if origin_model is not None:
                 self.net = origin_model
+                self.net.eval()
+                if torch.cuda.is_available() and cuda:
+                    self.net = self.net.cuda()
+                    self.cuda = True
             else:
                 assert False,"non-model error"
 
@@ -5678,6 +5685,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         self.net = None
         self.model_name = PATH
         self.cuda = False
+        device = "cpu"
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
             #short_name = short_name.split("/")[1]
@@ -5685,8 +5693,9 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
             self.net = New_Dual_Net(node_num)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
+                device = "cuda:0"
             self.model_name = model_name
-            self.net.load_state_dict(torch.load('model/{}'.format(model_name)))
+            self.net.load_state_dict(torch.load('model/{}'.format(model_name), map_location=torch.device(device)))
             self.net.eval()
         else:
             if origin_model is not None:
