@@ -206,11 +206,9 @@ class AggroPolicy(Policy):
                     creature_attack_flg = False
 
             if not creature_attack_flg:
-                    if attack_creature.player_attack_regulation is None or card_setting.player_attack_regulation[attack_creature.player_attack_regulation](
+                if attack_creature.player_attack_regulation is None or card_setting.player_attack_regulation[attack_creature.player_attack_regulation](
                         player):
-#                 if attack_creature.player_attack_regulation is None or attack_creature.player_attack_regulation(
-#                         player):
-                    return Action_Code.ATTACK_TO_PLAYER.value, card_id, None
+                return Action_Code.ATTACK_TO_PLAYER.value, card_id, None
 
             if len(opponent_creatures_stats) > 0 and target_id is not None:
                 return Action_Code.ATTACK_TO_FOLLOWER.value, card_id, target_id
