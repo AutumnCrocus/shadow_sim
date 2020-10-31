@@ -5324,15 +5324,17 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         self.net = None
         self.model_name = PATH
         self.cuda = False
+        device = "cpu"
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
             #short_name = short_name.split("/")[1]
-            self.name = "N_DN_NR_OMISMCTS(model_name={})Policy".format(short_name)
+            self.name = "DN_Greedy(model_name={})Policy".format(short_name)
             self.net = New_Dual_Net(node_num)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
+                device = "cuda:0"
             self.model_name = model_name
-            self.net.load_state_dict(torch.load('model/{}'.format(model_name)))
+            self.net.load_state_dict(torch.load('model/{}'.format(model_name), map_location=torch.device(device)))
             self.net.eval()
         else:
             if origin_model is not None:
