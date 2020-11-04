@@ -15,8 +15,8 @@ jobs:
       PLAYER_TYPES_A: "29,2"
       PLAYER_TYPES_B: "29,29"
       MODE: mirror
-      N: 100
-      DECK_LIST: "0"
+      N: 140
+      DECK_LIST: "2"
       NODE_NUM: 20
     runs-on: ubuntu-latest
     steps:
