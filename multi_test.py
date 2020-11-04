@@ -355,7 +355,6 @@ def multi_train(data):
     batch_id_list = train_ids
     all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
     info = f'#{p_num:>2} '
-    min_loss = 100
     for i in tqdm(range(iteration_num),desc=info,position=p_num):
         optimizer.zero_grad()
         key = random.sample(batch_id_list,k=batch_size)
@@ -376,13 +375,9 @@ def multi_train(data):
         states['target'] = {'actions': actions, 'rewards': rewards}
 
         p, v, loss = net(states, target=True)
-        z = all_rewards
-        pai = all_actions  # 45種類の抽象化した行動
-        current_loss = float(loss[0].item())
-        if min_loss >= current_loss:
-            min_loss = current_loss
-        else:
-            loss[0].backward()
+        if float(torch.std(v)) < 0.01:
+            assert False, "all same output!!!\n {}".format(v)
+        loss[0].backward()
         all_loss += float(loss[0].item())
         MSE += float(loss[1].item())
         CEE += float(loss[2].item())
@@ -454,7 +449,8 @@ def run_main():
     print("w_d:{}".format(weight_decay))
     std_th = args.th
     if args.limit_OMP:
-        os.environ["OMP_NUM_THREADS"] = "6"
+        os.environ["OMP_NUM_THREADS"] = "2"
+        os.environ["OMP_THREAD_LIMITS"] = "2"
     
     loss_history = []
 
@@ -493,17 +489,17 @@ def run_main():
     #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
 
-        #net.cpu()
-        #prev_net.cpu()
+        net.cpu()
+        prev_net.cpu()
 
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
-        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
                     ,mulligan=Min_cost_mulligan_policy())
         #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
-        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
                     ,mulligan=Min_cost_mulligan_policy())
         #p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
@@ -566,8 +562,8 @@ def run_main():
         print("batch_size:{}".format(batch))
         if args.multi_train is not None:
             p_size = 2
-            #if cuda_flg:
-            #    net = net.cuda()
+            if cuda_flg:
+                net = net.cuda()
             net.share_memory()
 
             all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
@@ -655,7 +651,9 @@ def run_main():
                 rewards = all_rewards[key]
                 states['target'] = {'actions': actions, 'rewards': rewards}
                 torch.cuda.empty_cache()
-                _, _, loss = net(states, target=True)
+                _, v, loss = net(states, target=True)
+                if float(torch.std(v)) < 0.01:
+                    assert False,"all same output!!!\n {}".format(v)
                 test_objective_loss += float(loss[0].item())
                 test_MSE += float(loss[1].item())
                 test_CEE += float(loss[2].item())
@@ -864,13 +862,13 @@ def run_main():
             loss_history.append(test_objective_loss)
 
 
-        #net.cpu()
-        #prev_net.cpu()
+        net.cpu()
+        prev_net.cpu()
 
-        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
                     ,mulligan=Min_cost_mulligan_policy())
         p1.name = "Alice"
-        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=cuda_flg)
+        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=False)
                     ,mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
         test_deck_list = (0, 1, 2, 4, 5, 10, 12)  if deck_flg is None else deck_flg# (0,1,4,10,13)

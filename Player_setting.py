@@ -354,6 +354,7 @@ class HumanPlayer(Player):
             player.deck.set_leader_class(self.deck.leader_class.name)
             player.deck.deck = deque(map(field.copy_func, self.deck.deck)) if field is not None else deque()
             player.deck.remain_num = int(self.deck.remain_num)
+            player.deck.deck_type = int(self.deck.deck_type)
 
         player.field = field
         player.name = self.name
@@ -372,7 +373,6 @@ class HumanPlayer(Player):
         else:
             tmp = tmp.split(",")
         # mylogger.info("tmp:{} type:{}".format(tmp, type(tmp)))
-        change_cards_id = []
         if len(tmp) > 0:
             change_cards_id = list(map(int, tmp))
             return_cards = [self.hand.pop(i) for i in change_cards_id[::-1]]

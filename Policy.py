@@ -5328,7 +5328,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
             #short_name = short_name.split("/")[1]
-            self.name = "DN_Greedy(model_name={})Policy".format(short_name)
+            self.name = "ExIt(model_name={})Policy".format(short_name)
             self.net = New_Dual_Net(node_num)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
@@ -5477,66 +5477,6 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
     def fully_expand(self, node, player_num=0):
         return node.field.check_game_end()
-
-
-    """
-    def execute_single_action(self, node, new_choices, child_node_fields, player_num=0):
-        field = node.field
-        move = random.choice(new_choices)
-        next_field = Field_setting.Field(5)
-        next_field.set_data(field)
-        next_field.players[0].deck.shuffle()
-        next_field.players[1].deck.shuffle()
-        next_field.get_situation(next_field.players[player_num],
-                                 next_field.players[1 - player_num])
-        next_node = None
-        exist_flg = False
-        if move[0] == Action_Code.TURN_END.value:
-            next_field.end_of_turn(player_num, virtual=True)
-            opponent_player_num = 1 - player_num
-            opponent = next_field.players[opponent_player_num]
-            next_field.untap(opponent_player_num)
-            next_field.increment_cost(opponent_player_num)
-            next_field.start_of_turn(opponent_player_num, virtual=True)
-            next_field.turn_player_num = opponent_player_num
-            hand_len = len(opponent.hand)
-            while len(opponent.hand) > 0:
-                opponent.deck.append(opponent.hand.pop())
-            opponent.deck.shuffle()
-            opponent.draw(opponent.deck, num=hand_len + 1)
-            flg = next_field.check_game_end()
-            next_node = New_Node(field=next_field, player_num=1 - player_num, finite_state_flg=flg,
-                                 depth=node.depth + 1)
-            for child in node.child_nodes:
-                if node.node_id_2_edge_action[id(child)] == Action_Code.TURN_END.value:
-                    if child.field.eq(next_field):#and opponent.eq(child.field.players[1 - player_num]):
-                        if move not in node.action_counter:
-                            node.action_counter[move] = 0
-                        node.action_counter[move] += 1
-                        if node.action_counter[move] >= 5:
-                            node.children_moves.remove(move)
-                        exist_flg = True
-                        break
-
-        else:
-            next_field.players[player_num].execute_action(next_field, next_field.players[1 - player_num],
-                                                          action_code=move, virtual=True)
-            flg = next_field.check_game_end()
-            next_node = New_Node(field=next_field, player_num=player_num,
-                                 finite_state_flg=flg, depth=node.depth + 1)
-            for child_field in child_node_fields:
-                if child_field.eq(next_field) and \
-                        child_field.players[player_num].eq(next_field.players[player_num]):
-                    if move not in node.action_counter:
-                        node.action_counter[move] = 0
-                    node.action_counter[move] += 1
-                    if node.action_counter[move] >= 5:
-                        node.children_moves.remove(move)
-                    exist_flg = True
-                    break
-
-        return next_node, move, exist_flg
-    """
 
     def execute_best(self, node, player_num=0):
         children = node.child_nodes
@@ -5691,7 +5631,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
             #short_name = short_name.split("/")[1]
-            self.name = "DN_Greedy(model_name={})Policy".format(short_name)
+            self.name = "GreedyExIt(model_name={})Policy".format(short_name)
             self.net = New_Dual_Net(node_num)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()

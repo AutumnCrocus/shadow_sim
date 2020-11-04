@@ -29,78 +29,41 @@ Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follo
    input = {'values', 'hand_ids','follower_card_ids', 
         'amulet_card_ids', 'follower_abilities', 'able_to_evo'}
 """
+class PositionalEncoding(nn.Module):
+
+    def __init__(self, d_model, dropout=0.1, max_len=5000):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-np.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x):
+        x = x + self.pe[:x.size(0), :]
+        return self.dropout(x)
 
 class New_Dual_Net(nn.Module):
     def __init__(self,n_mid):
         super(New_Dual_Net, self).__init__()
         self.state_net =Dual_State_Net(n_mid)
-        #self.life_layer = nn.Linear(5,n_mid)#お互いの体力、手札枚数、経過ターン
-        #self.pp_layer = nn.Linear(2, n_mid)#最大PP,残りPP
-
-        #self.lin3 = nn.Linear(9, n_mid)#最大手札枚数
-        #self.lin3 = nn.Linear(2,n_mid)#フォロワーの攻撃力,体力
-        #self.follower_layer = nn.Linear(5,n_mid)#フォロワーの攻撃力,体力,フォロワーであるか,フォロワーに攻撃可能、プレイヤーに攻撃可能
-        #self.hand_convert_layer = nn.Linear(3 * n_mid + 1, n_mid)#手札連結
-        #self.lin5 = nn.Linear(6 * n_mid, n_mid)#自分の場のフォロワー連結
-        #self.lin6 = nn.Linear(4 * n_mid, n_mid)  # 相手の場のフォロワー連結
-
-        #self.field_layer1 = nn.Linear(9 * n_mid//2, n_mid)
-        #self.field_layer2 = nn.Linear(10*n_mid,n_mid)
-
-        #self.deck_layer = nn.Linear(40*n_mid,n_mid)
-        #self.hand_card_layer = nn.Linear(9*n_mid,n_mid)
-        #self.amulet_layer = nn.Linear(10*n_mid,n_mid)
         self.emb1 = self.state_net.emb1#nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
-        #self.emb2 = self.emb1
-        #self.emb2 = nn.Embedding(1000, n_mid, padding_idx=0)  # フォロワー1000枚（空白含む）
-
-        #self.emb3 = self.emb1
-        #self.emb3 = nn.Embedding(1000, n_mid, padding_idx=0)  # アミュレット1000枚（空白含む）
-        #self.emb4 = nn.Embedding(16, n_mid, padding_idx=0)  # キーワード能力15個と空白
-        #self.emb4 = nn.Embedding(16, n_mid//10, padding_idx=0)
-        #self.emb5 = nn.Embedding(6, n_mid, padding_idx=0)  # 進化可能最大五体と空白
-        #self.emb6 = nn.Embedding(10, n_mid, padding_idx=0)  # 手札最大9枚の位置と空白
-        #self.emb7 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
-        #self.emb8 = nn.Embedding(6, n_mid, padding_idx=0)  # プレイヤーに攻撃可能な最大五体と空白
-        #self.emb9 = nn.Embedding(9, n_mid, padding_idx=0)#両プレイヤーのリーダークラス
-        #self.fc0 = nn.Linear(6*n_mid,n_mid)
-        #self.fc0 = nn.Linear(7*n_mid, n_mid)
-        #self.fc1 = nn.Linear(n_mid, n_mid)
-
-        #self.small_layer = nn.Linear(n_mid,n_mid//10)
-        #self.big_layer = nn.Linear(n_mid//10, n_mid)
         layer = [Dual_ResNet(2*n_mid, 2*n_mid) for _ in range(3)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
-
-        #self.fc3_p1 = nn.Linear(n_mid, 25)
-        #self.bn_p1 = nn.BatchNorm1d(25)
-        # 手札の枚数+自分の場のフォロワーの数*3＋ターン終了
-        #self.fc3_p2 = nn.Linear(25, 25)
         self.action_value_net = Action_Value_Net(self,mid_size=n_mid)
-
-        #self.fc3_v1 = nn.Linear(n_mid, 5)
-        #self.bn_v1 = nn.BatchNorm1d(5)
-        #self.fc3_v2 = nn.Linear(5, 2)
-        #self.fc3_v3 = nn.Linear(2, 1)
-
         self.loss_fn = Dual_Loss()
         self.filtered_softmax = filtered_softmax()
         self.n_mid = n_mid
         self.mish = Mish()
         #self.direct_layer = nn.Linear(n_mid, n_mid)
         self.final_layer = nn.Linear(n_mid,1)
-        #self.value_layer = nn.Linear(5+15,1)
-        #self.concat_layer = nn.Linear(n_mid+26+1,n_mid)
-        #self.hand_value_layer = nn.Linear(n_mid,1)
-        #self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
 
-        #self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
-
-        #self.prelu_1 = nn.PReLU(init=0.01)
-        #self.prelu_2 = nn.PReLU(init=0.01)
-        #self.prelu_3 = nn.PReLU(init=0.01)
-        #self.prelu_4 = nn.PReLU(init=0.01)
+        self.relu = nn.ReLU()
         self.prelu = nn.PReLU(init=0.01)
         self.integrate_layer = nn.Linear(2*n_mid,n_mid)
         self.rnn = nn.LSTM(input_size=n_mid,hidden_size=n_mid,batch_first=True)
@@ -148,20 +111,13 @@ class New_Dual_Net(nn.Module):
         self.action_code_keys = tuple(ans['detailed_action_codes'].keys())
         self.cuda_flg = False
 
+        value_layer = [nn.Linear(n_mid,n_mid)for _ in range(3)]
+        self.value_layer = nn.ModuleList(value_layer)
+
 
 
     #@profile
     def forward(self, states,target=False):
-#         if self.cuda_flg:
-#             states.update({dict_key: states[dict_key].cuda() for dict_key in self.normal_states_keys})
-#             states['values'] = {sub_key: states['values'][sub_key].cuda() \
-#                                 for sub_key in self.value_keys}
-#             states['detailed_action_codes'] = {sub_key: states['detailed_action_codes'][sub_key].cuda()
-#                                 for sub_key in self.action_code_keys}
-#             orig_before_states = states["before_states"]
-#             states['before_states'] = {dict_key : orig_before_states[dict_key].cuda() for dict_key in self.normal_states_keys}
-#             states['before_states']['values'] = {sub_key: orig_before_states['values'][sub_key].cuda() \
-#                                 for sub_key in self.value_keys}
 
         values = states['values']
         detailed_action_codes = states['detailed_action_codes']
@@ -170,21 +126,38 @@ class New_Dual_Net(nn.Module):
         field_card_ids = detailed_action_codes['field_card_ids']
         able_to_choice = detailed_action_codes['able_to_choice']
         action_choice_len = detailed_action_codes['action_choice_len']
-        x1 = self.state_net(states)
-        x2 = self.state_net(states["before_states"])
+        x_1 = self.state_net(states)
+        x_2 = self.state_net(states["before_states"])
         #x = torch.cat([x1,x2],dim=1)#self.prelu(self.integrate_layer(torch.cat([x1,x2],dim=1)))
-        x = torch.stack([x2,x1],dim=1)
-        x, (_,_) = self.rnn(x)
-        x = x.reshape(-1,2*self.n_mid)
+        #x = torch.stack([x2,x1],dim=1)
+        #x.size() = (-1,100)
+        #required (-1,2,100)
+        x_3 = torch.stack([x_2, x_1], dim=1)
+        x_3_1 = x_3.reshape(-1,2*self.n_mid)
+        #print(x.size())
+        #print("before",x[0:min(x.size()[0], 5)])
+        x_4, (_,_) = self.rnn(x_3)
+        #print("after",x[0:min(x.size()[0], 5)])
+        #print(x.size())
+        x_4 = x_4.reshape(-1,2*self.n_mid)
 
-        for i in range(self.layer_len):
-            x = self.layer[i](x)
-        x=self.prelu(self.integrate_layer(x))
+        #print(x.size())
+
+        x1 = self.layer[0](x_4)+x_3_1+x_4
+        #print(x1.size(),x_3.size(),x_4.size())
+        x2 = self.layer[1](x1)+x1+x_3_1+x_4
+        x3 = self.layer[2](x2)+x1+x2+x_3_1+x_4
+
+        # for i in range(self.layer_len):
+        #     x = self.layer[i](x)
+        x=self.prelu(self.integrate_layer(x3))
         tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
         h_p2 = tmp
 
         out_p = self.filtered_softmax(h_p2, able_to_choice)
 
+        #for i in range(3):
+        #    x = self.relu(self.value_layer[i](x))
         out_v = torch.tanh(self.final_layer(x))
         if target:
             #if self.cuda_flg:states['target'] = {key:states['target'][key].cuda() \
@@ -213,6 +186,7 @@ class New_Dual_Net(nn.Module):
 class Dual_State_Net(nn.Module):
     def __init__(self, n_mid):
         super(Dual_State_Net, self).__init__()
+        from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.value_layer = nn.Linear(5+15+n_mid,n_mid)
         #self.value_layer = nn.Linear(5 + 15 + 1, 1)
 
@@ -234,21 +208,16 @@ class Dual_State_Net(nn.Module):
 
         self.ability_eye = torch.cat([torch.Tensor([[0] * 15]), torch.eye(15)], dim=0)
         self.deck_type_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
-        """
-        self.prelu_1 = nn.PReLU(init=0.01)
-        self.prelu_2 = nn.PReLU(init=0.01)
-        self.prelu_3 = nn.PReLU(init=0.01)
-        self.prelu_4 = nn.PReLU(init=0.01)
-        self.prelu_5 = nn.PReLU(init=0.01)
-        self.prelu_6 = nn.PReLU(init=0.01)
-        self.prelu_7 = nn.PReLU(init=0.01)
-        self.prelu_8 = nn.PReLU(init=0.01)
-        self.prelu_9 = nn.PReLU(init=0.01)
-        """
-        prelu_layer = [nn.PReLU(init=0.01) for i in range(7)]
+        self.pos_encoder = PositionalEncoding(n_mid, dropout=0.1)
+        encoder_layers = TransformerEncoderLayer(n_mid, nhead=n_mid//5)
+        self.transformer_encoder = TransformerEncoder(encoder_layers, 3)
+
+        prelu_layer = [Mish() for i in range(7)]#[nn.PReLU(init=0.01) for i in range(7)]
         self.prelu_layer = nn.ModuleList(prelu_layer)
         self.modify_layer = nn.Linear(94*n_mid,n_mid)
         self.n_mid = n_mid
+        self.mish = Mish()
+        self.init_weights()
         #layer = [nn.Linear(n_mid,n_mid) for _ in range(3)]
         #self.layer = nn.ModuleList(layer)
 
@@ -263,6 +232,10 @@ class Dual_State_Net(nn.Module):
         self.ability_eye = self.ability_eye.cpu()
         self.deck_type_eye = self.deck_type_eye.cpu()
         return super(Dual_State_Net, self).cpu()
+
+    def init_weights(self):
+        initrange = 0.1
+        self.emb1.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, states):
         values = states['values']
@@ -284,19 +257,22 @@ class Dual_State_Net(nn.Module):
         class_values = class_values.expand(-1, 16, self.n_mid)
         deck_type_values = self.deck_type_eye[deck_type_datas].view(-1, 8).unsqueeze(-1)#.to(stats.device)
         deck_type_values = deck_type_values.expand(-1, 8, self.n_mid)
-        x4 = self.ability_eye[follower_abilities]
-        x4 = torch.sum(x4,dim=2)
-        abilities = x4#.to(stats.device)
+        x1 = self.ability_eye[follower_abilities]
+        x1 = torch.sum(x1,dim=2)
+        abilities = x1#.to(stats.device)
 
+        #src1 = self.emb1(follower_card_ids)
+        src1 = self.emb1(follower_card_ids)*np.sqrt(self.n_mid)
+        src1 = self.pos_encoder(src1)
 
-        follower_cards = self.prelu_layer[0](self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10, self.n_mid)
-        x1 = torch.cat([stats, abilities,follower_cards],dim=2)
-        x1 = self.prelu_layer[1](self.value_layer(x1))
+        follower_cards = self.prelu_layer[0](self.field_value_layer(src1)).view(-1, 10, self.n_mid)
+        x2 = torch.cat([stats, abilities,follower_cards],dim=2)
+        x2 = self.prelu_layer[1](self.value_layer(x2))
         #exist_filter1 = (follower_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
         #print("follower_cards:{},exist_filter1:{}".format(follower_cards.size(),exist_filter1.size()))
         #exist_filter1.expand(*[-1,10,self.n_mid])
         #x1 = x1 * exist_filter1
-        follower_values=x1#x1.view(-1,10)
+        follower_values=x2#x1.view(-1,10)
         """
         follower_cards = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
         x1 = torch.cat([stats, abilities,follower_cards],dim=2)
@@ -305,14 +281,16 @@ class Dual_State_Net(nn.Module):
         x1 = x1 * exist_filter1
         follower_values=x1.view(-1,10)
         """
-
-        amulet_cards = self.prelu_layer[0](self.field_value_layer(self.emb1(amulet_card_ids))).view(-1, 10,self.n_mid)
+        #src2 = self.emb1(amulet_card_ids)
+        src2 = self.emb1(amulet_card_ids)*np.sqrt(self.n_mid)
+        src2 = self.pos_encoder(src2)
+        amulet_cards = self.prelu_layer[0](self.field_value_layer(src2)).view(-1, 10,self.n_mid)
         #print("amulet_cards:{}".format(amulet_cards.size()))
-        x2 = amulet_cards
+        x3 = amulet_cards
         #exist_filter2 = (amulet_cards != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
         #exist_filter2.expand(*[-1, 10, self.n_mid])
         #x2 = x2 * exist_filter2
-        amulet_values=x2#x2.view(-1,10)
+        amulet_values=x3#x2.view(-1,10)
         """
         amulet_cards = self.prelu_5(self.field_value_layer(self.emb1(amulet_card_ids))).view(-1, 10,1)
         x2 = amulet_cards
@@ -326,12 +304,17 @@ class Dual_State_Net(nn.Module):
 
         #hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
         # hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
-        hand_cards = self.prelu_layer[3](self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9,self.n_mid)
+        #src3 = self.emb1(hand_ids)
+        src3 = self.emb1(hand_ids)*np.sqrt(self.n_mid)
+        src3 = self.pos_encoder(src3)
+        hand_cards = self.prelu_layer[3](self.hand_value_layer(src3)).view(-1, 9,self.n_mid)
         #exist_filter3 = (hand_ids != 0).float().unsqueeze(-1)
         hand_card_values = hand_cards# * exist_filter3
 
-
-        deck_cards = self.prelu_layer[4](self.deck_value_layer(self.emb1(deck_datas))).view(-1, 40,self.n_mid)
+        #src3 = self.emb1(hand_ids)
+        src4 = self.emb1(deck_datas)*np.sqrt(self.n_mid)
+        src4 = self.pos_encoder(src4)
+        deck_cards = self.prelu_layer[4](self.deck_value_layer(src4)).view(-1, 40,self.n_mid)
         deck_card_values = deck_cards
         #deck_card_values = torch.sum(hand_ids, dim=1).view(-1, 1)
 
@@ -339,11 +322,11 @@ class Dual_State_Net(nn.Module):
         input_tensor = [follower_values,amulet_values,life_values,\
                        class_values,deck_type_values,hand_card_values,deck_card_values]
         #print([cell.size() for cell in input_tensor])
-        x = torch.cat(input_tensor,dim=1)
+        before_x = torch.cat(input_tensor,dim=1)
 
         #x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
 
-        x = self.prelu_layer[5](self.concat_layer(x)).view(-1,94*self.n_mid)
+        x = self.prelu_layer[5](self.concat_layer(before_x)+before_x).view(-1,94*self.n_mid)
         x = self.prelu_layer[6](self.modify_layer(x))
 
 

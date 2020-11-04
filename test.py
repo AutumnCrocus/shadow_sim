@@ -297,6 +297,9 @@ def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, v
 def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=None,graph=False):
     #Player1 = copy.deepcopy(Player_1)
     #Player2 = copy.deepcopy(Player_2)
+
+    mylogger.info("d1:{}".format(Player_1.policy))
+    mylogger.info("d2:{}".format(Player_2.policy))
     Player1 = Player_1.get_copy(None)
     Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
@@ -1743,14 +1746,19 @@ if __name__ == '__main__':
         #a = int(args.playertype1) - 1
         #b = int(args.playertype2) - 1
         a,b = map(lambda ele:int(ele)-1,args.playertypes.split(","))
-        if a == 0:#if args.playertype1 == '0':
+        mylogger.info("a,b:{},{}".format(a,b))
+        if a == -1:#if args.playertype1 == '0':
             d1 = HumanPlayer(9, first=True)
         else:
             d1 = copy.deepcopy(Players[a])
-        if b == 0:#args.playertype2 == '0':
+        if b == -1:#args.playertype2 == '0':
             d2 = HumanPlayer(9, first=True)
+
         else:
             d2 = copy.deepcopy(Players[b])
+
+        mylogger.info("d1:{}".format(d1.policy))
+        mylogger.info("d2:{}".format(d2.policy))
         #p1 = int(args.decktype1)
         #p2 = int(args.decktype2)
         p1, p2 = map(int, args.decktypes.split(","))
