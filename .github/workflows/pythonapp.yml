@@ -17,7 +17,7 @@ jobs:
       MODE: mirror
       N: 100
       DECK_LIST: "0"
-      NODE_NUM: 100
+      NODE_NUM: 20
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
