@@ -62,13 +62,13 @@ class New_Dual_Net(nn.Module):
         self.mish = Mish()
         #self.direct_layer = nn.Linear(n_mid, n_mid)
         self.final_layer = nn.Linear(n_mid,1)
-
+        self.conv = nn.Conv1d(in_channels=100,out_channels=1,kernel_size=1)
         self.relu = nn.ReLU()
         self.prelu = nn.PReLU(init=0.01)
         self.integrate_layer = nn.Linear(n_mid,n_mid)
         self.rnn = nn.LSTM(input_size=n_mid,hidden_size=n_mid,batch_first=True,num_layers=3)
-        encoder_layers = nn.TransformerEncoderLayer(n_mid, 4 ,dropout=0.01)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
+        #encoder_layers = nn.TransformerEncoderLayer(n_mid, 4 ,dropout=0.01)
+        #self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
         ans = {'values': {'life_datas': None,
                           'class_datas': None,
                           'deck_type_datas': None,
@@ -141,18 +141,18 @@ class New_Dual_Net(nn.Module):
         # x_4 = x_4.reshape(-1,2*self.n_mid)
         _,(h0, c0) = self.rnn(x_2.unsqueeze(1))
         x_3,(_,_) = self.rnn(x_1.unsqueeze(1),(h0,c0))
-        x_4=self.transformer_encoder(x_3).reshape(-1,self.n_mid)
-
+        #x_4=self.transformer_encoder(x_3).reshape(-1,self.n_mid)
+        x_4 = x_3.reshape(-1,self.n_mid)+x_1+x_2
 
         #print(x.size())
 
         x1 = self.layer[0](x_4)+x_4
-        x2 = self.layer[1](x1)+x1+x_4
-        x3 = self.layer[2](x2)+x1+x2+x_4
+        x2 = self.layer[1](x1)+x1
+        x3 = self.layer[2](x2)+x2
 
         # for i in range(self.layer_len):
         #     x = self.layer[i](x)
-        x=self.prelu(self.integrate_layer(x3))
+        x=self.prelu(self.integrate_layer(x3))+x3
         tmp = self.action_value_net(x, action_categories, play_card_ids, field_card_ids,values,able_to_choice,target=target)
         h_p2 = tmp
 
@@ -160,7 +160,8 @@ class New_Dual_Net(nn.Module):
 
         #for i in range(3):
         #    x = self.relu(self.value_layer[i](x))
-        out_v = torch.tanh(self.final_layer(x))
+        before_x = self.conv(x.unsqueeze(-1))
+        out_v = torch.tanh(self.final_layer(x)+before_x)
         if target:
             #if self.cuda_flg:states['target'] = {key:states['target'][key].cuda() \
             #                                    for key in ('rewards','actions')}
@@ -266,7 +267,7 @@ class Dual_State_Net(nn.Module):
         # src1 = self.emb1(follower_card_ids)*np.sqrt(self.n_mid)
         # src1 = self.pos_encoder(src1)
 
-        follower_cards = self.prelu_layer[0](self.field_value_layer(src1)).view(-1, 10, self.n_mid)
+        follower_cards = self.prelu_layer[0](self.field_value_layer(src1).view(-1, 10, self.n_mid)+src1.view(-1, 10, self.n_mid))
         x2 = torch.cat([stats, abilities,follower_cards],dim=2)
         x2 = self.prelu_layer[1](self.value_layer(x2))
         #exist_filter1 = (follower_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
@@ -285,7 +286,8 @@ class Dual_State_Net(nn.Module):
         src2 = self.emb1(amulet_card_ids)
         # src2 = self.emb1(amulet_card_ids)*np.sqrt(self.n_mid)
         # src2 = self.pos_encoder(src2)
-        amulet_cards = self.prelu_layer[0](self.field_value_layer(src2)).view(-1, 10,self.n_mid)
+        amulet_cards = self.prelu_layer[0](self.field_value_layer(src2).view(-1, 10,self.n_mid)+\
+                                           src2.view(-1, 10,self.n_mid))
         #print("amulet_cards:{}".format(amulet_cards.size()))
         x3 = amulet_cards
         #exist_filter2 = (amulet_cards != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
@@ -308,14 +310,14 @@ class Dual_State_Net(nn.Module):
         src3 = self.emb1(hand_ids)
         # src3 = self.emb1(hand_ids)*np.sqrt(self.n_mid)
         # src3 = self.pos_encoder(src3)
-        hand_cards = self.prelu_layer[3](self.hand_value_layer(src3)).view(-1, 9,self.n_mid)
+        hand_cards = self.prelu_layer[3](self.hand_value_layer(src3).view(-1, 9,self.n_mid)+src3.view(-1, 9,self.n_mid))
         #exist_filter3 = (hand_ids != 0).float().unsqueeze(-1)
         hand_card_values = hand_cards# * exist_filter3
 
         src4 = self.emb1(deck_datas)
         # src4 = self.emb1(deck_datas)*np.sqrt(self.n_mid)
         # src4 = self.pos_encoder(src4)
-        deck_cards = self.prelu_layer[4](self.deck_value_layer(src4)).view(-1, 40,self.n_mid)
+        deck_cards = self.prelu_layer[4](self.deck_value_layer(src4).view(-1, 40,self.n_mid)+src4.view(-1,40,self.n_mid))
         deck_card_values = deck_cards
         #deck_card_values = torch.sum(hand_ids, dim=1).view(-1, 1)
 
@@ -451,9 +453,9 @@ class Dual_Loss(nn.Module):
         #print("mean:",MSE)
 
         tmp_CEE = p[range(p.size()[0]),pai]+1.0e-8
-        choice_len_term = 1/torch.sqrt(action_choice_len)
+        #choice_len_term = 1/torch.sqrt(action_choice_len)
         #print(choice_len_term)
-        CEE = -torch.log(tmp_CEE)*choice_len_term
+        CEE = -torch.log(tmp_CEE)#*choice_len_term
         CEE = torch.mean(CEE)
         #pai = pai.t()[0]
         #CEE = self.cross_entropy(p,pai)#softmaxも含まれている
