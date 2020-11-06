@@ -56,6 +56,7 @@ parser.add_argument('--check_deck_id', help='check_deck_id')
 parser.add_argument('--evaluate_num', help='evaluate_num',default=100,type=int)
 parser.add_argument('--max_update_interval', help='max_update_interval',default=10,type=int)
 parser.add_argument('--limit_OMP',help="limit OMP_NUM_THREADS for quadro",default=False,type=bool)
+parser.add_argument('--OMP_NUM', help='num of threads used in OMP',default=0,type=int)
 args = parser.parse_args()
 
 deck_flg = args.fixed_deck_ids#list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
@@ -375,8 +376,9 @@ def multi_train(data):
         states['target'] = {'actions': actions, 'rewards': rewards}
 
         p, v, loss = net(states, target=True)
-        if float(torch.std(v)) < 0.01:
-            assert False, "all same output!!!\n {}".format(v)
+        # if float(torch.std(v)) < 0.01 and float(loss[1].item()) > 0.9:
+        #     debug_log = [(v[j],rewards[j]) for j in range(v.size()[0])]
+        #     assert False, "all same output!!!\n {}".format(debug_log)
         loss[0].backward()
         all_loss += float(loss[0].item())
         MSE += float(loss[1].item())
@@ -451,6 +453,8 @@ def run_main():
     if args.limit_OMP:
         os.environ["OMP_NUM_THREADS"] = "2"
         os.environ["OMP_THREAD_LIMITS"] = "2"
+    if args.OMP_NUM > 0:
+        os.environ["OMP_NUM_THREADS"] = str(args.OMP_NUM)
     
     loss_history = []
 

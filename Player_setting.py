@@ -232,7 +232,7 @@ class Player:
         field.stack.clear()
         #self.sort_hand()
         (_, _, can_be_attacked, regal_targets) = field.get_situation(self, opponent)
-        (can_play, can_attack, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) \
+        (_,_,_), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) \
             = field.get_flag_and_choices(self, opponent, regal_targets)
         if not virtual:
             observable_data = field.get_observable_data(player_num=self.player_num)
@@ -246,23 +246,13 @@ class Player:
                     print("{}:{}".format(sub_key, observable_data[key][sub_key]))
             self.show_hand()
             field.show_field()
-            if able_to_play != []:
-                mylogger.info("able_to_play:{}".format(able_to_play))
-            if able_to_creature_attack != []:
-                mylogger.info(
+            mylogger.info("able_to_play:{}".format(able_to_play))
+            mylogger.info(
                     "able_to_creature_attack:{} can_be_attacked:{}".format(able_to_creature_attack, can_be_attacked))
             mylogger.info("regal_targets:{}".format(regal_targets))
-        #mylogger.info("check1:")
-        #field.show_field()
         (action_num, card_id, target_id) = self.policy.decide(self, opponent, field)
-        #mylogger.info("check2:")
-        #field.show_field()
-        #mylogger.info("{},{}".format(action_num,self.policy.policy_type))
         if action_num == Action_Code.ERROR.value:
-            #self.policy.starting_node.print_node()
-            #assert False
             self.error_count += 1
-            #mylogger.info("error_count:{}".format(self.error_count))
             if self.error_count >= 3:
                 self.policy.starting_node.print_tree()
                 print((action_num, card_id, target_id))
@@ -274,7 +264,6 @@ class Player:
             return self.decide(player, opponent, field, virtual=virtual,dual=dual)
 
         elif action_num != Action_Code.TURN_END.value and self.policy.policy_type == 4:
-            #mylogger.info("adjust")
             sim_field = self.policy.prev_node.field
             action_num, card_id, target_id = adjust_action_code(field,sim_field,self.player_num,
                     action_code=(action_num, card_id, target_id), msg = action_num)
