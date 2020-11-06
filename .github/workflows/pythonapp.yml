@@ -10,14 +10,14 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: Multi_Dual_2020_11_2_14_50_53_48_64_20nodes_W.pth
-      O_MODEL_NAME: Multi_Dual_2020_11_2_14_50_53_50_64_20nodes_W.pth
+      MODEL_NAME: Multi_Dual_2020_11_6_12_53_57_1_64_100nodes_W.pth
+      O_MODEL_NAME: Multi_Dual_2020_11_6_12_53_57_1_64_100nodes_W.pth
       PLAYER_TYPES_A: "29,2"
-      PLAYER_TYPES_B: "29,29"
+      PLAYER_TYPES_B: "29,17"
       MODE: mirror
-      N: 140
-      DECK_LIST: "2"
-      NODE_NUM: 20
+      N: 200
+      DECK_LIST: "100"
+      NODE_NUM: 100
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
