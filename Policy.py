@@ -5506,6 +5506,8 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         """
         max_value = -2
         max_value_action = (0, 0, 0)
+        if len(action_uct_values) == 0:
+            return None, (0,0,0)
         max_value,max_value_action = max([(sum(action_uct_values[action])/len(action_uct_values[action]),action) \
          for action in tuple(action_uct_values.keys())])
         #for key in tuple(action_uct_values.keys()):

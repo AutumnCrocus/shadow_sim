@@ -62,7 +62,7 @@ class New_Dual_Net(nn.Module):
         self.mish = Mish()
         #self.direct_layer = nn.Linear(n_mid, n_mid)
         self.final_layer = nn.Linear(n_mid,1)
-        self.conv = nn.Conv1d(in_channels=100,out_channels=1,kernel_size=1)
+        #self.conv = nn.Conv1d(in_channels=100,out_channels=1,kernel_size=1)
         self.relu = nn.ReLU()
         self.prelu = nn.PReLU(init=0.01)
         self.integrate_layer = nn.Linear(n_mid,n_mid)
@@ -160,8 +160,8 @@ class New_Dual_Net(nn.Module):
 
         #for i in range(3):
         #    x = self.relu(self.value_layer[i](x))
-        before_x = self.conv(x.unsqueeze(-1))
-        out_v = torch.tanh(self.final_layer(x)+before_x)
+        #before_x = self.conv(x.unsqueeze(-1))
+        out_v = torch.tanh(self.final_layer(x))#+before_x)
         if target:
             #if self.cuda_flg:states['target'] = {key:states['target'][key].cuda() \
             #                                    for key in ('rewards','actions')}
