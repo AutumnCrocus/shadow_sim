@@ -51,7 +51,9 @@ class New_Dual_Net(nn.Module):
     def __init__(self,n_mid):
         super(New_Dual_Net, self).__init__()
         self.state_net =Dual_State_Net(n_mid)
+        
         self.emb1 = self.state_net.emb1#nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
+        
         layer = [Dual_ResNet(n_mid,n_mid) for _ in range(3)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
@@ -62,11 +64,14 @@ class New_Dual_Net(nn.Module):
         self.mish = Mish()
         #self.direct_layer = nn.Linear(n_mid, n_mid)
         self.final_layer = nn.Linear(n_mid,1)
+        nn.init.kaiming_normal_(self.final_layer.weight)
         #self.conv = nn.Conv1d(in_channels=100,out_channels=1,kernel_size=1)
         self.relu = nn.ReLU()
         self.prelu = nn.PReLU(init=0.01)
         self.integrate_layer = nn.Linear(n_mid,n_mid)
+        nn.init.kaiming_normal_(self.integrate_layer.weight)
         self.rnn = nn.LSTM(input_size=n_mid,hidden_size=n_mid,batch_first=True,num_layers=3)
+        #nn.init.kaiming_normal_(self.rnn.weight)
         #encoder_layers = nn.TransformerEncoderLayer(n_mid, 4 ,dropout=0.01)
         #self.transformer_encoder = nn.TransformerEncoder(encoder_layers, 1)
         ans = {'values': {'life_datas': None,
@@ -114,6 +119,8 @@ class New_Dual_Net(nn.Module):
         self.cuda_flg = False
 
         value_layer = [nn.Linear(n_mid,n_mid)for _ in range(3)]
+        for i in range(len(value_layer)):
+            nn.init.kaiming_normal_(value_layer[i].weight)
         self.value_layer = nn.ModuleList(value_layer)
 
 
@@ -191,20 +198,24 @@ class Dual_State_Net(nn.Module):
         super(Dual_State_Net, self).__init__()
 
         self.value_layer = nn.Linear(5+15+n_mid,n_mid)
-        #self.value_layer = nn.Linear(5 + 15 + 1, 1)
+        nn.init.kaiming_normal_(self.value_layer.weight)
 
         self.life_layer = nn.Linear(5, n_mid)
+        nn.init.kaiming_normal_(self.life_layer.weight)
 
         self.hand_value_layer = nn.Linear(n_mid, n_mid)
-        #self.hand_value_layer = nn.Linear(n_mid,1)
+        nn.init.kaiming_normal_(self.hand_value_layer.weight)
         self.deck_value_layer = nn.Linear(n_mid, n_mid)
+        nn.init.kaiming_normal_(self.deck_value_layer.weight)
 
         self.field_value_layer = nn.Linear(n_mid, n_mid)
-        #self.field_value_layer = nn.Linear(n_mid, 1)
+        nn.init.kaiming_normal_(self.field_value_layer.weight)
 
         self.emb1 = nn.Embedding(3000,n_mid,padding_idx=0)
+        nn.init.kaiming_normal_(self.emb1.weight)
 
         self.concat_layer = nn.Linear(n_mid,n_mid)
+        nn.init.kaiming_normal_(self.concat_layer.weight)
 
         #self.concat_layer = nn.Linear(n_mid+10*2+1+16+8,n_mid)
         self.class_eye = torch.cat([torch.Tensor([[0] * 8]), torch.eye(8)], dim=0)
@@ -217,9 +228,10 @@ class Dual_State_Net(nn.Module):
         prelu_layer = [Mish() for i in range(7)]#[nn.PReLU(init=0.01) for i in range(7)]
         self.prelu_layer = nn.ModuleList(prelu_layer)
         self.modify_layer = nn.Linear(94*n_mid,n_mid)
+        nn.init.kaiming_normal_(self.modify_layer.weight)
         self.n_mid = n_mid
         self.mish = Mish()
-        self.init_weights()
+        #self.init_weights()
         #layer = [nn.Linear(n_mid,n_mid) for _ in range(3)]
         #self.layer = nn.ModuleList(layer)
 
@@ -340,6 +352,8 @@ class Dual_ResNet(nn.Module):
         super(Dual_ResNet, self).__init__()
         self.fc1 = nn.Linear(n_in, n_out)
         self.fc2 = nn.Linear(n_in, n_out)
+        nn.init.kaiming_normal_(self.fc1.weight)
+        nn.init.kaiming_normal_(self.fc2.weight)
         self.prelu1 = nn.PReLU(init=0.01)
         self.prelu2 = nn.PReLU(init=0.01)
         #self.mish = Mish()
@@ -361,14 +375,19 @@ class Action_Value_Net(nn.Module):
         super(Action_Value_Net, self).__init__()
         self.mid_size = mid_size
         self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
+        nn.init.kaiming_normal_(self.emb1.weight)
         self.emb2 = parent_net.emb1#nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
+        nn.init.kaiming_normal_(self.emb2.weight)
         #self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
         self.lin1 = nn.Linear(5*mid_size+4, mid_size)#nn.Linear(7 * mid_size, mid_size)
+        nn.init.kaiming_normal_(self.lin1.weight)
         #self.lin1 = nn.Linear(5 * mid_size, mid_size)
         self.lin2 = nn.Linear(mid_size, 1)
+        nn.init.kaiming_normal_(self.lin2.weight)
         #self.lin3 = nn.Linear(36,mid_size)
         self.lin3 = nn.Linear(66, mid_size)
-        layer = [Dual_ResNet(mid_size, mid_size) for _ in range(10)]
+        nn.init.kaiming_normal_(self.lin3.weight)
+        layer = [Dual_ResNet(mid_size, mid_size) for _ in range(3)]
         self.lin4 = nn.ModuleList(layer)
         #self.mish = Mish()
         self.action_catgory_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)

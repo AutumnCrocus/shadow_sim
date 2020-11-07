@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from my_moduler import get_module_logger
 import numpy as np
 import random
@@ -1638,6 +1639,9 @@ class Field:
         can_be_attacked = self.get_can_be_attacked(player.player_num)
         action_codes = [(0, 0, 0, 0, 0)]#行動カテゴリー, プレイしたカードのid, 攻撃したカードのid, 攻撃されたカードのid,
         #進化したカードのid
+        #行動カテゴリー, 作用する側のカードid, 作用される側のカードid
+        #aciton_codes = [(0,0,0)]
+        
         able_to_choice = [1]
         follower_choice = []
         leader_choice = []
