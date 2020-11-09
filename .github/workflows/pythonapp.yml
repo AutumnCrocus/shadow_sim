@@ -10,8 +10,8 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: 2020_11_9_001.pth
-      O_MODEL_NAME: 2020_11_9_001.pth
+      MODEL_NAME: 2020_11_9_002.pth
+      O_MODEL_NAME: 2020_11_9_002.pth
       PLAYER_TYPES_A: "29,2"
       PLAYER_TYPES_B: "29,13"
       MODE: mirror
