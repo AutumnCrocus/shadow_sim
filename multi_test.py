@@ -345,7 +345,7 @@ import itertools
 
 def multi_train(data):
     net, memory, batch_size, iteration_num, train_ids,p_num = data
-    optimizer =  optim.Adam(net.parameters(), weight_decay=weight_decay)
+    optimizer =  optim.AdamW(net.parameters(), weight_decay=weight_decay)
     all_loss, MSE, CEE = 0, 0, 0
 
     all_states, all_actions, all_rewards = memory
@@ -376,14 +376,31 @@ def multi_train(data):
         states['target'] = {'actions': actions, 'rewards': rewards}
 
         p, v, loss = net(states, target=True)
-        # if float(torch.std(v)) < 0.01 and float(loss[1].item()) > 0.9:
         #     debug_log = [(v[j],rewards[j]) for j in range(v.size()[0])]
         #     assert False, "all same output!!!\n {}".format(debug_log)
         loss[0].backward()
+        #         if float(torch.std(v)) < 0.01 and float(torch.std(rewards)) > 0.01 and float(loss[1].item()) > 0.5 and p_num == 0 and i > 10:
+        #             for batch_id in range(v.size()[0]):
+        #                 print("{}: {} --> {}".format(batch_id,float(v[batch_id]),float(rewards[batch_id])))
+        #             print("")
+        #             print("{}".format(float(loss[1].item())))
+        #             assert False
         all_loss += float(loss[0].item())
         MSE += float(loss[1].item())
         CEE += float(loss[2].item())
         optimizer.step()
+    if p_num == 0:
+        p_list = [float(cell) for cell in p[0]]
+        print("p:")
+        for k in range(15):
+            first = 3 * k
+            second = first + 1
+            third = first + 2
+            print("{:2d}: {:.3%} {:2d}: {:.3%} {:2d}: {:.3%}".format(first,p_list[first],second,p_list[second],third,p_list[third]))
+        print("")
+        print("actions:{}\n".format(actions[0]))
+        print("v:{}".format(float(v[0])))
+        print("rewards:{}".format(rewards[0]))
 
 
     return all_loss, MSE, CEE
@@ -569,7 +586,7 @@ def run_main():
             if cuda_flg:
                 net = net.cuda()
             net.share_memory()
-
+            net.train()
             all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
             all_states, all_actions, all_rewards = all_data
             memory_len = all_actions.size()[0]

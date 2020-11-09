@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
+# +
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock
-if __name__ == "__main__":
-    try:
-        set_start_method('spawn')
-        print("spawn is run.")
-        #set_start_method('fork') GPU使用時CUDA initializationでerror
-        #print('fork')
-    except RuntimeError:
-        pass
+
+#     try:
+#         set_start_method('spawn')
+#         print("spawn is run.")
+#         #set_start_method('fork') GPU使用時CUDA initializationでerror
+#         #print('fork')
+#     except RuntimeError:
+#         pass
 #import random
 #random.seed(247165)
 import sys
@@ -24,12 +25,15 @@ from mulligan_setting import *
 import logging
 import matplotlib.pyplot as plt
 import os
+if __name__ == "__main__":
+    os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 mylogger = get_module_logger(__name__)
 from my_enum import *
 import argparse
 import csv
 from tqdm import tqdm
 value_history = []
+# -
 
 
 
@@ -1687,17 +1691,20 @@ if __name__ == '__main__':
     if args.model_name is not None:
         model_name = args.model_name
         node_num = int(args.node_num)
+        cuda = False#torch.cuda.is_available()
         if args.model_name == "ini":
             origin_model = Embedd_Network_model.New_Dual_Net(100)
             Players.append(
                 Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=origin_model,node_num=node_num), mulligan=Min_cost_mulligan_policy()))  # 28
             Players.append(
-                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=origin_model,node_num=node_num), mulligan=Min_cost_mulligan_policy())) # 29
+                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=origin_model,\
+                                                                               cuda=cuda,node_num=node_num), mulligan=Min_cost_mulligan_policy())) # 29
         else:
             Players.append(
                 Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name,node_num=node_num), mulligan=Min_cost_mulligan_policy()))  # 28
             Players.append(
-                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name,node_num=node_num), mulligan=Min_cost_mulligan_policy())) # 29
+                Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name,\
+                                                                               cuda=cuda,node_num=node_num), mulligan=Min_cost_mulligan_policy())) # 29
 
     # assert False
     n = 100

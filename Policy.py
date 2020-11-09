@@ -5459,9 +5459,11 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         states['before_states'] = before_states
         pai, value = self.net(states)
         out_value = (float(value[0]) + 1)/2
+            
         #mylogger.info("value:{}".format(value))
         if node_player_num != self.main_player_num:
             out_value = 1 - out_value
+        out_value = min(0.95,out_value)
         node.state_value = out_value
         node.pai = pai[0]
 
