@@ -396,7 +396,7 @@ def multi_train(data):
             first = 3 * k
             second = first + 1
             third = first + 2
-            print("{:2d}: {:.3%} {:2d}: {:.3%} {:2d}: {:.3%}".format(first,p_list[first],second,p_list[second],third,p_list[third]))
+            print("{:2d}: {:3.3%} {:2d}: {:3.3%} {:2d}: {:3.3%}".format(first,p_list[first],second,p_list[second],third,p_list[third]))
         print("")
         print("actions:{}\n".format(actions[0]))
         print("v:{}".format(float(v[0])))
@@ -623,6 +623,7 @@ def run_main():
             value_keys = tuple(all_states['values'].keys())
             normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
             action_code_keys = tuple(all_states['detailed_action_codes'].keys())
+            net.eval()
             for i in tqdm(range(separate_num)):
                 key = [test_ids[i]]
                 states = {}
@@ -942,10 +943,16 @@ def run_main():
             net = prev_net
             #th = max(0.5,th*0.95)
             print("new_model lose... WR:{:.1%}".format(WR))
+            batch_size = 2**random.randint(2,7)
+            iteration = int(args.iteration_num * (args.batch_size/batch_size))
+            print("next: batch_size: {} itearation_num:{}".format(batch_size,iteration))
+            
         else:
             #th = 0.55
             win_flg = True
             print("new_model win! WR:{:.1%} min:{:.1%}".format(WR,min_WR))
+            batch_size = args.batch_size
+            iteration = args.iteration_num
         #writer.add_scalar(LOG_PATH + 'WR', WR, epoch)
 
 
