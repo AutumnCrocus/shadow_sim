@@ -12,8 +12,8 @@ jobs:
     env:
       MODEL_NAME: 2020_11_12_001.pth
       O_MODEL_NAME: 2020_11_12_001.pth
-      PLAYER_TYPES_A: "29,2"
-      PLAYER_TYPES_B: "29,13"
+      PLAYER_TYPES_A: "29,17"
+      PLAYER_TYPES_B: "29,27"
       MODE: mirror
       N: 200
       DECK_LIST: "0"
