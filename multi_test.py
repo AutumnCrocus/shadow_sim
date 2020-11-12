@@ -358,6 +358,7 @@ def multi_train(data):
     info = f'#{p_num:>2} '
     for i in tqdm(range(iteration_num),desc=info,position=p_num):
         optimizer.zero_grad()
+        net.zero_grad()
         key = random.sample(batch_id_list,k=batch_size)
         states = {}
         states.update({dict_key : torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
@@ -506,6 +507,7 @@ def run_main():
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
     th = args.WR_th
     last_updated = 0
+    reset_count = 0
     min_loss = 100
     #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
@@ -582,11 +584,16 @@ def run_main():
         batch = len(R.memory) // batch_num if batch_num is not None else batch_size
         print("batch_size:{}".format(batch))
         if args.multi_train is not None:
+            if last_updated > args.max_update_interval - 3:
+                net = New_Dual_Net(node_num)
+                reset_count += 1
+                print("reset_num:",reset_count)
             p_size = 2
             if cuda_flg:
                 net = net.cuda()
             net.share_memory()
             net.train()
+            net.zero_grad()
             all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
             all_states, all_actions, all_rewards = all_data
             memory_len = all_actions.size()[0]

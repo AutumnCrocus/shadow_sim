@@ -182,7 +182,6 @@ class New_Dual_Net(nn.Module):
         #print(v_x[0])
         for i in range(3):
             v_x = self.preprocess_layer[i](v_x)
-
         out_v = torch.tanh(self.final_layer(v_x))#+before_x)
         if target:
             #if self.cuda_flg:states['target'] = {key:states['target'][key].cuda() \
@@ -528,18 +527,18 @@ class Dual_Loss(nn.Module):
         super(Dual_Loss, self).__init__()
 
     def forward(self, p, v, z, pai,action_choice_len):
-        #l = (z − v)^2 − πlog p + c||θ||2
-        #paiはスカラー値
-        #print("p:{}".format(p[0:10]))
-        #print("z:{}".format(z[0:10]))
+
+        #tmp_MSE = torch.sum(
+        #    torch.pow((z - v),2),
+        #   dim=1)
         tmp_MSE = torch.sum(
-            torch.pow((z - v),2),
+            -(z+1)*torch.log((v+1)/2+1.0e-8)/2+(z-1)*torch.log((1-v)/2+1.0e-8)/2,
            dim=1)
-        #loss = torch.sum(torch.abs(z-v),dim=1)
-        #print("z:{}".format(z))
-        #print("v:{}".format(v))
-        #print("loss:{}".format(loss))
+        
+        
+
         MSE = torch.mean(tmp_MSE)
+        #print("MSE:{}".format(MSE))
         #print("loss:",loss)
         #print("mean:",MSE)
 
