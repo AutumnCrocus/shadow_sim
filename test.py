@@ -1649,7 +1649,7 @@ if __name__ == '__main__':
     parser.add_argument('--opponent_model_name', help='対戦相手のニューラルネットワークモデルの名前')
     parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
     parser.add_argument('--cProfile')
-    parser.add_argument('--node_num',default=100)
+    parser.add_argument('--node_num',default=100,type=int)
     args = parser.parse_args()
     mylogger.info("args:{}".format(args))
     step_num = 100
@@ -1693,7 +1693,7 @@ if __name__ == '__main__':
         node_num = int(args.node_num)
         cuda = False#torch.cuda.is_available()
         if args.model_name == "ini":
-            origin_model = Embedd_Network_model.New_Dual_Net(100)
+            origin_model = Embedd_Network_model.New_Dual_Net(args.node_num)
             Players.append(
                 Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=origin_model,node_num=node_num), mulligan=Min_cost_mulligan_policy()))  # 28
             Players.append(

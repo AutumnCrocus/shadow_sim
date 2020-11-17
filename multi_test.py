@@ -33,7 +33,7 @@ parser = argparse.ArgumentParser(description='デュアルニューラルネッ�
 parser.add_argument('--episode_num', help='試行回数', type=int,default=128)
 parser.add_argument('--iteration_num', help='イテレーション数', type=int,default=1000)
 parser.add_argument('--epoch_num', help='エポック数', type=int,default=64)
-parser.add_argument('--batch_size', help='バッチサイズ', type=int,default=32)
+parser.add_argument('--batch_size', help='バッチサイズ', type=int,default=256)
 parser.add_argument('--mcts', help='サンプリングAIをMCTSにする(オリジナルの場合は[OM])')
 parser.add_argument('--deck', help='サンプリングに用いるデッキの選び方')
 parser.add_argument('--cuda', help='gpuを使用するかどうか')
@@ -397,7 +397,7 @@ def multi_train(data):
             first = 3 * k
             second = first + 1
             third = first + 2
-            print("{:2d}: {:3.3%} {:2d}: {:3.3%} {:2d}: {:3.3%}".format(first,p_list[first],second,p_list[second],third,p_list[third]))
+            print("{:2d}: {:7.3%} {:2d}: {:7.3%} {:2d}: {:7.3%}".format(first,p_list[first],second,p_list[second],third,p_list[third]))
         print("")
         print("actions:{}\n".format(actions[0]))
         print("v:{}".format(float(v[0])))
@@ -509,6 +509,7 @@ def run_main():
     last_updated = 0
     reset_count = 0
     min_loss = 100
+    loss_th = 5.0
     #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
 
@@ -583,6 +584,7 @@ def run_main():
         p, pai, z, states = None, None, None, None
         batch = len(R.memory) // batch_num if batch_num is not None else batch_size
         print("batch_size:{}".format(batch))
+        pass_flg = False
         if args.multi_train is not None:
             if last_updated > args.max_update_interval - 3:
                 net = New_Dual_Net(node_num)
@@ -598,7 +600,7 @@ def run_main():
             all_states, all_actions, all_rewards = all_data
             memory_len = all_actions.size()[0]
             all_data_ids = list(range(memory_len))
-            train_ids = random.sample(all_data_ids, k=int(memory_len * 0.8))
+            train_ids = random.sample(all_data_ids, k=int(memory_len * 0.85))
             test_ids =list(set(all_data_ids)-set(train_ids))
             iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
                          for i in range(p_size)]
@@ -698,6 +700,7 @@ def run_main():
             test_objective_loss /= separate_num
             test_MSE /= separate_num
             test_CEE /= separate_num
+            pass_flg = test_objective_loss > loss_th
             print("AVE | Over_All_Loss(test ): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                   .format(test_objective_loss, test_MSE, test_CEE))
             print(test_MSE, separate_num)
@@ -893,48 +896,52 @@ def run_main():
 
         net.cpu()
         prev_net.cpu()
+        if pass_flg:
+            min_WR = 0
+            WR = 0
+            print("evaluation of this epoch is passed.")
+        else:
+            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
+                        ,mulligan=Min_cost_mulligan_policy())
+            p1.name = "Alice"
+            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=False)
+                        ,mulligan=Min_cost_mulligan_policy())
+            p2.name = "Bob"
+            test_deck_list = (0, 1, 2, 4, 5, 10, 12)  if deck_flg is None else deck_flg# (0,1,4,10,13)
+            test_episode_len = evaluate_num#100
+            match_num = len(test_deck_list)
 
-        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
-                    ,mulligan=Min_cost_mulligan_policy())
-        p1.name = "Alice"
-        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=False)
-                    ,mulligan=Min_cost_mulligan_policy())
-        p2.name = "Bob"
-        test_deck_list = (0, 1, 2, 4, 5, 10, 12)  if deck_flg is None else deck_flg# (0,1,4,10,13)
-        test_episode_len = evaluate_num#100
-        match_num = len(test_deck_list)
 
+            deck_pairs = ((d,d) for d in test_deck_list) #if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
+            manager = Manager()
+            shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
+            #iter_data = [(p1, p2,test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
+            iter_data = [(p1, p2, shared_array,test_episode_len, p_id, test_deck_list) for p_id in range(p_size)]
 
-        deck_pairs = ((d,d) for d in test_deck_list) #if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
-        manager = Manager()
-        shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
-        #iter_data = [(p1, p2,test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
-        iter_data = [(p1, p2, shared_array,test_episode_len, p_id, test_deck_list) for p_id in range(p_size)]
+            freeze_support()
+            pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+            memory = pool.map(multi_battle, iter_data)
+            print("\n" * (match_num+1))
+            # Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
+            pool.terminate()  # add this.
+            pool.close()  # add this.
 
-        freeze_support()
-        pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
-        memory = pool.map(multi_battle, iter_data)
-        print("\n" * (match_num+1))
-        # Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
-        pool.terminate()  # add this.
-        pool.close()  # add this.
-
-        memory = list(memory)
-        match_num = len(test_deck_list) #if deck_flg is None else p_size
-        min_WR=1.0
-        #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
-        Battle_Result = {(deck_id, deck_id): \
-                             tuple(shared_array[3*index+1:3*index+3]) for index, deck_id in enumerate(test_deck_list)}
-        #for memory_cell in memory:
-        #    #Battle_Result[memory_cell[0]] = memory_cell[1]
-        #    #min_WR = min(min_WR,memory_cell[1])
-        print(shared_array)
-        for key in sorted(list((Battle_Result.keys()))):
-            print("{}:train_WR:{:.2%},first_WR:{:.2%}"\
-                  .format(key,Battle_Result[key][0]/test_episode_len,2*Battle_Result[key][1]/test_episode_len))
-        WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
-        min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
-        #WR = sum(Battle_Result.values())/match_num
+            memory = list(memory)
+            match_num = len(test_deck_list) #if deck_flg is None else p_size
+            min_WR=1.0
+            #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
+            Battle_Result = {(deck_id, deck_id): \
+                                 tuple(shared_array[3*index+1:3*index+3]) for index, deck_id in enumerate(test_deck_list)}
+            #for memory_cell in memory:
+            #    #Battle_Result[memory_cell[0]] = memory_cell[1]
+            #    #min_WR = min(min_WR,memory_cell[1])
+            print(shared_array)
+            for key in sorted(list((Battle_Result.keys()))):
+                print("{}:train_WR:{:.2%},first_WR:{:.2%}"\
+                      .format(key,Battle_Result[key][0]/test_episode_len,2*Battle_Result[key][1]/test_episode_len))
+            WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
+            min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
+            #WR = sum(Battle_Result.values())/match_num
 
 
         #battle_data = [cell.pop(-1) for cell in memory]
@@ -946,20 +953,20 @@ def run_main():
                                               'min': min_WR,
                                               'threthold': th
                                               }, epoch)
-        if WR < th: #and min_WR < 0.5:
+        if WR < th and min_WR < 0.5:
             net = prev_net
             #th = max(0.5,th*0.95)
             print("new_model lose... WR:{:.1%}".format(WR))
-            batch_size = 2**random.randint(2,7)
-            iteration = int(args.iteration_num * (args.batch_size/batch_size))
-            print("next: batch_size: {} itearation_num:{}".format(batch_size,iteration))
+            #batch_size = 2**random.randint(2,7)
+            #iteration = int(args.iteration_num * (args.batch_size/batch_size))
+            #print("next: batch_size: {} itearation_num:{}".format(batch_size,iteration))
             
         else:
             #th = 0.55
             win_flg = True
             print("new_model win! WR:{:.1%} min:{:.1%}".format(WR,min_WR))
-            batch_size = args.batch_size
-            iteration = args.iteration_num
+            #batch_size = args.batch_size
+            #iteration = args.iteration_num
         #writer.add_scalar(LOG_PATH + 'WR', WR, epoch)
 
 

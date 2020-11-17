@@ -1038,7 +1038,7 @@ class Field:
                 if target_category == Target_Type.ENEMY_FOLLOWER.value:
                     regal_targets = can_be_targeted
                     if with_ids:
-                        side = field.card_location[1-player_num]
+                        side = self.card_location[1-player_num]
                         target_card_ids = [(side[location_id].card_id+500,1) for location_id in regal_targets]
 
                 elif target_category == Target_Type.ALLIED_FOLLOWER.value:
@@ -1078,7 +1078,8 @@ class Field:
 
 
                 elif target_category == Target_Type.ALLIED_CARD.value:
-                    field_len = len(self.card_location[player_num])
+                    
+                    _len = len(self.card_location[player_num])
                     regal_targets = list(range(field_len))
                     if with_ids:
                         target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0)
@@ -1141,7 +1142,7 @@ class Field:
                     regal_targets = [card_id for card_id in self.get_creature_location()[player_num] if
                                      evo_target_regulation(self.card_location[player_num][card_id], card)]
                     if with_ids:
-                        side = field.card_location[player_num]
+                        side = self.card_location[player_num]
                         target_card_ids = [(side[location_id].card_id+500,0) for location_id in regal_targets]
 
                 elif target_category == Target_Type.ENEMY.value:
@@ -1389,8 +1390,8 @@ class Field:
                     regal_targets = [card_id for card_id in can_be_targeted if
                                      regulation_func(self.card_location[1 - player_num][card_id])]
                     if with_ids:
-                        side = self.card_location[player_num]
-                        target_card_ids = [(side[location_id].card_id + 500, 1) for location_id in regal_targets]
+                        opponent_side = self.card_location[1-player_num]
+                        target_card_ids = [(opponent_side[location_id].card_id + 500, 1) for location_id in regal_targets]
 
 
 
@@ -1410,8 +1411,8 @@ class Field:
                     if with_ids:
                         target_card_ids = [(EMBEDDING_RANGE, 1)]
                         if len(regal_targets)>1:
-                            side = self.card_location[1-player_num]
-                            target_card_ids += [(side[location_id].card_id+500,1) for location_id in regal_targets[1:]]
+                            opponent_side = self.card_location[1-player_num]
+                            target_card_ids += [(opponent_side[location_id].card_id+500,1) for location_id in regal_targets[1:]]
 
 
 
@@ -1852,11 +1853,16 @@ class Field:
         #action_codes = [(0, 0, 0, 0, 0)]#行動カテゴリー, プレイしたカードのid, 攻撃したカードのid, 攻撃されたカードのid,
         #進化したカードのid
         #行動カテゴリー, 作用する側のカードid, 作用される側のカードid集合,作用される側のカードの場所id集合(player:0,opponent:1)
-        action_codes = [(0,0,(0,),(0,))]
+        
         able_to_choice = [1]
         follower_choice = []
         leader_choice = []
         evolve_choice = []
+        MAX_TARGET_NUM = 5
+        PADDING_TARGET = tuple(0 for _ in range(MAX_TARGET_NUM))
+        SIDE_ID = 2
+        PADDING_SIDE = tuple(SIDE_ID for _ in range(MAX_TARGET_NUM))
+        action_codes = [(0,0,PADDING_TARGET,PADDING_SIDE)]
 
         for play_id in range(9):
             if play_id in able_to_play:
@@ -1864,27 +1870,28 @@ class Field:
                 category_num = Card_Category[target_card.card_category].value - 1
                 long_card_id = target_card.card_id + margin + category_range * category_num
                 if play_id not in regal_targets:
-                    target_id = ((0,), (0,))
+                    target_id = (PADDING_TARGET, PADDING_SIDE)
                 else:
                     _,candidates = self.get_regal_targets(target_card,target_type=1,player_num=player.player_num,with_ids=True)
                     if len(candidates)>0:
                         if candidates[0][0] == "double":
                             #仮処理
-                            target_id = ((0,), (0,))
+                            target_id = (PADDING_TARGET, PADDING_SIDE)
                         else:
-                            target_card_ids = tuple(cell[0] for cell in candidates)[0:1]
-                            target_side_ids = tuple(cell[1] for cell in candidates)[0:1]
-
+                            target_card_ids = tuple(cell[0] for cell in candidates)[:MAX_TARGET_NUM]#[0:1]
+                            target_card_ids = target_card_ids + PADDING_TARGET[:max(MAX_TARGET_NUM-len(target_card_ids),0)]
+                            target_side_ids = tuple(cell[1] for cell in candidates)[:MAX_TARGET_NUM]#[0:1]
+                            target_side_ids = target_side_ids + PADDING_SIDE[:max(MAX_TARGET_NUM-len(target_side_ids),0)]
                             target_id = (target_card_ids,target_side_ids)
                             
                     else:
-                        target_id = ((0,), (0,))
+                        target_id = (PADDING_TARGET, PADDING_SIDE)
                 action_codes.append((Action_Code.PLAY_CARD.value,
                                         long_card_id, target_id[0],target_id[1]))
                 #assert long_card_id < 3*category_range and long_card_id > 0,"{}".format(long_card_id)
                 able_to_choice.append(1)
             else:
-                action_codes.append((0, 0, (0,),(0,)))
+                action_codes.append((0, 0, PADDING_TARGET,PADDING_SIDE))
                 able_to_choice.append(0)
         # for play_id in range(9):
         #     if play_id in able_to_play:
@@ -1915,64 +1922,40 @@ class Field:
                         attacked_card = self.card_location[1-player.player_num][attacked_id]
                         follower_attack_codes.append((Action_Code.ATTACK_TO_FOLLOWER.value,
                                                         attacking_card.card_id + margin,
-                                                      (attacked_card.card_id + margin,), (1,)))
+                                                      (attacked_card.card_id + margin,)+PADDING_TARGET[:MAX_TARGET_NUM-1], 
+                                                      (1,)+PADDING_SIDE[:MAX_TARGET_NUM-1]))
                         follower_choice.append(1)
                     else:
-                        follower_attack_codes.append((0, 0, (0,), (0,)))
+                        follower_attack_codes.append((0, 0, PADDING_TARGET, PADDING_SIDE))
                         follower_choice.append(0)
             else:
-                follower_attack_codes.extend([(0, 0, (0,), (0,))]*5)
+                follower_attack_codes.extend([(0, 0, PADDING_TARGET, PADDING_SIDE)]*5)
                 follower_choice.extend([0]*5)
 
             if attacker_id in able_to_attack:
                 attacking_card = self.card_location[player.player_num][attacker_id]
-                player_attack_codes.append((Action_Code.ATTACK_TO_PLAYER.value, attacking_card.card_id + margin,(0,),(1,) ))
+                player_attack_codes.append((Action_Code.ATTACK_TO_PLAYER.value, attacking_card.card_id + margin,
+                                            (EMBEDDING_RANGE-1,)+PADDING_TARGET[:MAX_TARGET_NUM-1],
+                                            (1,)+PADDING_SIDE[:MAX_TARGET_NUM-1] ))
                 leader_choice.append(1)
             else:
-                player_attack_codes.append((0, 0, (0,), (0,)))
+                player_attack_codes.append((0, 0, PADDING_TARGET, PADDING_SIDE))
                 leader_choice.append(0)
 
             if attacker_id in able_to_evo:
                 evolving_card = self.card_location[player.player_num][attacker_id]
-                evolve_codes.append((Action_Code.EVOLVE.value, evolving_card.card_id + margin,(0,),(0,)))
+                _,candidates = self.get_regal_targets(evolving_card,target_type=0,player_num=player.player_num,with_ids=True)
+                target_card_ids = tuple(cell[0] for cell in candidates)[:MAX_TARGET_NUM]#[0:1]
+                target_card_ids = target_card_ids + PADDING_TARGET[:max(MAX_TARGET_NUM-len(target_card_ids),0)]
+                target_side_ids = tuple(cell[1] for cell in candidates)[:MAX_TARGET_NUM]#[0:1]
+                target_side_ids = target_side_ids + PADDING_SIDE[:max(MAX_TARGET_NUM-len(target_side_ids),0)]
+                evolve_codes.append((Action_Code.EVOLVE.value, evolving_card.card_id + margin,
+                                     target_card_ids,target_side_ids))
                 evolve_choice.append(1)
             else:
-                evolve_codes.append((0, 0, (0,),(0,)))
+                evolve_codes.append((0, 0, PADDING_TARGET, PADDING_SIDE))
                 evolve_choice.append(0)
-        # for attacker_id in range(5):
-        #     if attacker_id in able_to_creature_attack:
-        #         attacking_card = self.card_location[player.player_num][attacker_id]
-        #         for attacked_id in range(5):
-        #             if attacked_id in can_be_attacked:
-        #                 attacked_card = self.card_location[1-player.player_num][attacked_id]
-        #                 follower_attack_codes.append((Action_Code.ATTACK_TO_FOLLOWER.value, 0,
-        #                                                 attacking_card.card_id + margin,
-        #                                                 attacked_card.card_id + margin, 0))
-        #                 follower_choice.append(1)
-        #             else:
-        #                 follower_attack_codes.append((0, 0, 0, 0, 0))
-        #                 follower_choice.append(0)
-        #     else:
-        #         follower_attack_codes.extend([(0, 0, 0, 0, 0)]*5)
-        #         follower_choice.extend([0]*5)
-        #
-        #     if attacker_id in able_to_attack:
-        #         attacking_card = self.card_location[player.player_num][attacker_id]
-        #         player_attack_codes.append((Action_Code.ATTACK_TO_PLAYER.value, 0,
-        #                                     attacking_card.card_id + margin, 0, 0))
-        #         leader_choice.append(1)
-        #     else:
-        #         player_attack_codes.append((0, 0, 0, 0, 0))
-        #         leader_choice.append(0)
-        #
-        #     if attacker_id in able_to_evo:
-        #         evolving_card = self.card_location[player.player_num][attacker_id]
-        #         evolve_codes.append((Action_Code.EVOLVE.value, 0, 0, 0,
-        #                              evolving_card.card_id + margin))
-        #         evolve_choice.append(1)
-        #     else:
-        #         evolve_codes.append((0, 0, 0, 0, 0))
-        #         evolve_choice.append(0)
+
 
         action_codes.extend(follower_attack_codes)
         action_codes.extend(player_attack_codes)

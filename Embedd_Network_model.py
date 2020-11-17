@@ -437,7 +437,7 @@ class Action_Value_Net(nn.Module):
         self.lin4 = nn.ModuleList(layer)
         #self.mish = Mish()
         self.action_catgory_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
-        self.side_emb = nn.Embedding(2,1)
+        self.side_emb = nn.Embedding(3,1,padding_idx=2)
         self.association_layer = nn.Linear(10+1,mid_size)#nn.Linear(mid_size+1,mid_size)
         nn.init.kaiming_normal_(self.association_layer.weight)
         self.prelu_1 = nn.PReLU(init=0.01)
