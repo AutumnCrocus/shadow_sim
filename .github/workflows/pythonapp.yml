@@ -12,7 +12,7 @@ jobs:
     env:
       MODEL_NAME: Multi_Dual_2020_11_15_22_14_13_9_64_W_cuda.pth
       O_MODEL_NAME: Multi_Dual_2020_11_15_22_14_13_9_64_W_cuda.pth
-      PLAYER_TYPES_A: "29,13"
+      PLAYER_TYPES_A: "29,17"
       PLAYER_TYPES_B: "29,17"
       MODE: mirror
       N: 200
