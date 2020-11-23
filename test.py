@@ -302,8 +302,8 @@ def execute_demo(Player_1, Player_2, iteration, virtual_flg=False, deck_type=Non
     #Player1 = copy.deepcopy(Player_1)
     #Player2 = copy.deepcopy(Player_2)
 
-    mylogger.info("d1:{}".format(Player_1.policy))
-    mylogger.info("d2:{}".format(Player_2.policy))
+    mylogger.info("d1:{}".format(Player_1.policy.name))
+    mylogger.info("d2:{}".format(Player_2.policy.name))
     Player1 = Player_1.get_copy(None)
     Player2 = Player_2.get_copy(None)
     Player1.name = "Alice"
