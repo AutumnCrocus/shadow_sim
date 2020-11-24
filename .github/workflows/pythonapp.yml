@@ -43,7 +43,7 @@ jobs:
     
     - name: Run Test1     
       run: |
-       python3 multi_test.py --episode_num 100 --check True --cpu_num 2 --model_name $MODEL_NAME --node_num $NODE_NUM --decklist $DECKLIST --fixed_opponent "Aggro"
+       python3 multi_test.py --episode_num 100 --check True --cpu_num 2 --model_name $MODEL_NAME --node_num $NODE_NUM --deck_list $DECKLIST --fixed_opponent "Aggro"
 
     #- name: Run Test1     
     #  run: |
