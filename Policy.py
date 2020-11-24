@@ -5343,6 +5343,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                 if torch.cuda.is_available() and cuda:
                     self.net = self.net.cuda()
                     self.cuda = True
+                self.name = "ExIt(model_name=origin)Policy"
             else:
                 assert False,"non-model error"
         #mylogger.info("self.cuda:{}".format(next(self.net.parameters()).is_cuda))
@@ -5650,6 +5651,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
                 if torch.cuda.is_available() and cuda:
                     self.net = self.net.cuda()
                     self.cuda = True
+                self.name = "GreedyExIt(model_name=origin)Policy"
             else:
                 assert False,"non-model error"
 

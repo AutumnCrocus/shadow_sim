@@ -57,6 +57,7 @@ parser.add_argument('--evaluate_num', help='evaluate_num',default=100,type=int)
 parser.add_argument('--max_update_interval', help='max_update_interval',default=10,type=int)
 parser.add_argument('--limit_OMP',help="limit OMP_NUM_THREADS for quadro",default=False,type=bool)
 parser.add_argument('--OMP_NUM', help='num of threads used in OMP',default=0,type=int)
+parser.add_argument('--loss_th', help='accepted test loss limit',default=10,type=int)
 args = parser.parse_args()
 
 deck_flg = args.fixed_deck_ids#list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
@@ -509,7 +510,7 @@ def run_main():
     last_updated = 0
     reset_count = 0
     min_loss = 100
-    loss_th = 5.0
+    loss_th = args.loss_th
     #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
 
@@ -953,7 +954,7 @@ def run_main():
                                               'min': min_WR,
                                               'threthold': th
                                               }, epoch)
-        if WR < th and min_WR < 0.5:
+        if WR < th or (len(deck_flg) > 1 and min_WR < 0.5):
             net = prev_net
             #th = max(0.5,th*0.95)
             print("new_model lose... WR:{:.1%}".format(WR))
@@ -1058,12 +1059,13 @@ def check_score():
             p2 = Player(9, False, policy=AggroPolicy(),
                         mulligan=Min_cost_mulligan_policy())
         elif fixed_opponent == "OM":
-            # p1 = Player(9, True, policy=Opponent_Modeling_MCTSPolicy())
-            # p1.name = "Alice"
-            p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy(),
-                        mulligan=Min_cost_mulligan_policy())
-        else:
+             p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy())
+        elif fixed_opponent == "NR_OM":
+            p2 = Player(9, False, policy=Non_Rollout_OM_ISMCTSPolicy(iteration=200), mulligan=Min_cost_mulligan_policy())
+        elif fixed_opponent == "ExItGreedy":
             p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=net))
+        elif fixed_opponent == "Greedy":
+            p2 = Player(9, False, policy=New_GreedyPolicy(), mulligan=Simple_mulligan_policy())
     else:
         if opponent_net is not None:  # epoch < 5:
             p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
@@ -1076,22 +1078,38 @@ def check_score():
     Battle_Result = {}
     deck_list=list(map(int,args.deck_list.split(",")))
     print(deck_list)
-    deck_pairs = list(itertools.product(deck_list,deck_list))
-
-    iter_data = [(p1, p2, episode_len, cell_id,cell) for cell_id,cell in enumerate(deck_pairs)]\
-        if check_deck_id is None else [(p1, p2, episode_len//(2*p_size), cell_id,(check_deck_id,check_deck_id)) \
-                                       for cell_id in range(2*p_size)]
+    test_deck_list = deck_list
+    test_episode_len = episode_len
+    match_num = len(test_deck_list)
+    deck_pairs = tuple((d,d) for d in test_deck_list) #if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
+    manager = Manager()
+    shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
+    #iter_data = [(p1, p2,test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
+    iter_data = [(p1, p2, shared_array,episode_len, p_id, test_deck_list) for p_id in range(p_size)]
     freeze_support()
+    print(p1.policy.name)
+    print(p2.policy.name)
     pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
     memory = pool.map(multi_battle, iter_data)
     #Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
 
     pool.close()  # add this.
     pool.terminate()  # add this.
-    print("\n" * (len(deck_pairs) + 1))
+    print("\n" * (match_num + 1))
     memory = list(memory)
-    for memory_cell in memory:
-        Battle_Result[memory_cell[0]] = (memory_cell[1],memory_cell[2])
+    min_WR=1.0
+    #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
+    Battle_Result = {(deck_id, deck_id): \
+                         tuple(shared_array[3*index+1:3*index+3]) for index, deck_id in enumerate(test_deck_list)}
+    #for memory_cell in memory:
+    #    #Battle_Result[memory_cell[0]] = memory_cell[1]
+    #    #min_WR = min(min_WR,memory_cell[1])
+    print(shared_array)
+    for key in sorted(list((Battle_Result.keys()))):
+        print("{}:WR:{:.2%},first_WR:{:.2%}"\
+              .format(key,Battle_Result[key][0]/test_episode_len,2*Battle_Result[key][1]/test_episode_len))
+    WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
+    min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
     print(Battle_Result)
     result_name = model_name.split(".")[0] + ":" + args.deck_list
     deck_num = len(deck_list)

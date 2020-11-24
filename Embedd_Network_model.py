@@ -531,8 +531,9 @@ class Dual_Loss(nn.Module):
         #tmp_MSE = torch.sum(
         #    torch.pow((z - v),2),
         #   dim=1)
+        LOSS_EPSILON=1.0e-4
         tmp_MSE = torch.sum(
-            -(z+1)*torch.log((v+1)/2+1.0e-8)/2+(z-1)*torch.log((1-v)/2+1.0e-8)/2,
+            -(z+1)*torch.log((v+1)/2+LOSS_EPSILON)/2+(z-1)*torch.log((1-v)/2+LOSS_EPSILON)/2,
            dim=1)
         
         
@@ -542,7 +543,7 @@ class Dual_Loss(nn.Module):
         #print("loss:",loss)
         #print("mean:",MSE)
 
-        tmp_CEE1 = p[range(p.size()[0]),pai]+1.0e-8
+        tmp_CEE1 = p[range(p.size()[0]),pai]+LOSS_EPSILON
         #choice_len_term = 1/torch.sqrt(action_choice_len)
         #print(choice_len_term)
         tmp_CEE2 = -torch.log(tmp_CEE1)#*choice_len_term
