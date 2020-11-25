@@ -10,14 +10,14 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: 2020_11_23_001.pth
-      O_MODEL_NAME: 2020_11_23_001.pth
-      PLAYER_TYPES_A: "29,19"
+      MODEL_NAME: 2020_11_25_001.pth
+      O_MODEL_NAME: 2020_11_25_001.pth
+      PLAYER_TYPES_A: "29,2"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 200
-      DECK_LIST: "100"
-      NODE_NUM: 40
+      DECK_LIST: "4,5"
+      NODE_NUM: 100
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -43,7 +43,7 @@ jobs:
     
     - name: Run Test1     
       run: |
-       python3 multi_test.py --episode_num 200 --check True --cpu_num 2 --model_name $MODEL_NAME --node_num $NODE_NUM --deck_list $DECK_LIST --fixed_opponent "OM"
+       python3 multi_test.py --episode_num 200 --check True --cpu_num 2 --model_name $MODEL_NAME --node_num $NODE_NUM --deck_list $DECK_LIST --fixed_opponent "Aggro"
 
     #- name: Run Test1     
     #  run: |
