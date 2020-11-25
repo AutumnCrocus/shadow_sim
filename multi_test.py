@@ -278,7 +278,7 @@ def multi_battle(episode_data):
     #partial_iteration = episode_data[-3]
     p_id = episode_data[-2]
     #deck_ids = episode_data[-1]
-    deck_id_data = episode_data[-1]
+    deck_id_data = episode_data[-1]#((deck_id,deck_id),)
     deck_data_len = len(deck_id_data)
     shared_array = episode_data[-4]
     #win_rate_dict = {ele:{"win_num":0,"first_win_num":0}\
@@ -293,7 +293,7 @@ def multi_battle(episode_data):
         available_deck_ids = [(index,ele) for index,ele in enumerate(deck_id_data) if shared_array[3*index]< count_limit]
 
         current_deck_id_data = random.choice(available_deck_ids)
-        deck_index,current_deck_id = current_deck_id_data
+        deck_index,current_deck_ids = current_deck_id_data
         shared_array[3*deck_index] += 1
         episode = shared_array[3*deck_index]
         f = Field(5)
@@ -305,8 +305,8 @@ def multi_battle(episode_data):
         p2.player_num = 1
 
 
-        deck_type1 = current_deck_id#deck_ids[episode%2]
-        deck_type2 = current_deck_id#deck_ids[1-episode%2]
+        deck_type1 = current_deck_ids[episode%2]#deck_ids[episode%2]
+        deck_type2 = current_deck_ids[1-episode%2]#deck_ids[1-episode%2]
         d1 = tsv_to_deck(key_2_tsv_name[deck_type1][0])
         d1.set_leader_class(key_2_tsv_name[deck_type1][1])
         d1.set_deck_type(deck_id_2_deck_type(deck_type1))
@@ -908,12 +908,11 @@ def run_main():
             p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=False)
                         ,mulligan=Min_cost_mulligan_policy())
             p2.name = "Bob"
-            test_deck_list = (0, 1, 2, 4, 5, 10, 12)  if deck_flg is None else deck_flg# (0,1,4,10,13)
+            test_deck_list = tuple(100,)  if deck_flg is None else deck_flg# (0,1,4,10,13)
+            test_deck_list = tuple(itertools.product(test_deck_list,test_deck_list))
             test_episode_len = evaluate_num#100
             match_num = len(test_deck_list)
 
-
-            deck_pairs = ((d,d) for d in test_deck_list) #if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
             manager = Manager()
             shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
             #iter_data = [(p1, p2,test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
@@ -931,17 +930,28 @@ def run_main():
             match_num = len(test_deck_list) #if deck_flg is None else p_size
             min_WR=1.0
             #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
-            Battle_Result = {(deck_id, deck_id): \
+            Battle_Result = {(deck_id[0], deck_id[1]): \
                                  tuple(shared_array[3*index+1:3*index+3]) for index, deck_id in enumerate(test_deck_list)}
             #for memory_cell in memory:
             #    #Battle_Result[memory_cell[0]] = memory_cell[1]
             #    #min_WR = min(min_WR,memory_cell[1])
             print(shared_array)
+            result_table = {}
             for key in sorted(list((Battle_Result.keys()))):
+                cell_WR = Battle_Result[key][0]/test_episode_len
+                cell_first_WR = 2*Battle_Result[key][1]/test_episode_len
                 print("{}:train_WR:{:.2%},first_WR:{:.2%}"\
-                      .format(key,Battle_Result[key][0]/test_episode_len,2*Battle_Result[key][1]/test_episode_len))
-            WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
-            min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
+                      .format(key,cell_WR,cell_first_WR))
+                if key[::-1] not in result_table:
+                    result_table[key] = cell_WR
+                else:
+                    result_table[ key[::-1]] = (result_table[ key[::-1]] + cell_WR)/2
+            print(result_table)
+            min_WR =  min(result_table.values())
+            WR = sum(result_table.values())/len(result_table.values())
+            #WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
+            #min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
+            
             #WR = sum(Battle_Result.values())/match_num
 
 
@@ -954,7 +964,7 @@ def run_main():
                                               'min': min_WR,
                                               'threthold': th
                                               }, epoch)
-        if WR < th or (len(deck_flg) > 1 and min_WR < 0.5):
+        if WR < th and min_WR < 0.5:
             net = prev_net
             #th = max(0.5,th*0.95)
             print("new_model lose... WR:{:.1%}".format(WR))
@@ -1078,10 +1088,10 @@ def check_score():
     Battle_Result = {}
     deck_list=list(map(int,args.deck_list.split(",")))
     print(deck_list)
-    test_deck_list = deck_list
-    test_episode_len = episode_len
+    test_deck_list = tuple(100,)  if deck_flg is None else deck_list# (0,1,4,10,13)
+    test_deck_list = tuple(itertools.product(test_deck_list,test_deck_list))
+    test_episode_len = evaluate_num#100
     match_num = len(test_deck_list)
-    deck_pairs = tuple((d,d) for d in test_deck_list) #if deck_flg is None else ((deck_flg,deck_flg) for _ in range(p_size))
     manager = Manager()
     shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
     #iter_data = [(p1, p2,test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
@@ -1099,7 +1109,7 @@ def check_score():
     memory = list(memory)
     min_WR=1.0
     #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
-    Battle_Result = {(deck_id, deck_id): \
+    Battle_Result = {(deck_id[0], deck_id[1]): \
                          tuple(shared_array[3*index+1:3*index+3]) for index, deck_id in enumerate(test_deck_list)}
     #for memory_cell in memory:
     #    #Battle_Result[memory_cell[0]] = memory_cell[1]
@@ -1108,11 +1118,10 @@ def check_score():
     for key in sorted(list((Battle_Result.keys()))):
         print("{}:WR:{:.2%},first_WR:{:.2%}"\
               .format(key,Battle_Result[key][0]/test_episode_len,2*Battle_Result[key][1]/test_episode_len))
-    WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
-    min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
     print(Battle_Result)
     result_name = model_name.split(".")[0] + ":" + args.deck_list
     deck_num = len(deck_list)
+    os.makedirs("Battle_Result", exist_ok=True)
     with open("Battle_Result/" + result_name, "w") as f:
         writer = csv.writer(f, delimiter='\t', lineterminator='\n')
         row = ["{} vs {}".format(p1.policy.name, p2.policy.name)]
