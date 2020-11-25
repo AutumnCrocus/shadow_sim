@@ -216,7 +216,7 @@ class Dual_State_Net(nn.Module):
     def __init__(self, n_mid):
         super(Dual_State_Net, self).__init__()
         self.short_mid = n_mid//10
-        self.value_layer = nn.Linear(5+15+10+1+1+1,self.short_mid)#nn.Linear(5+15+n_mid,n_mid)
+        self.value_layer = nn.Linear(6+15+10+1+1+1,self.short_mid)#nn.Linear(5+15+n_mid,n_mid)
         nn.init.kaiming_normal_(self.value_layer.weight)
 
         self.life_layer = nn.Linear(5, self.short_mid)#nn.Linear(5, n_mid)
@@ -459,7 +459,7 @@ class Action_Value_Net(nn.Module):
         life_datas = values['life_datas']
         pp_datas = values['pp_datas']
         hand_card_costs = values['hand_card_costs']
-        stats = values['follower_stats'].view(-1,50)
+        stats = values['follower_stats'].view(-1,6*10)
         # action_categories = detailed_action_codes['action_categories']
         # play_card_ids = detailed_action_codes['play_card_ids']
         # field_card_ids = detailed_action_codes['field_card_ids']
@@ -643,13 +643,13 @@ def get_data(f,player_num=0):
                            if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Creature" else 0 for i in range(5)]
     follower_stats = [[f.card_location[player_num][i].power/20, f.card_location[player_num][i].get_current_toughness()/20,
-                       1, int(f.card_location[player_num][i].can_attack_to_follower()), int(f.card_location[player_num][i].can_attack_to_player())]
+                       1, int(f.card_location[player_num][i].can_attack_to_follower()), int(f.card_location[player_num][i].can_attack_to_player()),1]
                       if i < len(f.card_location[player_num]) and f.card_location[player_num][
-        i].card_category == "Creature" else [0, 0, 0, 0, 0] for i in range(5)] \
+        i].card_category == "Creature" else [0, 0, 0, 0, 0,0] for i in range(5)] \
                      + [[f.card_location[opponent_num][i].power/20, f.card_location[opponent_num][i].get_current_toughness()/20,
-                         1, 1, 1]
+                         1, 1, 1,1]
                         if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
-        i].card_category == "Creature" else [0, 0, 0, 0, 0] for i in range(5)]
+        i].card_category == "Creature" else [0, 0, 0, 0, 0,0] for i in range(5)]
     """
     follower_stats = [[f.card_location[player_num][i].power/100, f.card_location[player_num][i].get_current_toughness()/100]
                       if i < len(f.card_location[player_num]) and f.card_location[player_num][
@@ -707,9 +707,9 @@ def get_data(f,player_num=0):
     able_to_creature_attack = f.get_able_to_creature_attack(player)
     able_to_creature_attack = [1 if i in able_to_creature_attack else 0 for i in range(5)] + opponent_mask
     #life_data = [player.life, opponent.life,len(player.hand),len(opponent.hand) ,f.current_turn[player_num]]
-    life_data = [player.life/20, opponent.life/20, len(player.hand)/10, len(opponent.hand)/10,f.current_turn[player_num]/100]
+    life_data = [player.life/20, opponent.life/20, len(player.hand)/10, len(opponent.hand)/10,f.current_turn[player_num]/10]
     #pp_data = [f.cost[player_num],f.remain_cost[player_num]]
-    pp_data = [f.cost[player_num]/10, f.remain_cost[player_num]/10]
+    pp_data = [f.cost[player_num]/10, f.remain_cost[player_num]/10,f.cost[1-player_num]/10, f.remain_cost[1-player_num]/10]
 
     class_data = [player.deck.leader_class.value,
                     opponent.deck.leader_class.value]
