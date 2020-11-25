@@ -1086,9 +1086,9 @@ def check_score():
     # p2 = Player(9, False, policy=RandomPolicy(), mulligan=Min_cost_mulligan_policy())
     p2.name = "Bob"
     Battle_Result = {}
-    deck_list=list(map(int,args.deck_list.split(",")))
+    deck_list=tuple(map(int,args.deck_list.split(",")))
     print(deck_list)
-    test_deck_list = tuple(100,)  if deck_flg is None else deck_list# (0,1,4,10,13)
+    test_deck_list = deck_list# (0,1,4,10,13)
     test_deck_list = tuple(itertools.product(test_deck_list,test_deck_list))
     test_episode_len = evaluate_num#100
     match_num = len(test_deck_list)
