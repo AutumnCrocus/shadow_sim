@@ -1055,9 +1055,6 @@ def check_score():
     if args.deck is not None:
         deck_sampling_type = True
     G = Game()
-    episode_len = 100
-    if args.episode_num is not None:
-        episode_len = int(args.episode_num)
     net.cpu()
     t3 = datetime.datetime.now()
     p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
@@ -1091,6 +1088,7 @@ def check_score():
     test_deck_list = deck_list# (0,1,4,10,13)
     test_deck_list = tuple(itertools.product(test_deck_list,test_deck_list))
     test_episode_len = evaluate_num#100
+    episode_num = evaluate_num
     match_num = len(test_deck_list)
     manager = Manager()
     shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
