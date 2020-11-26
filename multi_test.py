@@ -1093,7 +1093,7 @@ def check_score():
     manager = Manager()
     shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
     #iter_data = [(p1, p2,test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
-    iter_data = [(p1, p2, shared_array,episode_len, p_id, test_deck_list) for p_id in range(p_size)]
+    iter_data = [(p1, p2, shared_array,episode_num, p_id, test_deck_list) for p_id in range(p_size)]
     freeze_support()
     print(p1.policy.name)
     print(p2.policy.name)
