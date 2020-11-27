@@ -16,7 +16,7 @@ jobs:
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 200
-      DECK_LIST: "4"
+      DECK_LIST: "5"
       NODE_NUM: 100
       OPPONENT_TYPE: "OM"
     runs-on: ubuntu-latest
