@@ -10,15 +10,15 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: 2020_11_26_001.pth
-      O_MODEL_NAME: 2020_11_26_001.pth
+      MODEL_NAME: 2020_11_30_001.pth
+      O_MODEL_NAME: 2020_11_30_001.pth
       PLAYER_TYPES_A: "29,2"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 200
-      DECK_LIST: "5"
-      NODE_NUM: 100
-      OPPONENT_TYPE: "OM"
+      DECK_LIST: "0,4"
+      NODE_NUM: 40
+      OPPONENT_TYPE: "Aggro"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
