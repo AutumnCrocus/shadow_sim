@@ -18,7 +18,7 @@ jobs:
       N: 200
       DECK_LIST: "0,4"
       NODE_NUM: 40
-      OPPONENT_TYPE: "Aggro"
+      OPPONENT_TYPE: "Greedy"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
