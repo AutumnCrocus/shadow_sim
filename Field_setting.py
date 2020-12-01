@@ -1477,6 +1477,7 @@ class Field:
                     regal_targets = [hand_id -1 if itself_index<hand_id else hand_id for hand_id, hand_card in enumerate(self.players[player_num].hand)
                                      if hand_id!= itself_index and regulation_func(hand_card)]
                     if with_ids:
+                        player = self.players[player_num]
                         hand_len = len(player.hand)
                         target_card_ids = [(1000*(Card_Category[player.hand[hand_id].card_category].value-1)+\
                                             player.hand[hand_id].card_id+500,0) for hand_id in range(hand_len)

@@ -345,8 +345,8 @@ def multi_battle(episode_data):
 import itertools
 
 def multi_train(data):
-    net, memory, batch_size, iteration_num, train_ids,p_num = data
-    optimizer =  optim.AdamW(net.parameters(), weight_decay=weight_decay)
+    net, memory, batch_size, iteration_num, train_ids,p_num,current_weight_decay = data
+    optimizer =  optim.AdamW(net.parameters(), weight_decay=current_weight_decay)
     all_loss, MSE, CEE = 0, 0, 0
 
     all_states, all_actions, all_rewards = memory
@@ -520,20 +520,24 @@ def run_main():
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
-        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
-                    ,mulligan=Min_cost_mulligan_policy())
-        #p1 = Player(9, True, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
+        if epoch == 0:
+            p1 = Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy())
+            p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy())
+        else:
+            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
+                        ,mulligan=Min_cost_mulligan_policy())
+            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
+                        ,mulligan=Min_cost_mulligan_policy())
+
         p1.name = "Alice"
-        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
-                    ,mulligan=Min_cost_mulligan_policy())
-        #p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
         p2.name = "Bob"
         manager = Manager()
         shared_value = manager.Value("i",0)
         #iter_data = [[p1, p2,shared_value,single_iter,i] for i in range(double_p_size)]
-        iter_data = [[p1, p2, shared_value, episode_len, i] for i in range(p_size)]
+        current_p_size = p_size if epoch != 0 else 4
+        iter_data = [[p1, p2, shared_value, episode_len, i] for i in range(current_p_size)]
         freeze_support()
-        pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+        pool = Pool(current_p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_preparation, iter_data)
         print("\n" * (p_size+1))
         pool.terminate()  # add this.
@@ -603,121 +607,103 @@ def run_main():
             all_data_ids = list(range(memory_len))
             train_ids = random.sample(all_data_ids, k=int(memory_len * 0.85))
             test_ids =list(set(all_data_ids)-set(train_ids))
-            iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
-                         for i in range(p_size)]
-            freeze_support()
+            min_loss = [0,100,100,100]
+            best_train_data = [100,100,100]
+            next_nets = [copy.deepcopy(net) for k in range(4)]
+            for weight_scale in range(4):
+                target_net = next_nets[weight_scale]
+                target_net.train()
+                iter_data = [[target_net,all_data,batch,iteration//p_size,train_ids,i,10**(-weight_scale)]
+                             for i in range(p_size)]
+                #iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
+                #            for i in range(p_size)]
+                freeze_support()
 
-            pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
-            loss_data = pool.map(multi_train, iter_data)
-            pool.terminate()  # add this.
-            pool.close()  # add this.
-            print("\n" * p_size)
-            #imap = pool.imap(multi_train, iter_data)
-            #loss_data = list(tqdm(imap, total=p_size))
-            #[(1,1,1),(),()]
-            sum_of_loss = sum(map(lambda data: data[0], loss_data))
-            sum_of_MSE = sum(map(lambda data: data[1], loss_data))
-            sum_of_CEE = sum(map(lambda data: data[2], loss_data))
-            train_objective_loss = sum_of_loss / iteration
-            train_MSE = sum_of_MSE / iteration
-            train_CEE = sum_of_CEE / iteration
-            print("AVE | Over_All_Loss(train): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
-                  .format(train_objective_loss, train_MSE, train_CEE))
+                pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+                loss_data = pool.map(multi_train, iter_data)
+                pool.terminate()  # add this.
+                pool.close()  # add this.
+                print("\n" * p_size)
+                #imap = pool.imap(multi_train, iter_data)
+                #loss_data = list(tqdm(imap, total=p_size))
+                #[(1,1,1),(),()]
+                sum_of_loss = sum(map(lambda data: data[0], loss_data))
+                sum_of_MSE = sum(map(lambda data: data[1], loss_data))
+                sum_of_CEE = sum(map(lambda data: data[2], loss_data))
+                train_objective_loss = sum_of_loss / iteration
+                train_MSE = sum_of_MSE / iteration
+                train_CEE = sum_of_CEE / iteration
+                print("AVE | Over_All_Loss(train): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+                      .format(train_objective_loss, train_MSE, train_CEE))
             #all_states, all_actions, all_rewards = all_data
-            test_ids_len = len(test_ids)
-            separate_num = test_ids_len
-            test_objective_loss = 0
-            test_MSE = 0
-            test_CEE = 0
-            states_keys = tuple(all_states.keys())
-            value_keys = tuple(all_states['values'].keys())
-            normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
-            action_code_keys = tuple(all_states['detailed_action_codes'].keys())
-            net.eval()
-            for i in tqdm(range(separate_num)):
-                key = [test_ids[i]]
-                states = {}
-                states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
-                states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
-                                    for sub_key in value_keys}
-                states['detailed_action_codes'] = {
-                    sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
-                    for sub_key in action_code_keys}
-                orig_before_states = all_states["before_states"]
-                states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
-                                           normal_states_keys}
-                states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
-                                                     for sub_key in value_keys}
-                """
-                states = {}
-                for dict_key in states_keys:
-                    if dict_key == 'values':
-                        states['values'] = {}
-                        for sub_key in value_keys:
-                            states['values'][sub_key] = all_states['values'][sub_key][key]
-                    elif dict_key == 'detailed_action_codes':
-                        states['detailed_action_codes'] = {}
-                        for sub_key in action_code_keys:
-                            states['detailed_action_codes'][sub_key] = \
-                                all_states['detailed_action_codes'][sub_key][key]
-                    elif dict_key == 'before_states':
-                        orig_before_states = all_states["before_states"]
-                        before_states = {}
-                        for dict_key in states_keys:
-                            if dict_key == 'values':
-                                before_states['values'] = {}
-                                for sub_key in value_keys:
-                                    before_states['values'][sub_key] = \
-                                        torch.clone(orig_before_states['values'][sub_key][key])
-                                    # states['values'][sub_key].grad=None
-                            elif dict_key == 'detailed_action_codes' or dict_key == "before_states":
-                                pass
-                            else:
-                                before_states[dict_key] = torch.clone(orig_before_states[dict_key][key])
-                        states["before_states"] = before_states
-                    else:
-                        states[dict_key] = all_states[dict_key][key]
-                """
+                test_ids_len = len(test_ids)
+                separate_num = test_ids_len
+                test_objective_loss = 0
+                test_MSE = 0
+                test_CEE = 0
+                states_keys = tuple(all_states.keys())
+                value_keys = tuple(all_states['values'].keys())
+                normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
+                action_code_keys = tuple(all_states['detailed_action_codes'].keys())
+                target_net.eval()
+                for i in tqdm(range(separate_num)):
+                    key = [test_ids[i]]
+                    states = {}
+                    states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+                    states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
+                                        for sub_key in value_keys}
+                    states['detailed_action_codes'] = {
+                        sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                        for sub_key in action_code_keys}
+                    orig_before_states = all_states["before_states"]
+                    states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
+                                               normal_states_keys}
+                    states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
+                                                         for sub_key in value_keys}
+                    actions = all_actions[key]
+                    rewards = all_rewards[key]
+                    states['target'] = {'actions': actions, 'rewards': rewards}
+                    torch.cuda.empty_cache()
+                    _, v, loss = target_net(states, target=True)
+                    if float(torch.std(v)) < 0.01:
+                        assert False,"all same output!!!\n {}".format(v)
+                    test_objective_loss += float(loss[0].item())
+                    test_MSE += float(loss[1].item())
+                    test_CEE += float(loss[2].item())
+                    del loss
+                    
+                print("")
 
-                actions = all_actions[key]
-                rewards = all_rewards[key]
-                states['target'] = {'actions': actions, 'rewards': rewards}
-                torch.cuda.empty_cache()
-                _, v, loss = net(states, target=True)
-                if float(torch.std(v)) < 0.01:
-                    assert False,"all same output!!!\n {}".format(v)
-                test_objective_loss += float(loss[0].item())
-                test_MSE += float(loss[1].item())
-                test_CEE += float(loss[2].item())
-                del loss
-            print("")
+                separate_num = max(1, separate_num)
+
+                test_objective_loss /= separate_num
+                test_MSE /= separate_num
+                test_CEE /= separate_num
+                pass_flg = test_objective_loss > loss_th
+                print("AVE | Over_All_Loss(test ): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
+                      .format(test_objective_loss, test_MSE, test_CEE))
+                print(test_MSE, separate_num)
+                if min_loss[1] > test_objective_loss:
+                    min_loss = [weight_scale,test_objective_loss,test_MSE, test_CEE]
+                    best_train_data = [train_objective_loss, train_MSE, train_CEE]
+            print("best_data:",min_loss)
+            writer.add_scalars(LOG_PATH+'Over_All_Loss', {'train': best_train_data[0],
+                                                'test': min_loss[1]
+                                                }, epoch)
+            writer.add_scalars(LOG_PATH+'MSE', {'train': best_train_data[1],
+                                                'test': min_loss[2]
+                                                }, epoch)
+            writer.add_scalars(LOG_PATH+'CEE', {'train': best_train_data[2],
+                                                'test': min_loss[3]
+                                                }, epoch)
+            net = next_nets[min_loss[0]]
+            loss_history.append(sum_of_loss / iteration)
+            p_size = cpu_num
             del actions
             del all_data
             del all_states
             del all_actions
             del all_rewards
-            separate_num = max(1, separate_num)
-
-            test_objective_loss /= separate_num
-            test_MSE /= separate_num
-            test_CEE /= separate_num
-            pass_flg = test_objective_loss > loss_th
-            print("AVE | Over_All_Loss(test ): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
-                  .format(test_objective_loss, test_MSE, test_CEE))
-            print(test_MSE, separate_num)
-
-            writer.add_scalars(LOG_PATH+'Over_All_Loss', {'train': train_objective_loss,
-                                                'test': test_objective_loss
-                                                }, epoch)
-            writer.add_scalars(LOG_PATH+'MSE', {'train': train_MSE,
-                                                'test': test_MSE
-                                                }, epoch)
-            writer.add_scalars(LOG_PATH+'CEE', {'train': train_CEE,
-                                                'test': test_CEE
-                                                }, epoch)
-
-            loss_history.append(sum_of_loss / iteration)
-            p_size = cpu_num
 
         else:
             prev_optimizer = copy.deepcopy(optimizer)
