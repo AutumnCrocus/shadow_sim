@@ -2536,8 +2536,13 @@ class Information_Set_MCTSPolicy():
             self.field = field
             node = self.tree_policy(starting_node, player_num=player_num)
             value = self.default_policy(node, player_num=player_num)
+            
+            if abs(value) == 1: 
+                value = (2*value-1)*self.iteration
+                
             self.back_up(node, value, player_num=player_num)
-            if value == 1: break
+            if value >= 1:
+                break
             if starting_node.max_child_visit_num[0] is not None \
                     and starting_node.max_child_visit_num[1] is not None:
                 if starting_node.max_child_visit_num[1].visit_num - \
@@ -2548,9 +2553,9 @@ class Information_Set_MCTSPolicy():
                 if starting_node.max_child_visit_num[1].visit_num > int(self.iteration / 2):
                     break
 
-        _, move = self.execute_best(self.current_node, player_num=player_num)
+        #_, move = self.execute_best(self.current_node, player_num=player_num)
 
-        return move
+        return# move
 
     def tree_policy(self, node, player_num=0):
 
@@ -3650,7 +3655,8 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
     def default_policy(self, node, player_num=0):
         sum_of_value = 0
         if node.finite_state_flg:
-            return self.state_value(node.field, player_num=self.main_player_num)
+            return self.state_value(node.field, player_num=player_num)
+            #return self.state_value(node.field, player_num=self.main_player_num)
         end_count = 0
         current_field = Field_setting.Field(5)
         opponent_player_num = 1 - self.main_player_num
@@ -3678,10 +3684,12 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
                 opponent_deck.shuffle()
                 opponent.draw(opponent_deck, hand_len + 1)
             self.simulate_playout(current_field, player_num=1 - self.main_player_num)
-            sum_of_value += self.state_value(current_field, player_num=self.main_player_num)
+            sum_of_value += 1-self.state_value(current_field, player_num=1 - self.main_player_num)
+            #self.state_value(current_field, player_num=1 - self.main_player_num)
+            #sum_of_value += self.state_value(current_field, player_num=self.main_player_num)
         if node.parent_node.node_id_2_edge_action[id(node)][0] == Action_Code.TURN_END.value:
             if len(node.parent_node.edge_action_2_node_id) > 1:
-                sum_of_value /= 10
+                sum_of_value = sum_of_value if player_num != self.main_player_num else sum_of_value/10
         return sum_of_value / self.default_iteration
 
     def simulate_playout(self, current_field, player_num=0):
@@ -5400,7 +5408,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
                         mylogger.info("{:<60}:{:.3%}".format(txt, pai[action_code_id]))
             mylogger.info("current node data")
-            self.prev_node.print_tree(single=True)
+            self.prev_node.print_tree()
             """
             mylogger.info("state_detail")
 
@@ -5435,6 +5443,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
     def default_policy(self, node, player_num=0):
         value = self.state_value(node, player_num)
+        value = 1- value if self.main_player_num != player_num else value
         return value
 
     def state_value(self, node, player_num):
@@ -5595,7 +5604,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         action_code = node.node_id_2_edge_action[id(child_node)]#(action_category,play_id,target)
         action_id = Action_Code.TURN_END.value
         if len(node.child_actions) > 1 and action_code[0] == 0:
-            return -1
+            return - (2*int( player_num == self.main_player_num)-1)
         action_id = action_code[1]+ self.action_2_action_code_dict[action_code[0]]
         action_id = action_id + 4*action_code[1]+action_code[2] if action_code[0] == Action_Code.ATTACK_TO_FOLLOWER.value \
             else action_id

@@ -534,10 +534,9 @@ def run_main():
         manager = Manager()
         shared_value = manager.Value("i",0)
         #iter_data = [[p1, p2,shared_value,single_iter,i] for i in range(double_p_size)]
-        current_p_size = p_size if epoch != 0 else 4
-        iter_data = [[p1, p2, shared_value, episode_len, i] for i in range(current_p_size)]
+        iter_data = [[p1, p2, shared_value, episode_len, i] for i in range(p_size)]
         freeze_support()
-        pool = Pool(current_p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+        pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
         memory = pool.map(multi_preparation, iter_data)
         print("\n" * (p_size+1))
         pool.terminate()  # add this.
@@ -610,10 +609,12 @@ def run_main():
             min_loss = [0,100,100,100]
             best_train_data = [100,100,100]
             next_nets = [copy.deepcopy(net) for k in range(4)]
+            iteration_num = (int(memory_len * 0.85) // batch)*iteration
             for weight_scale in range(4):
                 target_net = next_nets[weight_scale]
                 target_net.train()
-                iter_data = [[target_net,all_data,batch,iteration//p_size,train_ids,i,10**(-weight_scale)]
+                print("weight_decay:",10**(-weight_scale))
+                iter_data = [[target_net,all_data,batch,iteration_num//p_size,train_ids,i,10**(-weight_scale)]
                              for i in range(p_size)]
                 #iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
                 #            for i in range(p_size)]
@@ -630,9 +631,9 @@ def run_main():
                 sum_of_loss = sum(map(lambda data: data[0], loss_data))
                 sum_of_MSE = sum(map(lambda data: data[1], loss_data))
                 sum_of_CEE = sum(map(lambda data: data[2], loss_data))
-                train_objective_loss = sum_of_loss / iteration
-                train_MSE = sum_of_MSE / iteration
-                train_CEE = sum_of_CEE / iteration
+                train_objective_loss = sum_of_loss / iteration_num
+                train_MSE = sum_of_MSE / iteration_num
+                train_CEE = sum_of_CEE / iteration_num
                 print("AVE | Over_All_Loss(train): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                       .format(train_objective_loss, train_MSE, train_CEE))
             #all_states, all_actions, all_rewards = all_data
@@ -950,7 +951,7 @@ def run_main():
                                               'min': min_WR,
                                               'threthold': th
                                               }, epoch)
-        if WR < th and min_WR < 0.5:
+        if WR < th and min_WR <= 0.5:
             net = prev_net
             #th = max(0.5,th*0.95)
             print("new_model lose... WR:{:.1%}".format(WR))
