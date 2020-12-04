@@ -10,13 +10,13 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: 2020_12_03_001.pth
-      O_MODEL_NAME: 2020_12_03_001.pth
+      MODEL_NAME: 2020_12_04_001.pth
+      O_MODEL_NAME: 2020_12_04_001.pth
       PLAYER_TYPES_A: "29,2"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 100
-      DECK_LIST: "4"
+      DECK_LIST: "5"
       NODE_NUM: 80
       OPPONENT_TYPE: "OM"
     runs-on: ubuntu-latest
