@@ -5453,7 +5453,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         node_player_num = node.parent_node.player_num if node.parent_node is not None and node.player_num != node.parent_node.player_num\
                             else node.player_num
         field = node.field
-        player = field.players[self.main_player_num]
+        player = field.players[node_player_num]
         if field.check_game_end():
             value = int(player.life > 0 and not player.lib_out_flg)
             node.state_value = value
