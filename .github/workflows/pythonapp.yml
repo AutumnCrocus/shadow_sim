@@ -16,9 +16,9 @@ jobs:
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 100
-      DECK_LIST: "5"
+      DECK_LIST: "0,4,5"
       NODE_NUM: 80
-      OPPONENT_TYPE: "OM"
+      OPPONENT_TYPE: "Aggro"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
