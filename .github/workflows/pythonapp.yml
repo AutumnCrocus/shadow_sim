@@ -15,10 +15,10 @@ jobs:
       PLAYER_TYPES_A: "29,2"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
-      N: 400
-      DECK_LIST: "4"
+      N: 100
+      DECK_LIST: "0,4,5"
       NODE_NUM: 80
-      OPPONENT_TYPE: "NR_OM"
+      OPPONENT_TYPE: "Aggro"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
