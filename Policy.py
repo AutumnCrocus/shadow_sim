@@ -3921,9 +3921,13 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
         action_2_node.update({key: [] for key in actions_set})
         action_uct_values = {key: [] for key in actions_set}
         [action_2_node[action].append(children[action_id]) for action_id,action in enumerate(actions)]
-        [[action_uct_values[action].append(int(action[0] != 0)*(target_node.value / max(1, target_node.visit_num) +\
-                        (target_node.visit_num / max(1, node.visit_num))**2)) for target_node in action_2_node[action]]\
+        
+        [[action_uct_values[action].append(int(action[0] != 0)*(target_node.value / max(1, target_node.visit_num)))\
+                        for target_node in action_2_node[action]]\
                                 for action in actions_set]
+        #[[action_uct_values[action].append(int(action[0] != 0)*(target_node.value / max(1, target_node.visit_num) +\
+        #                (target_node.visit_num / max(1, node.visit_num))**2)) for target_node in action_2_node[action]]\
+        #                        for action in actions_set]
         max_value = -2
         max_value_action = (0, 0, 0)
         max_value,max_value_action = max([(sum(action_uct_values[action])/len(action_uct_values[action]),action) \
@@ -3933,88 +3937,6 @@ class Opponent_Modeling_ISMCTSPolicy(Information_Set_MCTSPolicy):
 
         max_value_node = random.choice(action_2_node[max_value_action]) if max_value_action != (0,0,0) else None
         return max_value_node, max_value_action
-
-    """
-    def best(self, node, player_num=0):
-        children = node.child_nodes
-        action_uct_values = {}
-        action_2_node = {}
-        more_than_one = len(node.edge_action_2_node_id) > 1
-        for child in children:
-            action = node.node_id_2_edge_action[id(child)]
-            if action not in action_uct_values:
-                action_uct_values[action] = []
-            if action not in action_2_node:
-                action_2_node[action] = []
-            if action == (0,0,0) and more_than_one:
-                value = -1
-            else:
-                value = self.uct(child, node, player_num=player_num)
-            action_uct_values[action].append(value)
-            action_2_node[action].append(child)
-        max_value = None
-        max_value_action = None
-        for key in list(action_uct_values.keys()):
-            values = action_uct_values[key]
-            weights = [cell.visit_num for cell in action_2_node[key]]
-            visit_num_sum = sum(weights)
-            value_len = len(values)
-            mean_value = sum([values[node_id] * (weights[node_id] / visit_num_sum) for node_id in range(value_len)])
-            if max_value is None or mean_value > max_value:
-                max_value = mean_value
-                max_value_action = key
-        # weights = [cell.visit_num for cell in action_2_node[max_value_action]]
-        # max_value_node = random.choices(action_2_node[max_value_action], weights=weights)[0]
-        max_value_node = random.choices(action_2_node[max_value_action])[0]
-        return max_value_node, max_value_action
-    
-
-    def execute_best(self, node, player_num=0):
-        children = node.child_nodes
-        if len(children) == 0:
-            return node, (Action_Code.TURN_END.value, "no children", 0)
-        action_uct_values = {}
-        action_2_node = {}
-        for child in children:
-            action = node.node_id_2_edge_action[id(child)]
-            if action not in action_uct_values:
-                action_uct_values[action] = []
-            if action not in action_2_node:
-                action_2_node[action] = []
-            if action == (0,0,0) and len(node.edge_action_2_node_id) > 1:
-                action_uct_values[action].append(0)
-                action_2_node[action].append(child)
-                continue
-            if child.finite_state_flg and child.field.check_game_end():
-                player = child.field.players[player_num]
-                if player.life <= 0 or player.lib_out_flg:
-                    action_uct_values[action].append(0)
-                else:
-                    action_uct_values[action].append(100)
-            else:
-                action_uct_values[action].append(child.value/child.visit_num)
-            action_2_node[action].append(child)
-        max_value = None
-        max_value_action = None
-        #if len(action_uct_values) == 0:
-        #    return node, (Action_Code.ERROR.value, 0, 0)
-        for key in list(action_uct_values.keys()):
-            values = action_uct_values[key]
-            weights = [cell.visit_num for cell in action_2_node[key]]
-            visit_num_sum = sum(weights)
-            # mean_value = sum(values)/len(values)
-            value_len = len(values)
-            mean_value = sum([values[node_id] * (weights[node_id] / visit_num_sum) for node_id in range(value_len)])
-            if max_value is None or mean_value > max_value:
-                max_value = mean_value
-                max_value_action = key
-        assert max_value_action is not None, "action is None!"
-        # weights = [cell.visit_num for cell in action_2_node[max_value_action]]
-        # max_value_node = random.choices(action_2_node[max_value_action], weights=weights)[0]
-        #max_value_node = random.choices(action_2_node[max_value_action])[0]
-        max_value_node = random.choice(action_2_node[max_value_action])
-        return max_value_node, max_value_action
-    """
 
     def uct(self, child_node, node, player_num=0):
         over_all_n = node.visit_num
@@ -5500,9 +5422,13 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         action_2_node.update({key: [] for key in actions_set})
         action_uct_values = {key: [] for key in actions_set}
         [action_2_node[action].append(children[action_id]) for action_id,action in enumerate(actions)]
-        [[action_uct_values[action].append(int(action[0] != 0)*(target_node.value / max(1, target_node.visit_num) +\
-                        (target_node.visit_num / max(1, node.visit_num))**2)) for target_node in action_2_node[action]]\
+        
+        [[action_uct_values[action].append(int(action[0] != 0)*(target_node.value / max(1, target_node.visit_num)))\
+                                           for target_node in action_2_node[action]]\
                                 for action in actions_set]
+        #[[action_uct_values[action].append(int(action[0] != 0)*(target_node.value / max(1, target_node.visit_num) +\
+        #                (target_node.visit_num / max(1, node.visit_num))**2)) for target_node in action_2_node[action]]\
+        #                        for action in actions_set]
         """
         for child in children:
             action = node_id_2_dict[id(child)]
@@ -5603,8 +5529,11 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         exploitation_value = (2*int( player_num == self.main_player_num)-1)*(w / (n + epsilon))
         action_code = node.node_id_2_edge_action[id(child_node)]#(action_category,play_id,target)
         action_id = Action_Code.TURN_END.value
-        if len(node.child_actions) > 1 and action_code[0] == 0:
+
+        if len(node.child_actions) > 1 and action_code[0] == 0 and node.visit_num >= 5:
             return - (2*int( player_num == self.main_player_num)-1)
+        #if len(node.child_actions) > 1 and action_code[0] == 0:
+        #    return - (2*int( player_num == self.main_player_num)-1)
         action_id = action_code[1]+ self.action_2_action_code_dict[action_code[0]]
         action_id = action_id + 4*action_code[1]+action_code[2] if action_code[0] == Action_Code.ATTACK_TO_FOLLOWER.value \
             else action_id
@@ -5623,9 +5552,10 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             action_id = 40 + action_code[1]
         """
 
-        probability = node.pai[action_id] + 1e-2
-        exploration_value = c * probability * (np.sqrt(over_all_n) / ((1 + n)**2))
-
+        probability = node.pai[action_id] + 1e-5
+        #exploration_value = c * probability * (np.sqrt(over_all_n) / ((n + epsilon)**2))
+        exploration_value = np.sqrt(np.log(over_all_n) / (2*(n + 1)))
+        exploration_value += c * probability / (n+1)
         value = exploitation_value + exploration_value
         child_node.uct = value
 
