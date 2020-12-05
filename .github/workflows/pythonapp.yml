@@ -12,10 +12,10 @@ jobs:
     env:
       MODEL_NAME: 2020_12_05_001.pth
       O_MODEL_NAME: 2020_12_05_001.pth
-      PLAYER_TYPES_A: "24,2"
+      PLAYER_TYPES_A: "24,17"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
-      N: 1000
+      N: 200
       DECK_LIST: "0"
       NODE_NUM: 40
       OPPONENT_TYPE: "OM"
