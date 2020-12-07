@@ -5655,7 +5655,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
     def state_value(self, field, player_num):
         player = field.players[player_num]
         if field.check_game_end():
-            return int(player.life > 0 and not player.lib_out_flg)
+            return [[1/45]*45],int(player.life > 0 and not player.lib_out_flg)
         states = self.get_data(field, player_num=player_num)
 
         before_states = self.origin_field_data
