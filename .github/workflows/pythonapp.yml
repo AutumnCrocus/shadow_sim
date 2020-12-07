@@ -15,7 +15,7 @@ jobs:
       PLAYER_TYPES_A: "28,1"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
-      N: 200
+      N: 4000
       DECK_LIST: "0"
       NODE_NUM: 40
       OPPONENT_TYPE: "OM"
