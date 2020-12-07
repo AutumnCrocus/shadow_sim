@@ -885,9 +885,10 @@ def creature_ability_100(field, player, opponent, virtual, target, itself):
     """
     Fanfare: Put 2 Analyzing Artifacts into your deck.
     """
-    cards = []
-    cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
-    cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
+    cards = [card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]),
+             card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"])]
+    #cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
+    #cards.append(card_setting.Creature(card_setting.creature_name_to_id["Analyzing Artifact"]))
     put_cards_into_deck(field, player, cards, virtual)
 
 
@@ -902,9 +903,10 @@ def creature_ability_102(field, player, opponent, virtual, target, itself):
     """
     Put 2 Radiant Artifacts into your deck.
     """
-    cards = []
-    cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
-    cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
+    cards = [card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]),
+             card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"])]
+    #cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
+    #cards.append(card_setting.Creature(card_setting.creature_name_to_id["Radiant Artifact"]))
     put_cards_into_deck(field, player, cards, virtual)
 
 

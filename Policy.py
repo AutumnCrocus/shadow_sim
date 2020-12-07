@@ -5566,11 +5566,13 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 class Dual_NN_GreedyPolicy(New_GreedyPolicy):
     def __init__(self, model_name=None, origin_model=None, cuda=False,node_num=100):
         super().__init__()
+
         self.policy_type = 2
         from Embedd_Network_model import New_Dual_Net, Detailed_State_data_2_Tensor
         self.net = None
         self.model_name = PATH
         self.cuda = False
+        self.pai=None
         device = "cpu"
         if model_name is not None:
             short_name = model_name.split(".pth")[0]
@@ -5597,6 +5599,10 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         self.state_convertor = Detailed_State_data_2_Tensor
         self.origin_field_data = None
         self.current_player_num = 0
+        self.action_2_action_code_dict = {Action_Code.PLAY_CARD.value:1,
+                                          Action_Code.ATTACK_TO_FOLLOWER.value:10,
+                                          Action_Code.ATTACK_TO_PLAYER.value:35,
+                                          Action_Code.EVOLVE.value:40,0:0}
 
     def decide(self, player, opponent, field):
 
@@ -5613,8 +5619,11 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         max_value_action = (0, 0, 0)
         max_state_value = -np.inf
 
+        pai,_ = self.state_value(starting_field, player_num)
+        w = 1/3
         if not field.secret:
             mylogger.info("able_actions:{}".format(able_actions))
+            mylogger.info("pai:{}".format(pai))
         for action in able_actions:
             sim_field = Field_setting.Field(5)
             sim_field.set_data(starting_field)
@@ -5624,9 +5633,17 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
                 sim_player = sim_field.players[player_num]
                 sim_opponent = sim_field.players[1 - player_num]
                 sim_player.execute_action(sim_field, sim_opponent, action_code=action, virtual=True)
-            value = self.state_value(sim_field, player_num)
+
+            action_id = action[1] + self.action_2_action_code_dict[action[0]]
+            if action[0] == Action_Code.ATTACK_TO_FOLLOWER.value:
+                action_id = action_id + 4 * action[1] + action[2]
+            else:
+                pass
+            _,value = self.state_value(sim_field, player_num)
+            current_pai = float(pai[0][action_id])
             if not field.secret:
-                mylogger.info("action:{},state_value:{:.3f}".format(action, value))
+                mylogger.info("action:{},state_value:{:.3f} pai:{:6.2%}".format(action, value,current_pai))
+            value += w * current_pai
             if value > max_state_value:
                 max_value_action = action
                 max_state_value = value
@@ -5651,7 +5668,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         pai, value = self.net(states)
         out_value = float(value[0])
 
-        return out_value
+        return pai,out_value
 
     def get_data(self,f,player_num = 0):
         tmp = Game_setting.get_data(f,player_num=player_num)

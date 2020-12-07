@@ -58,6 +58,7 @@ parser.add_argument('--max_update_interval', help='max_update_interval',default=
 parser.add_argument('--limit_OMP',help="limit OMP_NUM_THREADS for quadro",default=False,type=bool)
 parser.add_argument('--OMP_NUM', help='num of threads used in OMP',default=0,type=int)
 parser.add_argument('--loss_th', help='accepted test loss limit',default=10,type=int)
+parser.add_argument('--supervised', help='if model use other model')
 args = parser.parse_args()
 
 deck_flg = args.fixed_deck_ids#list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
@@ -520,10 +521,16 @@ def run_main():
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
-        if epoch == 0:
-            p1 = Player(9, True, policy=Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy())
-            p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy(), mulligan=Min_cost_mulligan_policy())
+        if epoch == 0 and args.supervised is not None:
+            episode_len = 256
+            if args.supervised == "Random":
+                supervise_policy = [RandomPolicy(), RandomPolicy()]
+            else:
+                supervise_policy = [New_GreedyPolicy(), New_GreedyPolicy()]
+            p1 = Player(9, True, policy=supervise_policy[0], mulligan=Min_cost_mulligan_policy())
+            p2 = Player(9, False, policy=supervise_policy[1], mulligan=Min_cost_mulligan_policy())
         else:
+            episode_len = args.episode_num
             p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
                         ,mulligan=Min_cost_mulligan_policy())
             p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
@@ -951,21 +958,13 @@ def run_main():
                                               'min': min_WR,
                                               'threthold': th
                                               }, epoch)
-        if WR < th and min_WR <= 0.5:
-            net = prev_net
-            #th = max(0.5,th*0.95)
-            print("new_model lose... WR:{:.1%}".format(WR))
-            #batch_size = 2**random.randint(2,7)
-            #iteration = int(args.iteration_num * (args.batch_size/batch_size))
-            #print("next: batch_size: {} itearation_num:{}".format(batch_size,iteration))
-            
-        else:
-            #th = 0.55
+        if WR >= th or (len(deck_flg) > 1 and min_WR > 0.5):
             win_flg = True
             print("new_model win! WR:{:.1%} min:{:.1%}".format(WR,min_WR))
-            #batch_size = args.batch_size
-            #iteration = args.iteration_num
-        #writer.add_scalar(LOG_PATH + 'WR', WR, epoch)
+        else:
+            net = prev_net
+            print("new_model lose... WR:{:.1%}".format(WR))
+
 
 
 
@@ -976,11 +975,9 @@ def run_main():
         print(t4-t3)
         # or (epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num)
         if win_flg:
-            PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_{}nodes_W.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                                 t1.second, epoch+1,epoch_num,node_num)
+            PATH = "model/{}_{}_{}in{}_{}_nodes.pth".format(t1.month, t1.day, epoch+1,epoch_num,node_num)
             if torch.cuda.is_available() and cuda_flg:
-                PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_{}_{}_W_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                                        t1.second, epoch + 1 , epoch_num)
+                PATH = "model/{}_{}_{}in{}_{}_nodes_cuda.pth".format(t1.month, t1.day, epoch+1,epoch_num,node_num)
             torch.save(net.state_dict(), PATH)
             print("{} is saved.".format(PATH))
             last_updated = 0
@@ -1002,11 +999,9 @@ def run_main():
     writer.close()
     print('Finished Training')
 
-    PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_all_{}nodes.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                         t1.second,node_num)
+    PATH = "model/{}_{}_finished_{}_nodes.pth".format(t1.month, t1.day,node_num)
     if torch.cuda.is_available() and cuda_flg:
-        PATH = "model/Multi_Dual_{}_{}_{}_{}_{}_{}_all_cuda.pth".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                             t1.second)
+        PATH = "model/{}_{}_finished_{}_nodes_cuda.pth".format(t1.month, t1.day,node_num)
     torch.save(net.state_dict(), PATH)
     print("{} is saved.".format(PATH))
     t2 = datetime.datetime.now()

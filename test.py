@@ -1760,12 +1760,11 @@ if __name__ == '__main__':
             d1 = copy.deepcopy(Players[a])
         if b == -1:#args.playertype2 == '0':
             d2 = HumanPlayer(9, first=True)
-
         else:
             d2 = copy.deepcopy(Players[b])
+        mylogger.info("d1:{}".format(d1.policy.name))
 
-        mylogger.info("d1:{}".format(d1.policy))
-        mylogger.info("d2:{}".format(d2.policy))
+        mylogger.info("d2:{}".format(d2.policy.name))
         #p1 = int(args.decktype1)
         #p2 = int(args.decktype2)
         p1, p2 = map(int, args.decktypes.split(","))
