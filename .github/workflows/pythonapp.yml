@@ -12,7 +12,7 @@ jobs:
     env:
       MODEL_NAME: 12_5_5in100_40_nodes_cuda.pth
       O_MODEL_NAME: 12_5_5in100_40_nodes_cuda.pth
-      PLAYER_TYPES_A: "29,28"
+      PLAYER_TYPES_A: "28,1"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 200
