@@ -12,10 +12,10 @@ jobs:
     env:
       MODEL_NAME: 12_7_1in128_40_nodes.pth
       O_MODEL_NAME: 12_7_1in128_40_nodes.pth
-      PLAYER_TYPES_A: "29,24"
+      PLAYER_TYPES_A: "29,13"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
-      N: 400
+      N: 200
       DECK_LIST: "10"
       NODE_NUM: 40
       OPPONENT_TYPE: "OM"
