@@ -1658,6 +1658,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', help='実行モード、demoで対戦画面表示,policyでdecktype固定で各AIタイプの組み合わせで対戦')
     parser.add_argument('--cProfile')
     parser.add_argument('--node_num',default=100,type=int)
+    parser.add_argument('--step_iteration',default=100,type=int)
     args = parser.parse_args()
     mylogger.info("args:{}".format(args))
     step_num = 100
@@ -1706,13 +1707,13 @@ if __name__ == '__main__':
                 Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=origin_model,node_num=node_num), mulligan=Min_cost_mulligan_policy()))  # 28
             Players.append(
                 Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=origin_model,\
-                                                                               cuda=cuda,node_num=node_num), mulligan=Min_cost_mulligan_policy())) # 29
+                                                                               cuda=cuda,node_num=node_num,iteration=args.step_iteration), mulligan=Min_cost_mulligan_policy())) # 29
         else:
             Players.append(
                 Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name,node_num=node_num), mulligan=Min_cost_mulligan_policy()))  # 28
             Players.append(
                 Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name,\
-                                                                               cuda=cuda,node_num=node_num), mulligan=Min_cost_mulligan_policy())) # 29
+                                                                               cuda=cuda,node_num=node_num,iteration=args.step_iteration), mulligan=Min_cost_mulligan_policy())) # 29
 
     # assert False
     n = 100

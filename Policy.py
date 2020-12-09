@@ -2537,8 +2537,8 @@ class Information_Set_MCTSPolicy():
             node = self.tree_policy(starting_node, player_num=player_num)
             value = self.default_policy(node, player_num=player_num)
             
-            if abs(value) == 1: 
-                value = (2*value-1)*self.iteration
+            if value in [0,1]:
+                value = (2*int(self.main_player_num==node.player_num)-1)*self.iteration
                 
             self.back_up(node, value, player_num=player_num)
             if value >= 1:
@@ -5281,7 +5281,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         self.state_convertor = Detailed_State_data_2_Tensor
         self.policy_type = 4
         self.cuda = cuda
-        self.iteration = 200
+        self.iteration = iteration
         self.action_2_action_code_dict = {Action_Code.PLAY_CARD.value:1,
                                           Action_Code.ATTACK_TO_FOLLOWER.value:10,
                                           Action_Code.ATTACK_TO_PLAYER.value:35,
@@ -5291,6 +5291,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
     def decide(self, player, opponent, field):
         self.origin_field_data = field.before_observable_fields
+        self.main_player_num = player.player_num
         action = super().decide(player,opponent, field)
         if not field.secret and self.prev_node is not None:
             pai = self.prev_node.pai
@@ -5531,7 +5532,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         action_id = Action_Code.TURN_END.value
 
         if len(node.child_actions) > 1 and action_code[0] == 0 and node.visit_num >= 5:
-            return - (2*int( player_num == self.main_player_num)-1)
+            return - 100*(2*int( player_num == self.main_player_num)-1)
         #if len(node.child_actions) > 1 and action_code[0] == 0:
         #    return - (2*int( player_num == self.main_player_num)-1)
         action_id = action_code[1]+ self.action_2_action_code_dict[action_code[0]]
