@@ -36,7 +36,7 @@ class Game:
                 break
         for player in f.players:
             policy = player.policy
-            if policy.policy_type == 3:
+            if policy.policy_type in [3,4]:
                 policy.current_node = None
                 policy.prev_node = None
 
@@ -78,7 +78,7 @@ class Game:
             assert accumulate_turn < 100,"infinite loop"
         for player in f.players:
             policy = player.policy
-            if policy.policy_type == 3:
+            if policy.policy_type in [3,4]:
                 policy.current_node = None
                 policy.prev_node = None
         #reward = int(target_player_num == 0)*(2*win-1) + 1 - win
@@ -113,7 +113,7 @@ class Game:
             #print("accumulate_turn:{}".format(accumulate_turn))
         for player in f.players:
             policy = player.policy
-            if policy.policy_type == 3:
+            if policy.policy_type in [3,4]:
                 policy.current_node = None
                 policy.prev_node = None
         #reward = win if target_player_num == 0 else lose

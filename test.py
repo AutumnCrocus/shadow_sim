@@ -188,10 +188,14 @@ def demo_game_play(Player1, Player2, D1, D2, win, lose, lib_num, virtual_flg=Fal
     f.players[1].deck = None
     f.players[1].lib_out_flg = False
     f.players[1].effect.clear()
-    if f.players[0].policy.policy_type == 3:
-        f.players[0].policy.current_node = None
-    if f.players[1].policy.policy_type == 3:
-        f.players[1].policy.current_node = None
+    if f.players[0].policy.policy_type in [3,4]:
+        policy = f.players[0].policy
+        policy.current_node = None
+        policy.prev_node = None
+    if f.players[1].policy.policy_type in [3,4]:
+        policy = f.players[1].policy
+        policy.current_node = None
+        policy.prev_node = None
 
     if deck_name_list is not None:
         f.play_cards.play_cards_set()
@@ -268,10 +272,14 @@ def demo_game_play_with_pairwise(Player1, Player2, D1, D2, win, lose, lib_num, v
     f.players[1].lib_out_flg = False
     f.players[1].effect.clear()
     f.play_cards.plain_play_cards_set()
-    if f.players[0].policy.policy_type == 3:
-        f.players[0].policy.current_node = None
-    if f.players[1].policy.policy_type == 3:
-        f.players[1].policy.current_node = None
+    if f.players[0].policy.policy_type in [3,4]:
+        policy = f.players[0].policy
+        policy.current_node = None
+        policy.prev_node = None
+    if f.players[1].policy.policy_type in [3,4]:
+        policy = f.players[1].policy
+        policy.current_node = None
+        policy.prev_node = None
     win_flg = [w, l]
     #for i in range(2):
     #    sorted_name_list = sorted(list(f.play_cards.plain_name_list[i].keys()))
