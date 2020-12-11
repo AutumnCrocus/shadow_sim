@@ -58,6 +58,7 @@ parser.add_argument('--max_update_interval', help='max_update_interval',default=
 parser.add_argument('--limit_OMP',help="limit OMP_NUM_THREADS for quadro",default=False,type=bool)
 parser.add_argument('--OMP_NUM', help='num of threads used in OMP',default=0,type=int)
 parser.add_argument('--loss_th', help='accepted test loss limit',default=10,type=int)
+parser.add_argument('--step_iter', help='MCTS_step_iteration',default=100,type=int)
 parser.add_argument('--supervised', help='if model use other model')
 args = parser.parse_args()
 
@@ -522,18 +523,18 @@ def run_main():
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
         if epoch == 0 and args.supervised is not None:
-            episode_len = 256
+            episode_len = 1000
             if args.supervised == "Random":
                 supervise_policy = [RandomPolicy(), RandomPolicy()]
-            else:
+            else: 
                 supervise_policy = [New_GreedyPolicy(), New_GreedyPolicy()]
             p1 = Player(9, True, policy=supervise_policy[0], mulligan=Min_cost_mulligan_policy())
             p2 = Player(9, False, policy=supervise_policy[1], mulligan=Min_cost_mulligan_policy())
         else:
             episode_len = args.episode_num
-            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
+            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
                         ,mulligan=Min_cost_mulligan_policy())
-            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
+            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
                         ,mulligan=Min_cost_mulligan_policy())
 
         p1.name = "Alice"
@@ -896,10 +897,10 @@ def run_main():
             WR = 0
             print("evaluation of this epoch is passed.")
         else:
-            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False)
+            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
                         ,mulligan=Min_cost_mulligan_policy())
             p1.name = "Alice"
-            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=False)
+            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=False,iteration=args.step_iter)
                         ,mulligan=Min_cost_mulligan_policy())
             p2.name = "Bob"
             test_deck_list = tuple(100,)  if deck_flg is None else deck_flg# (0,1,4,10,13)
