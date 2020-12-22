@@ -5383,9 +5383,13 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             return value#return 2*int(player.life > 0 and not player.lib_out_flg) - 1
 
         states = self.get_data(field, player_num=node_player_num)
-        before_states = self.origin_field_data[node_player_num]
-        before_states = [before_states]
-        before_states = self.state_convertor(before_states,cuda=self.cuda)
+        before_states = states
+        if node.parent_node is not None and node.player_num == node.parent_node.player_num:
+            before_states =  self.get_data(node.parent_node.field, player_num=node_player_num)
+        #self.origin_field_data[node_player_num]
+        #print(before_states)
+        #before_states = [before_states]
+        #before_states = self.state_convertor(before_states,cuda=self.cuda)
 
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])],cuda=self.cuda)

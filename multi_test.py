@@ -526,6 +526,8 @@ def run_main():
             episode_len = 1000
             if args.supervised == "Random":
                 supervise_policy = [RandomPolicy(), RandomPolicy()]
+            elif args.supervised == "Aggro":
+                supervise_policy = [AggroPolicy(), AggroPolicy()]
             else: 
                 supervise_policy = [New_GreedyPolicy(), New_GreedyPolicy()]
             p1 = Player(9, True, policy=supervise_policy[0], mulligan=Min_cost_mulligan_policy())
@@ -1040,7 +1042,7 @@ def check_score():
     G = Game()
     net.cpu()
     t3 = datetime.datetime.now()
-    p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg)
+    p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg,iteration=args.step_iter)
                 , mulligan=Min_cost_mulligan_policy())
     #p1 = Player(9, True, policy=AggroPolicy())
     p1.name = "Alice"
@@ -1056,6 +1058,8 @@ def check_score():
             p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=net))
         elif fixed_opponent == "Greedy":
             p2 = Player(9, False, policy=New_GreedyPolicy(), mulligan=Simple_mulligan_policy())
+        elif fixed_opponent == "Random":
+            p2 = Player(9, False, policy=RandomPolicy(), mulligan=Simple_mulligan_policy())
     else:
         if opponent_net is not None:  # epoch < 5:
             p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())

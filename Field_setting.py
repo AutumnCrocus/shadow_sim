@@ -1714,16 +1714,16 @@ class Field:
 
 
     def play_turn_for_dual(self, turn_player_num):
-        if self.current_turn == [0,0]:
-            self.before_observable_fields = [get_data(self,player_num=0),
-                                             get_data(self,player_num=1)]
+        #if self.current_turn == [0,0]:
+        #   self.before_observable_fields = [get_data(self,player_num=0),
+        #                                     get_data(self,player_num=1)]
         win, lose, lib_num, turn = 0, 0, 0, 0
         train_datas = []
         count = 0
         player = self.players[turn_player_num]
         opponent = self.players[1-turn_player_num]
         non_turn_player_num = 1 - turn_player_num
-        before_state = self.before_observable_fields[turn_player_num]
+        #before_state = self.before_observable_fields[turn_player_num]
         while True:
             self.untap(turn_player_num)
             self.increment_cost(turn_player_num)
@@ -1758,6 +1758,7 @@ class Field:
                 return win, lose, self.check_game_end(), train_datas
             self.time = time.time()
             # data = (state, action, next_state)
+            before_state = get_data(self, player_num=turn_player_num)
             while time.time() - self.time < 90:
                 state = get_data(self, player_num=turn_player_num)
                 detailed_action_code = self.get_detailed_action_code(player)
@@ -1782,6 +1783,7 @@ class Field:
 
                 train_datas.append((state, action_code, before_state, detailed_action_code)) #\
                     #if sum(detailed_action_code['able_to_choice']) > 1 else None
+                before_state = state
                 if end_flg:
                     break
 
@@ -1819,7 +1821,7 @@ class Field:
                 self.ex_turn_count[turn_player_num] -= 1
             else:
                 break
-        self.before_observable_fields[turn_player_num] = get_data(self,player_num=turn_player_num)
+        
         return win, lose, self.check_game_end(), train_datas
 
     
