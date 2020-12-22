@@ -12,7 +12,7 @@ jobs:
     env:
       MODEL_NAME: 2020_12_23_001.pth
       O_MODEL_NAME: 2020_12_23_001.pth
-      PLAYER_TYPES_A: "29,17"
+      PLAYER_TYPES_A: "29,1"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 400
