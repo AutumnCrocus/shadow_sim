@@ -63,7 +63,7 @@ class New_Dual_Net(nn.Module):
         self.n_mid = n_mid
         self.mish = torch.sigmoid#Mish()
         #self.direct_layer = nn.Linear(n_mid, n_mid)
-        preprocess_layer = [Dual_ResNet(n_mid,n_mid) for _ in range(3)]
+        preprocess_layer = [Dual_ResNet(n_mid,n_mid) for _ in range(5)]
         self.preprocess_layer = nn.ModuleList(preprocess_layer)
         self.final_layer = nn.Linear(n_mid,1)
         nn.init.kaiming_normal_(self.final_layer.weight)
@@ -159,9 +159,11 @@ class New_Dual_Net(nn.Module):
 
         #print(x.size())
 
-        x1 = self.layer[0](current_states)#+x_4
-        x2 = self.layer[1](x1)#+x1
-        x3 = self.layer[2](x2)#+x_4#+x2
+
+        x3 = current_states
+        for i in range(self.layer_len):
+            x3 = self.layer[i](x3)
+
         
 
         # for i in range(self.layer_len):
@@ -258,10 +260,19 @@ class Dual_State_Net(nn.Module):
         #[Mish() for i in range(7)]
         #[nn.PReLU(init=0.01) for i in range(7)]
         #self.prelu_layer = nn.ModuleList(prelu_layer)
-        self.prelu_layer = torch.tanh
-        self.modify_layer = nn.Linear(94*self.short_mid,4*n_mid)
-        self.second_modify_layer = nn.Linear(4*n_mid,2*n_mid)
-        self.third_modify_layer = nn.Linear(2*n_mid,n_mid)
+        self.prelu_layer = Mish()#torch.tanh
+
+        #self.modify_layer = nn.Linear(94*self.short_mid,4*n_mid)
+        #self.second_modify_layer = nn.Linear(4*n_mid,2*n_mid)
+        #self.third_modify_layer = nn.Linear(2*n_mid,n_mid)
+        hidden_layer_num = 5
+        origin = 94*self.short_mid
+        node_shrink_range = (origin - n_mid) // hidden_layer_num
+        self.modify_layer_num = hidden_layer_num
+        node_size_list = [origin - i * node_shrink_range for i in range(hidden_layer_num)] + [n_mid]
+        modify_layer = [nn.Linear(node_size_list[i], node_size_list[i+1]) for i in range(hidden_layer_num)]
+        self.modify_layer = nn.ModuleList(modify_layer)
+
         #nn.init.kaiming_normal_(self.modify_layer.weight)
         self.n_mid = n_mid
         self.mish = torch.tanh
@@ -378,9 +389,12 @@ class Dual_State_Net(nn.Module):
         #x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
 
         x = self.prelu_layer(self.concat_layer(before_x)).view(-1,94*self.short_mid)#+before_x).view(-1,94*self.short_mid)
-        x = self.prelu_layer(self.modify_layer(x))
-        x = self.prelu_layer(self.second_modify_layer(x))
-        x = self.prelu_layer(self.third_modify_layer(x))
+
+        for i in range(self.modify_layer_num):
+            x = self.prelu_layer(self.modify_layer[i](x))
+        #x = self.prelu_layer(self.modify_layer(x))
+        #x = self.prelu_layer(self.second_modify_layer(x))
+        #x = self.prelu_layer(self.third_modify_layer(x))
         #print(before_x)
         #print(x)
 
