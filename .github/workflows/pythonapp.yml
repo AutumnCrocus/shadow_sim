@@ -17,7 +17,7 @@ jobs:
       MODE: mirror
       N: 400
       DECK_LIST: "0,1"
-      NODE_NUM: 40
+      NODE_NUM: 0
       OPPONENT_TYPE: "OM"
     runs-on: ubuntu-latest
     steps:
