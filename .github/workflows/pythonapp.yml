@@ -18,7 +18,7 @@ jobs:
       N: 400
       DECK_LIST: "0"
       NODE_NUM: 20
-      OPPONENT_TYPE: "Greedy"
+      OPPONENT_TYPE: "NR_OM"
       CYCLE_NUM: 200
     runs-on: ubuntu-latest
     steps:
