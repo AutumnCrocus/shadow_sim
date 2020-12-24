@@ -5294,6 +5294,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         self.main_player_num = player.player_num
         action = super().decide(player,opponent, field)
         if not field.secret and self.prev_node is not None:
+            print("A")
             pai = self.prev_node.pai
             sim_field = self.prev_node.field
             sim_player = sim_field.players[player.player_num]
@@ -5331,7 +5332,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
                         mylogger.info("{:<60}:{:.3%}".format(txt, pai[action_code_id]))
             mylogger.info("current node data")
-            self.prev_node.print_tree()
+            self.prev_node.print_tree(single=True)
             """
             mylogger.info("state_detail")
 
@@ -5347,6 +5348,9 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
                 else:
                     print("{}:{}".format(dict_key,states[dict_key][0]))
             """
+        else:
+            pass
+            #print("B")
         return action
 
     def uct_search(self, player, opponent, field,use_existed_node=False):
@@ -5380,7 +5384,10 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         if field.check_game_end():
             value = int(player.life > 0 and not player.lib_out_flg)
             node.state_value = value
+
             return value#return 2*int(player.life > 0 and not player.lib_out_flg) - 1
+
+            
 
         states = self.get_data(field, player_num=node_player_num)
         before_states = states
@@ -5401,6 +5408,10 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         if node_player_num != self.main_player_num:
             out_value = 1 - out_value
         out_value = min(0.9999,out_value)
+        power_sum = sum([card.power if card.card_category == "Creature" else 0 for card in field.card_location[1-node_player_num]])
+        if player.life < power_sum + 5:
+            value = np.exp((-(power_sum+5-player.life))*0.1)
+            out_value *= value
         node.state_value = out_value
         node.pai = pai[0]
 
