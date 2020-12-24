@@ -18,8 +18,8 @@ jobs:
       N: 400
       DECK_LIST: "0"
       NODE_NUM: 20
-      OPPONENT_TYPE: "NR_OM"
-      CYCLE_NUM: 200
+      OPPONENT_TYPE: "Aggro"
+      CYCLE_NUM: 400
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
