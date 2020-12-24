@@ -18,7 +18,8 @@ jobs:
       N: 400
       DECK_LIST: "0"
       NODE_NUM: 20
-      OPPONENT_TYPE: "OM"
+      OPPONENT_TYPE: "Aggro"
+      CYCLE_NUM: 200
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -44,7 +45,7 @@ jobs:
     
     - name: Run Test1     
       run: |
-       python3 multi_test.py --evaluate_num $N --check True --cpu_num 4 --model_name $MODEL_NAME --node_num $NODE_NUM --deck_list $DECK_LIST --fixed_opponent $OPPONENT_TYPE
+       python3 multi_test.py --evaluate_num $N --check True --cpu_num 4 --model_name $MODEL_NAME --node_num $NODE_NUM --deck_list $DECK_LIST --fixed_opponent $OPPONENT_TYPE --step_iter $CYCLE_NUM
 
     #- name: Run Test1     
     #  run: |
