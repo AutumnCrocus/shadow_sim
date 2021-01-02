@@ -12,7 +12,7 @@ jobs:
     env:
       MODEL_NAME: 12_29_decklist_5_20_nodes_cuda.pth
       O_MODEL_NAME: 12_29_decklist_5_20_nodes_cuda.pth
-      PLAYER_TYPES_A: "29,2"
+      PLAYER_TYPES_A: "29,24"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 200
