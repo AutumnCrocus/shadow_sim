@@ -1868,19 +1868,23 @@ class Field:
                 target_id = (PADDING_TARGET, PADDING_SIDE)
             else:
                 _,candidates = self.get_regal_targets(target_card,target_type=1,player_num=player.player_num,with_ids=True)
+                target_id = (PADDING_TARGET, PADDING_SIDE)
                 if len(candidates)>0:
                     if candidates[0][0] == "double":
                         #仮処理
-                        target_id = (PADDING_TARGET, PADDING_SIDE)
+                        pass
                     else:
                         #print(regal_targets[play_id])
-                        id_in_regal = [dic_id for dic_id,ele in enumerate(regal_targets[play_id]) if ele == action_code[2]][0]
-                        target_card_ids = tuple(cell[0] for cell in candidates)[id_in_regal]#[0:1]
-                        target_side_ids = tuple(cell[1] for cell in candidates)[id_in_regal]#[0:1]
-                        target_id = (target_card_ids,target_side_ids)
-                            
-                else:
-                    target_id = (PADDING_TARGET, PADDING_SIDE)
+                        id_in_regal = [dic_id for dic_id,ele in enumerate(regal_targets[play_id]) \
+                                       if ele == action_code[2]]
+                        if len(id_in_regal)>0:
+                            id_in_regal = id_in_regal[0]
+                            assert len(candidates)-1 > id_in_regal,"{} over candidates:{}({})".\
+                            format(id_in_regal,candidates,len(candidates))
+                            target_card_ids = tuple(cell[0] for cell in candidates)[id_in_regal]#[0:1]
+                            target_side_ids = tuple(cell[1] for cell in candidates)[id_in_regal]#[0:1]
+                            target_id = (target_card_ids,target_side_ids)
+
             detailed_action = (action_code[0],long_card_id,target_id[0],target_id[1],)
             
         elif action_code[0] in (Action_Code.ATTACK_TO_FOLLOWER.value,Action_Code.ATTACK_TO_PLAYER.value):
