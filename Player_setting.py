@@ -284,10 +284,11 @@ class Player:
 
         if not virtual:
             mylogger.info("action_num:{} card_id:{} target_id:{}".format(action_num, card_id, target_id))
-
-        end_flg = self.execute_action(field, opponent, action_code=(action_num, card_id, target_id), virtual=virtual)
+        action = (action_num, card_id, target_id)
+        before_action = self.field.get_single_detailed_action_code(self,action)
+        end_flg = self.execute_action(field, opponent, action_code=action, virtual=virtual)
         if dual:
-            return end_flg, (action_num, card_id, target_id)#(action_num, card_id)
+            return end_flg, (action_num, card_id, target_id),before_action#(action_num, card_id)
         return end_flg
 
     def execute_action(self, field, opponent, action_code=None, virtual=False):

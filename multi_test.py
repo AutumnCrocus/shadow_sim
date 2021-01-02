@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # +
 
-from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support, Value, Array, Manager
+from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support, Value, Array, Manager,cpu_count
 import ctypes
 import os
 #os.environ["OMP_NUM_THREADS"] = "4"
@@ -222,44 +222,52 @@ def multi_preparation(episode_data):
         sum_code = 0
         end_turn = 0
         for i in range(2):
-            end_turn = int(train_data[i][-1][0].life_data[0][-1]*100)
+            end_turn = int(train_data[i][-1][0]["life_data"][0][-1]*100)
             for data in train_data[i]:
+                
+                #print(0,data[0])
+                #print(2,data[2])
                 # assert False,"{}".format(data[0])
                 detailed_action_code = data[3]
                 #if sum(detailed_action_code["able_to_choice"]) == 1:
                 #    continue
-                before_state = {'hand_ids': data[0].hand_ids, 'hand_card_costs': data[0].hand_card_costs,
-                                'follower_card_ids': data[0].follower_card_ids,
-                                'amulet_card_ids': data[0].amulet_card_ids,
-                                'follower_stats': data[0].follower_stats,
-                                'follower_abilities': data[0].follower_abilities,
-                                'able_to_evo': data[0].able_to_evo,
-                                'life_data': data[0].life_data,
-                                'pp_data': data[0].pp_data,
-                                'able_to_play': data[0].able_to_play,
-                                'able_to_attack': data[0].able_to_attack,
-                                'able_to_creature_attack': data[0].able_to_creature_attack,
-                                'deck_data': data[0].deck_data}
+                #print(data[0])
+#                 after_state = Detailed_State_data(data[0].hand_ids, data[0].hand_card_costs,
+#                                 data[0].follower_card_ids, data[0].amulet_card_ids,
+#                                 data[0].follower_stats, data[0].follower_abilities,
+#                                 data[0].able_to_evo, data[0].life_data,
+#                                 data[0].pp_data, data[0].able_to_play,
+#                                 data[0].able_to_attack, data[0].able_to_creature_attack,
+#                                                   data[0].deck_data)
+                after_state = {"hand_ids":data[0]['hand_ids'], 
+                         "hand_card_costs":data[0]['hand_card_costs'], 
+                         "follower_card_ids":data[0]['follower_card_ids'], 
+                         "amulet_card_ids":data[0]['amulet_card_ids'],
+                         "follower_stats":data[0]['follower_stats'], 
+                         "follower_abilities":data[0]['follower_abilities'], 
+                         "able_to_evo":data[0]['able_to_evo'], 
+                         "life_data":data[0]['life_data'], 
+                         "pp_data":data[0]['pp_data'],
+                         "able_to_play":data[0]['able_to_play'], 
+                         "able_to_attack":data[0]['able_to_attack'],
+                         "able_to_creature_attack":data[0]['able_to_creature_attack'],
+                         "deck_data":data[0]['deck_data']}
+#                 after_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
+#                                data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
+#                                data[0]['follower_stats'], data[0]['follower_abilities'],
+#                                data[0]['able_to_evo'], data[0]['life_data'],
+#                                data[0]['pp_data'], data[0]['able_to_play'],
+#                                data[0]['able_to_attack'], data[0]['able_to_creature_attack'],
+#                                                  data[0]['deck_data'])
+                before_state = data[2]
 
-                after_state = {'hand_ids': data[2].hand_ids, 'hand_card_costs': data[2].hand_card_costs,
-                               'follower_card_ids': data[2].follower_card_ids,
-                               'amulet_card_ids': data[2].amulet_card_ids,
-                               'follower_stats': data[2].follower_stats,
-                               'follower_abilities': data[2].follower_abilities,
-                               'able_to_evo': data[2].able_to_evo,
-                               'life_data': data[2].life_data,
-                               'pp_data': data[2].pp_data,
-                               'able_to_play': data[2].able_to_play,
-                               'able_to_attack': data[2].able_to_attack,
-                               'able_to_creature_attack': data[2].able_to_creature_attack,
-                               'deck_data':data[2].deck_data}
                 action_probability = data[1]
                 sum_of_choices += sum(detailed_action_code['able_to_choice'])
                 sum_code += 1
                 #current_turn = int(data[0].life_data[0][-1] * 100)
                 #discount_rate = GAMMA**(end_turn-current_turn)
                 discounted_reward = reward[i]# * discount_rate
-                result_data.append((before_state, action_probability, after_state, detailed_action_code,discounted_reward))#, reward[i]))
+                result_data.append((after_state, action_probability, before_state, detailed_action_code,discounted_reward))#, reward[i]))
                 #print("life_data:{}".format(data[2].life_data))
                 #end_turn = data[2].life_data[0][-1]
                 #result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[1-i]))
@@ -370,9 +378,10 @@ def multi_train(data):
         states['detailed_action_codes'] = {sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
                             for sub_key in action_code_keys}
         orig_before_states = all_states["before_states"]
-        states['before_states'] = {dict_key : torch.clone(orig_before_states[dict_key][key]) for dict_key in normal_states_keys}
-        states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
-                            for sub_key in value_keys}
+        states['before_states'] = torch.clone(orig_before_states[key])
+#         states['before_states'] = {dict_key : torch.clone(orig_before_states[dict_key][key]) for dict_key in normal_states_keys}
+#         states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
+#                             for sub_key in value_keys}
         
         actions = all_actions[key]
         rewards = all_rewards[key]
@@ -463,7 +472,12 @@ from Field_setting import *
 from Player_setting import *
 from Policy import *
 from Game_setting import Game
-
+if args.limit_OMP:
+    half_cpu_num = str(cpu_count()//2)
+    os.environ["OMP_NUM_THREADS"] = half_cpu_num
+    os.environ["OMP_THREAD_LIMITS"] = half_cpu_num
+if args.OMP_NUM > 0:
+    os.environ["OMP_NUM_THREADS"] = str(args.OMP_NUM)
 def run_main():
     from torch.utils.tensorboard import SummaryWriter
     print(args)
@@ -471,11 +485,7 @@ def run_main():
     print("use cpu num:{}".format(p_size))
     print("w_d:{}".format(weight_decay))
     std_th = args.th
-    if args.limit_OMP:
-        os.environ["OMP_NUM_THREADS"] = "2"
-        os.environ["OMP_THREAD_LIMITS"] = "2"
-    if args.OMP_NUM > 0:
-        os.environ["OMP_NUM_THREADS"] = str(args.OMP_NUM)
+
     
     loss_history = []
 
@@ -566,22 +576,46 @@ def run_main():
 
         for data in memories:
             #print(data[0])
-            before_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
-                            data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
-                            data[0]['follower_stats'], data[0]['follower_abilities'],
-                            data[0]['able_to_evo'], data[0]['life_data'],
-                            data[0]['pp_data'], data[0]['able_to_play'],
-                            data[0]['able_to_attack'], data[0]['able_to_creature_attack'],data[0]['deck_data'])
-            after_state = Detailed_State_data(data[2]['hand_ids'], data[2]['hand_card_costs'],
+#             after_state = Detailed_State_data(data[0].hand_ids, data[0].hand_card_costs,
+#                                 data[0].follower_card_ids, data[0].amulet_card_ids,
+#                                 data[0].follower_stats, data[0].follower_abilities,
+#                                 data[0].able_to_evo, data[0].life_data,
+#                                 data[0].pp_data, data[0].able_to_play,
+#                                 data[0].able_to_attack, data[0].able_to_creature_attack,
+#                                                   data[0].deck_data)
+#             after_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
+#                             data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
+#                             data[0]['follower_stats'], data[0]['follower_abilities'],
+#                             data[0]['able_to_evo'], data[0]['life_data'],
+#                             data[0]['pp_data'], data[0]['able_to_play'],
+#                             data[0]['able_to_attack'], data[0]['able_to_creature_attack'],data[0]['deck_data'])
+            after_state = {"hand_ids":data[0]['hand_ids'], 
+                     "hand_card_costs":data[0]['hand_card_costs'], 
+                     "follower_card_ids":data[0]['follower_card_ids'], 
+                     "amulet_card_ids":data[0]['amulet_card_ids'],
+                     "follower_stats":data[0]['follower_stats'], 
+                     "follower_abilities":data[0]['follower_abilities'], 
+                     "able_to_evo":data[0]['able_to_evo'], 
+                     "life_data":data[0]['life_data'], 
+                     "pp_data":data[0]['pp_data'],
+                     "able_to_play":data[0]['able_to_play'], 
+                     "able_to_attack":data[0]['able_to_attack'],
+                     "able_to_creature_attack":data[0]['able_to_creature_attack'],
+                     "deck_data":data[0]['deck_data']}
+            before_state = data[2]
+            """
+            before_state = Detailed_State_data(data[2]['hand_ids'], data[2]['hand_card_costs'],
                             data[2]['follower_card_ids'], data[2]['amulet_card_ids'],
                             data[2]['follower_stats'], data[2]['follower_abilities'],
                             data[2]['able_to_evo'], data[2]['life_data'],
                             data[2]['pp_data'], data[2]['able_to_play'],
-                            data[2]['able_to_attack'], data[2]['able_to_creature_attack'],data[2]['deck_data'])
+                            data[2]['able_to_attack'], data[2]['able_to_creature_attack'],
+                            data[2]['deck_data'])
+            """
             hit_flg = int(1 in data[3]['able_to_choice'][10:35])
             all_able_to_follower_attack += hit_flg
             follower_attack_num +=  hit_flg * int(data[1] >= 10 and data[1] <= 34)
-            R.push(before_state,data[1], after_state, data[3], data[4])
+            R.push(after_state,data[1], before_state, data[3], data[4])
 
 
         print("win_rate:{:.3%}".format(win_num/episode_len))
@@ -667,10 +701,11 @@ def run_main():
                         sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
                         for sub_key in action_code_keys}
                     orig_before_states = all_states["before_states"]
-                    states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
-                                               normal_states_keys}
-                    states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
-                                                         for sub_key in value_keys}
+                    states['before_states'] = torch.clone(orig_before_states[key])
+#                     states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
+#                                                normal_states_keys}
+#                     states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
+#                                                          for sub_key in value_keys}
                     actions = all_actions[key]
                     rewards = all_rewards[key]
                     states['target'] = {'actions': actions, 'rewards': rewards}

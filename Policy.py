@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+MAX_TARGET_NUM = 5
+PADDING_TARGET = tuple(0 for _ in range(MAX_TARGET_NUM))
+SIDE_ID = 2
+PADDING_SIDE = tuple(SIDE_ID for _ in range(MAX_TARGET_NUM))
 from abc import ABCMeta, abstractmethod
 import operator
 import random
@@ -5332,7 +5336,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
                         mylogger.info("{:<60}:{:.3%}".format(txt, pai[action_code_id]))
             mylogger.info("current node data")
-            self.prev_node.print_tree(single=True)
+            #self.prev_node.print_tree(single=True)#single=True
             """
             mylogger.info("state_detail")
 
@@ -5377,8 +5381,9 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         if node.state_value is not None:
             return node.state_value
 
-        node_player_num = node.parent_node.player_num if node.parent_node is not None and node.player_num != node.parent_node.player_num\
-                            else node.player_num
+        #node_player_num = node.parent_node.player_num if node.parent_node is not None and node.player_num != node.parent_node.player_num\
+        #                    else node.player_num
+        node_player_num = player_num
         field = node.field
         player = field.players[node_player_num]
         if field.check_game_end():
@@ -5390,9 +5395,22 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             
 
         states = self.get_data(field, player_num=node_player_num)
-        before_states = states
+        before_states = [(0,0,0,2)]#states
         if node.parent_node is not None and node.player_num == node.parent_node.player_num:
-            before_states =  self.get_data(node.parent_node.field, player_num=node_player_num)
+            node_id_2_dict = node.parent_node.node_id_2_edge_action
+            action = node_id_2_dict[id(node)]
+            before_field = node.parent_node.field
+            before_player = before_field.players[before_field.turn_player_num]
+            try:
+                before_states = [before_field.get_single_detailed_action_code(before_player,action)]
+            except Exception as e:
+                print(action)
+                before_player.show_hand()
+                before_field.show_field()
+                print(e)
+                assert False
+            
+            #self.get_data(node.parent_node.field, player_num=node_player_num)
         #self.origin_field_data[node_player_num]
         #print(before_states)
         #before_states = [before_states]
@@ -5400,7 +5418,8 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])],cuda=self.cuda)
-        states['before_states'] = before_states
+        #print([before_states])
+        states['before_states'] = torch.LongTensor(before_states)
         pai, value = self.net(states)
         out_value = (float(value[0]) + 1)/2
             
@@ -5408,7 +5427,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         if node_player_num != self.main_player_num:
             out_value = 1 - out_value
         out_value = min(0.9999,out_value)
-        power_sum = sum([card.power if card.card_category == "Creature" else 0 for card in field.card_location[1-node_player_num]])
+        power_sum = sum([card.power if card.card_category == "Creature" else 0 for card in field.card_location[1-player_num]])
         if player.life < power_sum + 5:
             value = np.exp((-(power_sum+5-player.life))*0.1)
             out_value *= value

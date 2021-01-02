@@ -1758,11 +1758,12 @@ class Field:
                 return win, lose, self.check_game_end(), train_datas
             self.time = time.time()
             # data = (state, action, next_state)
-            before_state = get_data(self, player_num=turn_player_num)
+            before_state = self.get_single_detailed_action_code(player,(0,0,0))
             while time.time() - self.time < 90:
                 state = get_data(self, player_num=turn_player_num)
                 detailed_action_code = self.get_detailed_action_code(player)
-                end_flg, single_action = player.decide(player, opponent, self, virtual=True, dual=True)
+                #before_action = self.get_single_detailed_action_code(player,single_action)
+                end_flg, single_action,before_action = player.decide(player, opponent, self, virtual=True, dual=True)
                 action_code = 0
                 if single_action[0] == Action_Code.TURN_END.value:
                     action_code = 0
@@ -1782,8 +1783,9 @@ class Field:
                     self.get_observable_data(player_num=player.player_num),player.show_hand(),self.show_field())
 
                 train_datas.append((state, action_code, before_state, detailed_action_code)) #\
+                before_state = before_action
                     #if sum(detailed_action_code['able_to_choice']) > 1 else None
-                before_state = state
+                
                 if end_flg:
                     break
 
@@ -1842,7 +1844,83 @@ class Field:
         board_diff /= 10
         value = board_diff*0.45+life_diff*0.45+hand_diff*0.1
         return 1/(1+np.exp(-(value*10)))
-
+    def get_single_detailed_action_code(self,player,action_code):
+        margin = 500
+        category_range = 1000
+        able_to_choice = [1]
+        follower_choice = []
+        leader_choice = []
+        evolve_choice = []
+        MAX_TARGET_NUM = 5
+        PADDING_TARGET = 0#tuple(0 for _ in range(MAX_TARGET_NUM))
+        SIDE_ID = 2
+        PADDING_SIDE = SIDE_ID#tuple(SIDE_ID for _ in range(MAX_TARGET_NUM))
+        #action_codes = [(0,0,PADDING_TARGET,PADDING_SIDE)]
+        detailed_action = (0,0,PADDING_TARGET,PADDING_SIDE,)
+        opponent = self.players[1-player.player_num]
+        regal_targets = self.get_regal_target_dict(player,opponent)
+        if action_code[0] == Action_Code.PLAY_CARD.value:
+            play_id = action_code[1]
+            target_card = player.hand[play_id]
+            category_num = Card_Category[target_card.card_category].value - 1
+            long_card_id = target_card.card_id + margin + category_range * category_num
+            if play_id not in regal_targets:
+                target_id = (PADDING_TARGET, PADDING_SIDE)
+            else:
+                _,candidates = self.get_regal_targets(target_card,target_type=1,player_num=player.player_num,with_ids=True)
+                if len(candidates)>0:
+                    if candidates[0][0] == "double":
+                        #仮処理
+                        target_id = (PADDING_TARGET, PADDING_SIDE)
+                    else:
+                        #print(regal_targets[play_id])
+                        id_in_regal = [dic_id for dic_id,ele in enumerate(regal_targets[play_id]) if ele == action_code[2]][0]
+                        target_card_ids = tuple(cell[0] for cell in candidates)[id_in_regal]#[0:1]
+                        target_side_ids = tuple(cell[1] for cell in candidates)[id_in_regal]#[0:1]
+                        target_id = (target_card_ids,target_side_ids)
+                            
+                else:
+                    target_id = (PADDING_TARGET, PADDING_SIDE)
+            detailed_action = (action_code[0],long_card_id,target_id[0],target_id[1],)
+            
+        elif action_code[0] in (Action_Code.ATTACK_TO_FOLLOWER.value,Action_Code.ATTACK_TO_PLAYER.value):
+            attacking_card = self.card_location[player.player_num][action_code[1]]
+            long_card_id = attacking_card.card_id + margin
+            if action_code[0] == Action_Code.ATTACK_TO_FOLLOWER.value:
+                attacked_card = self.card_location[1-player.player_num][action_code[2]]
+                detailed_action = (Action_Code.ATTACK_TO_FOLLOWER.value,
+                                                    attacking_card.card_id + margin,
+                                                          attacked_card.card_id +\
+                                                           margin, 
+                                                  1,)
+            else:
+                detailed_action = (Action_Code.ATTACK_TO_PLAYER.value,\
+                                            attacking_card.card_id + margin,\
+                                            EMBEDDING_RANGE-1,
+                                            1,)
+        elif action_code[0] == Action_Code.EVOLVE.value:
+            evolving_card = self.card_location[player.player_num][action_code[1]]
+            regal,candidates =\
+            self.get_regal_targets(evolving_card,target_type=0,player_num=player.player_num,with_ids=True)
+            if len(candidates)>0:
+                if candidates[0][0] == "double":
+                    target_card_ids = PADDING_TARGET
+                    target_side_ids = PADDING_SIDE
+                else:
+                    id_in_regal = [dic_id for dic_id,ele in enumerate(regal) if ele == action_code[2]][0]
+                    target_card_ids = tuple(cell[0] for cell in candidates)[id_in_regal]#[0:1]
+                    target_side_ids = tuple(cell[1] for cell in candidates)[id_in_regal]#[0:1]
+            else:
+                target_card_ids = PADDING_TARGET
+                target_side_ids = PADDING_SIDE
+            detailed_action = (Action_Code.EVOLVE.value, evolving_card.card_id + margin,
+                                     target_card_ids,target_side_ids,)
+        else:
+            detailed_action = (0,0,PADDING_TARGET,PADDING_SIDE,)
+        #print(action_code,detailed_action)
+        return detailed_action
+            
+            
     def get_detailed_action_code(self, player):
         margin = 500
         category_range = 1000
