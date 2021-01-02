@@ -1879,7 +1879,7 @@ class Field:
                                        if ele == action_code[2]]
                         if len(id_in_regal)>0:
                             id_in_regal = id_in_regal[0]
-                            assert len(candidates)-1 > id_in_regal,"{} over candidates:{}({})".\
+                            assert len(candidates) > id_in_regal,"{} over candidates:{}({})".\
                             format(id_in_regal,candidates,len(candidates))
                             target_card_ids = tuple(cell[0] for cell in candidates)[id_in_regal]#[0:1]
                             target_side_ids = tuple(cell[1] for cell in candidates)[id_in_regal]#[0:1]
