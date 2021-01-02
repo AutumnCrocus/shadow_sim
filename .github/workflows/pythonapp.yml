@@ -10,13 +10,13 @@ on:
 jobs:
   build: 
     env:
-      MODEL_NAME: 2020_12_24_001.pth
-      O_MODEL_NAME: 2020_12_24_001.pth
+      MODEL_NAME: 12_29_decklist_5_20_nodes_cuda.pth
+      O_MODEL_NAME: 12_29_decklist_5_20_nodes_cuda.pth
       PLAYER_TYPES_A: "29,2"
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
-      N: 400
-      DECK_LIST: "0"
+      N: 100
+      DECK_LIST: "0,1,2,4"
       NODE_NUM: 20
       OPPONENT_TYPE: "Greedy"
       CYCLE_NUM: 400
@@ -43,13 +43,13 @@ jobs:
       run: |
         pip install -r requirements.txt
     
-    - name: Run Test1     
-      run: |
-       python3 multi_test.py --evaluate_num $N --check True --cpu_num 4 --model_name $MODEL_NAME --node_num $NODE_NUM --deck_list $DECK_LIST --fixed_opponent $OPPONENT_TYPE --step_iter $CYCLE_NUM
-
     #- name: Run Test1     
     #  run: |
-    #   python3 test.py --N  $N --playertypes $PLAYER_TYPES_A --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
+    #   python3 multi_test.py --evaluate_num $N --check True --cpu_num 4 --model_name $MODEL_NAME --node_num $NODE_NUM --deck_list $DECK_LIST --fixed_opponent $OPPONENT_TYPE --step_iter $CYCLE_NUM
+
+    - name: Run Test1     
+      run: |
+       python3 test.py --N  $N --playertypes $PLAYER_TYPES_A --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
     #- name: Run Test2     
     #  run: |
     #   python3 test.py --N  $N --playertypes $PLAYER_TYPES_B --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
