@@ -16,7 +16,7 @@ jobs:
       PLAYER_TYPES_B: "29,24"
       MODE: mirror
       N: 200
-      DECK_LIST: "0,1,2,3"
+      DECK_LIST: "4,5,6,7"
       NODE_NUM: 20
       OPPONENT_TYPE: "Greedy"
       CYCLE_NUM: 400
