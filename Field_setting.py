@@ -1442,7 +1442,7 @@ class Field:
                         target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,1) for card_id, target_thing
                                      in enumerate(self.card_location[1 - player_num]) if (1-player_num,card_id) in regal_targets and target_thing.can_be_targeted()]+\
                             [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0) for card_id, target_thing
-                             in enumerate(self.card_location[player_num]) if (1-player_num,card_id) in regal_targets]
+                             in enumerate(self.card_location[player_num]) if (player_num,card_id) in regal_targets]
 
 
 
@@ -1878,9 +1878,10 @@ class Field:
                         id_in_regal = [dic_id for dic_id,ele in enumerate(regal_targets[play_id]) \
                                        if ele == action_code[2]]
                         if len(id_in_regal)>0:
+                            origin_target = id_in_regal
                             id_in_regal = id_in_regal[0]
-                            assert len(candidates) > id_in_regal,"{} over candidates:{}({})".\
-                            format(id_in_regal,candidates,len(candidates))
+                            assert len(candidates) > id_in_regal,"{} over candidates:{} all:{}".\
+                            format(id_in_regal,candidates,origin_target)
                             target_card_ids = tuple(cell[0] for cell in candidates)[id_in_regal]#[0:1]
                             target_side_ids = tuple(cell[1] for cell in candidates)[id_in_regal]#[0:1]
                             target_id = (target_card_ids,target_side_ids)
