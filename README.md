@@ -1,7 +1,9 @@
 #shadow_sim
 
 Emulator and AI of Shadowverse
+
 Work In Progress
+
 currently implementing self-play AI for Shadowverse
 
 ## License
