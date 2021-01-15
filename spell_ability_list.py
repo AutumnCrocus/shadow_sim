@@ -281,7 +281,7 @@ def spell_ability_037(field, player, opponent, virtual, target, itself):
     """
     Summon a Club Soldier, a Heart Guardian, and a Spade Raider.
     """
-    summon_creature(field, player, virtual, name="Crab Soldier")
+    summon_creature(field, player, virtual, name="Club Soldier")
     summon_creature(field, player, virtual, name="Heart Guardian")
     summon_creature(field, player, virtual, name="Spade Raider")
 

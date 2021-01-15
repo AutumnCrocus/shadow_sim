@@ -378,7 +378,8 @@ def multi_train(data):
         states['detailed_action_codes'] = {sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
                             for sub_key in action_code_keys}
         orig_before_states = all_states["before_states"]
-        states['before_states'] = torch.clone(orig_before_states[key])
+        states['before_states'] = [torch.clone(orig_before_states[i][key]) for i in range(4)]
+        #states['before_states'] = torch.clone(orig_before_states[key])
 #         states['before_states'] = {dict_key : torch.clone(orig_before_states[dict_key][key]) for dict_key in normal_states_keys}
 #         states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
 #                             for sub_key in value_keys}
@@ -701,7 +702,8 @@ def run_main():
                         sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
                         for sub_key in action_code_keys}
                     orig_before_states = all_states["before_states"]
-                    states['before_states'] = torch.clone(orig_before_states[key])
+                    #states['before_states'] = torch.clone(orig_before_states[key])
+                    states['before_states'] = [torch.clone(orig_before_states[i][key]) for i in range(4)]
 #                     states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
 #                                                normal_states_keys}
 #                     states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \

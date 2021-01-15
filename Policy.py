@@ -37,6 +37,7 @@ from my_enum import *
 import warnings
 import Embedd_Network_model
 import card_setting
+
 ACTION_SIZE = 45
 
 # warnings.simplefilter('ignore')
@@ -5419,7 +5420,37 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
             ([field.get_detailed_action_code(field.players[node_player_num])],cuda=self.cuda)
         #print([before_states])
-        states['before_states'] = torch.LongTensor(before_states)
+        single_before_state = before_states[0]
+        if single_before_state[1] in Embedd_Network_model.names:
+            acting_id=Embedd_Network_model.names.index(single_before_state[1])
+            acting_id = Embedd_Network_model.d2v_model.docvecs[acting_id]
+        else:
+            acting_id = [0]*20
+        if single_before_state[2] in Embedd_Network_model.names:
+            acted_id = Embedd_Network_model.names.index(single_before_state[2])
+            acted_id = Embedd_Network_model.d2v_model.docvecs[acted_id]
+        else:
+            acted_id = [0] * 20
+        # if single_before_state[3] in Embedd_Network_model.names:
+        #     _id = Embedd_Network_model.names.index(single_before_state[3])
+        #     acted_id = Embedd_Network_model.d2v_model.docvecs[acted_id]
+        # else:
+        #     side_id = 2
+        side_id = single_before_state[3]
+        single_before_state = (single_before_state[0],acting_id,acted_id,side_id)
+        #print(single_before_state)
+        before_states = [single_before_state]
+        #print(single_before_state)
+        try:
+            states['before_states'] = [torch.Tensor([single_before_state[0]]),
+                                       torch.Tensor([single_before_state[1]]),
+                                       torch.Tensor([single_before_state[2]]),
+                                       torch.Tensor([single_before_state[3]])]
+        except Exception as e:
+
+            print(e)
+            assert False
+        #torch.Tensor(before_states)#torch.LongTensor(before_states)
         pai, value = self.net(states)
         out_value = (float(value[0]) + 1)/2
             

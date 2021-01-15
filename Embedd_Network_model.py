@@ -11,6 +11,10 @@ import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 import torch.nn.functional as F
+import card2vec
+from gensim.models import doc2vec
+names, texts = card2vec.load_json("all")
+d2v_model = doc2vec.Doc2Vec.load("all.model")
 from collections import namedtuple
 import copy
 import random
@@ -52,9 +56,9 @@ class New_Dual_Net(nn.Module):
         super(New_Dual_Net, self).__init__()
         self.state_net =Dual_State_Net(n_mid)
         
-        self.emb1 = self.state_net.emb1#nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
+        #self.emb1 = self.state_net.emb1#nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
         
-        layer = [Dual_ResNet(n_mid+25,n_mid+25) for _ in range(3)]
+        layer = [Dual_ResNet(n_mid+45,n_mid+45) for _ in range(3)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
         self.action_value_net = Action_Value_Net(self,mid_size=n_mid)
@@ -70,7 +74,7 @@ class New_Dual_Net(nn.Module):
         #self.conv = nn.Conv1d(in_channels=100,out_channels=1,kernel_size=1)
         self.relu = torch.tanh#torch.sigmoid()#nn.ReLU()
         self.prelu = torch.tanh#torch.sigmoid()#nn.PReLU(init=0.01)
-        self.integrate_layer = nn.Linear(n_mid+25,n_mid)
+        self.integrate_layer = nn.Linear(n_mid+45,n_mid)
         nn.init.kaiming_normal_(self.integrate_layer.weight)
         self.rnn = nn.LSTM(input_size=n_mid,hidden_size=n_mid,batch_first=True,num_layers=3)
         #nn.init.kaiming_normal_(self.rnn.weight)
@@ -140,17 +144,20 @@ class New_Dual_Net(nn.Module):
         current_states = self.state_net(states)
         before_states = states["before_states"]
         #print("size:",before_states.size())
-        split_states = torch.split(before_states,[1,1,1,1],dim=1)
-        embed_action_categories = self.action_value_net.action_catgory_eye[split_states[0]]
+        split_states = before_states#torch.split(before_states,[1,1,1,1],dim=1)
+        embed_action_categories = self.action_value_net.action_catgory_eye[split_states[0].long()].view(-1,4)
         #.to(stats.device)#self.emb1(action_categories)(-1,45,4)
-        embed_acting_card_ids = self.action_value_net.emb2(split_states[1])
+        embed_acting_card_ids = split_states[1]#self.action_value_net.emb2(split_states[1])
         embed_acting_card_ids = self.action_value_net.prelu_3(embed_acting_card_ids)
-        embed_acted_card_ids = self.action_value_net.emb2(split_states[2])#(-1,45,n_mid,?)
-        embed_acted_card_sides = self.action_value_net.side_emb(split_states[3])  # (-1,45,?,n_mid)
+        embed_acted_card_ids = split_states[2]#self.action_value_net.emb2(split_states[2])#(-1,45,n_mid,?)
+        embed_acted_card_sides = split_states[3].view(-1,1)#self.action_value_net.side_emb(split_states[3])  # (-1,45,?,n_mid)
         #print("split:",embed_action_categories.size(),embed_acting_card_ids.size(),
         #     embed_acted_card_ids.size(),embed_acted_card_sides.size())
-        before_states = torch.cat([embed_action_categories,embed_acting_card_ids,
-                                  embed_acted_card_ids,embed_acted_card_sides],dim=2).view(-1,25)
+        input_tensors = [embed_action_categories,embed_acting_card_ids,
+                                  embed_acted_card_ids,embed_acted_card_sides]
+        #for cell in input_tensors:
+        #    print(cell.size())
+        before_states = torch.cat(input_tensors,dim=1).view(-1,45)
         #before_states = self.state_net(states["before_states"])
         current_states = current_states# - before_states
         #print(x_1[0])
@@ -239,24 +246,24 @@ class Dual_State_Net(nn.Module):
         self.life_layer = nn.Linear(5, self.short_mid)#nn.Linear(5, n_mid)
         nn.init.kaiming_normal_(self.life_layer.weight)
 
-        self.hand_value_layer = nn.Linear(10, 10)#nn.Linear(n_mid, n_mid)
+        self.hand_value_layer = nn.Linear(20, 10)#nn.Linear(10, 10)#nn.Linear(n_mid, n_mid)
         nn.init.kaiming_normal_(self.hand_value_layer.weight)
 
         self.hand_integrate_layer = nn.Linear(10, self.short_mid)#nn.Linear(n_mid, n_mid)
         nn.init.kaiming_normal_(self.hand_integrate_layer.weight)
 
-        self.deck_value_layer = nn.Linear(10, 10)#nn.Linear(n_mid, n_mid)
+        self.deck_value_layer = nn.Linear(20, 10)#nn.Linear(10, 10)#nn.Linear(n_mid, n_mid)
         nn.init.kaiming_normal_(self.deck_value_layer.weight)
 
         self.deck_integrate_layer = nn.Linear(10, self.short_mid)#nn.Linear(n_mid, n_mid)
         nn.init.kaiming_normal_(self.deck_integrate_layer.weight)
 
-        self.amulet_value_layer = nn.Linear(10, self.short_mid)#nn.Linear(n_mid, n_mid)
+        self.amulet_value_layer = nn.Linear(10, self.short_mid)#nn.Linear(10, self.short_mid)#nn.Linear(n_mid, n_mid)
         nn.init.kaiming_normal_(self.amulet_value_layer.weight)
-        self.field_value_layer = nn.Linear(10, 10)#nn.Linear(n_mid, n_mid)
+        self.field_value_layer = nn.Linear(20, 10)#nn.Linear(10, 10)#nn.Linear(n_mid, n_mid)
         nn.init.kaiming_normal_(self.field_value_layer.weight)
 
-        self.emb1 = nn.Embedding(3000,10,padding_idx=0)
+        #self.emb1 = nn.Embedding(3000,10,padding_idx=0)
         #nn.Embedding(3000,n_mid,padding_idx=0)
         #nn.init.kaiming_normal_(self.emb1.weight)
 
@@ -335,7 +342,7 @@ class Dual_State_Net(nn.Module):
         x1 = torch.sum(x1,dim=2)
         abilities = x1#.to(stats.device)
 
-        src1 = self.emb1(follower_card_ids)
+        src1 = follower_card_ids#self.emb1(follower_card_ids)(-1,10)→(-1,10,20)
         # src1 = self.emb1(follower_card_ids)*np.sqrt(self.n_mid)
         # src1 = self.pos_encoder(src1)
 
@@ -343,10 +350,10 @@ class Dual_State_Net(nn.Module):
         x2 = torch.cat([stats, abilities,follower_cards,able_to_attack,able_to_creature_attack,able_to_evo],dim=2)
         _follower_values = self.prelu_layer(self.value_layer(x2))
         
-        follower_exist_filter = (follower_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
+        #follower_exist_filter = (follower_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
         #print("follower_cards:{},exist_filter1:{}".format(follower_cards.size(),exist_filter1.size()))
         #exist_filter1.expand(*[-1,10,self.n_mid])
-        follower_values = _follower_values * follower_exist_filter
+        follower_values = _follower_values# * follower_exist_filter
         """
         follower_cards = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
         x1 = torch.cat([stats, abilities,follower_cards],dim=2)
@@ -355,15 +362,15 @@ class Dual_State_Net(nn.Module):
         x1 = x1 * exist_filter1
         follower_values=x1.view(-1,10)
         """
-        src2 = self.emb1(amulet_card_ids)
+        src2 = amulet_card_ids#self.emb1(amulet_card_ids)
         # src2 = self.emb1(amulet_card_ids)*np.sqrt(self.n_mid)
         # src2 = self.pos_encoder(src2)
         amulet_cards = self.prelu_layer(self.field_value_layer(src2).view(-1, 10,10))#+src2.view(-1, 10,10))
         #print("amulet_cards:{}".format(amulet_cards.size()))
         _amulet_values = torch.sigmoid(self.amulet_value_layer(amulet_cards))#amulet_cards
-        amulet_exist_filter = (amulet_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
+        #amulet_exist_filter = (amulet_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
         #exist_filter2.expand(*[-1, 10, self.n_mid])
-        amulet_values = _amulet_values * amulet_exist_filter
+        amulet_values = _amulet_values# * amulet_exist_filter
         """
         amulet_cards = self.prelu_5(self.field_value_layer(self.emb1(amulet_card_ids))).view(-1, 10,1)
         x2 = amulet_cards
@@ -377,21 +384,21 @@ class Dual_State_Net(nn.Module):
 
         #hand_ids = self.prelu_3(self.hand_value_layer(self.emb1(hand_ids))).view(-1, 9)
         # hand_card_values = torch.sum(hand_ids,dim=1).view(-1,1)
-        src3 = self.emb1(hand_ids)
+        src3 = hand_ids#self.emb1(hand_ids)
         # src3 = self.emb1(hand_ids)*np.sqrt(self.n_mid)
         # src3 = self.pos_encoder(src3)
         hand_cards = self.prelu_layer(self.hand_value_layer(src3).view(-1, 9,10))#+src3.view(-1, 9,10))
         _hand_card_values = torch.sigmoid(self.hand_integrate_layer(hand_cards))#hand_cards
-        hand_exist_filter = (hand_ids != 0).float().unsqueeze(-1)
-        hand_card_values = _hand_card_values * hand_exist_filter
+        #hand_exist_filter = (hand_ids != 0).float().unsqueeze(-1)
+        hand_card_values = _hand_card_values# * hand_exist_filter
 
-        src4 = self.emb1(deck_datas)
+        src4 = deck_datas#self.emb1(deck_datas)
         # src4 = self.emb1(deck_datas)*np.sqrt(self.n_mid)
         # src4 = self.pos_encoder(src4)
         deck_cards = self.prelu_layer(self.deck_value_layer(src4).view(-1, 40,10))#+src4.view(-1,40,10))
         _deck_card_values = torch.sigmoid(self.deck_integrate_layer(deck_cards))#deck_cards
-        deck_exist_filter = (deck_datas != 0).float().unsqueeze(-1)
-        deck_card_values = _deck_card_values * deck_exist_filter
+        #deck_exist_filter = (deck_datas != 0).float().unsqueeze(-1)
+        deck_card_values = _deck_card_values# * deck_exist_filter
         
         #deck_card_values = torch.sum(hand_ids, dim=1).view(-1, 1)
 
@@ -448,11 +455,11 @@ class Action_Value_Net(nn.Module):
         self.short_mid = mid_size//10
         #self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
         #nn.init.kaiming_normal_(self.emb1.weight)
-        self.emb2 = parent_net.emb1#nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
-        nn.init.kaiming_normal_(self.emb2.weight)
+        #self.emb2 = parent_net.emb1#nn.Embedding(3000, mid_size, padding_idx=0)  # 1000枚*3カテゴリー（空白含む）
+        #nn.init.kaiming_normal_(self.emb2.weight)
         #self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
         #self.lin1 = nn.Linear(5*mid_size+4, mid_size)#nn.Linear(7 * mid_size, mid_size)
-        self.lin1 = nn.Linear(2*mid_size+10+4, mid_size)#nn.Linear(3*mid_size+4, mid_size)
+        self.lin1 = nn.Linear(2*mid_size+20+4, mid_size)#nn.Linear(3*mid_size+4, mid_size)
         # #nn.Linear(7 * mid_size, mid_size)
 
         nn.init.kaiming_normal_(self.lin1.weight)
@@ -467,7 +474,7 @@ class Action_Value_Net(nn.Module):
         #self.mish = Mish()
         self.action_catgory_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
         self.side_emb = nn.Embedding(3,1,padding_idx=2)
-        self.association_layer = nn.Linear(10+1,mid_size)#nn.Linear(mid_size+1,mid_size)
+        self.association_layer = nn.Linear(25,mid_size)#nn.Linear(10+1,mid_size)#nn.Linear(mid_size+1,mid_size)
         nn.init.kaiming_normal_(self.association_layer.weight)
         self.prelu_1 = nn.PReLU(init=0.01)
         self.prelu_2 = nn.PReLU(init=0.01)
@@ -503,19 +510,21 @@ class Action_Value_Net(nn.Module):
 
         # embed_play_card_ids = self.emb2(play_card_ids)
         # embed_play_card_ids = self.prelu_3(embed_play_card_ids)
-        embed_acting_card_ids = self.emb2(acting_card_ids)
+        embed_acting_card_ids = acting_card_ids#self.emb2(acting_card_ids)
         embed_acting_card_ids = self.prelu_3(embed_acting_card_ids)
 
         # embed_field_card_ids = self.emb2(field_card_ids).view(-1,45,3*self.mid_size)#self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
         # embed_field_card_ids = self.prelu_4(embed_field_card_ids)
-        embed_acted_card_ids = self.emb2(acted_card_ids)#(-1,45,n_mid,?)
-
+        embed_acted_card_ids = acted_card_ids#self.emb2(acted_card_ids)#(-1,45,n_mid,?)
+        #print(embed_acted_card_ids.size())#(-1,45,20)
         #print("emb_acted:{}".format(embed_acted_card_ids.size()))
         embed_acted_card_sides = self.side_emb(acted_card_sides)  # (-1,45,?,n_mid)
+        #print(embed_acted_card_sides.size())
+        embed_acted_card_sides = embed_acted_card_sides.view(-1,45,5)
         #print(acted_card_ids,acted_card_sides,embed_acted_card_ids.size(),embed_acted_card_sides.size())
-        embed_acted_card_ids = torch.cat([embed_acted_card_ids,embed_acted_card_sides],dim=3)
+        embed_acted_card_ids = torch.cat([embed_acted_card_ids,embed_acted_card_sides],dim=2)
         embed_acted_card_ids = torch.sigmoid(self.association_layer(embed_acted_card_ids))
-        embed_acted_card_ids = torch.sum(embed_acted_card_ids,dim=2)
+        # embed_acted_card_ids = torch.sum(embed_acted_card_ids,dim=2)
         embed_acted_card_ids = embed_acted_card_ids.view(-1,45,self.n_mid)
         #self.emb3(field_card_ids).view(-1,45,3*self.mid_size)
         embed_acted_card_ids = self.prelu_4(embed_acted_card_ids)
@@ -607,8 +616,23 @@ class New_Dual_ReplayMemory:
         states = Detailed_State_data_2_Tensor(states,cuda=cuda,normalize=True)
         before_states = [list(cell.before_state) for cell in tmp]
         #print(before_states)
-        before_states = torch.LongTensor(before_states)
-        before_states = before_states.cuda() if cuda else before_states
+
+        tensor_action_categories = torch.LongTensor(
+            [cell[0]for cell in before_states])
+        tensor_acting_card_ids_in_action = torch.Tensor(
+            [d2v_model.docvecs[names.index(cell[1])]
+              if cell[1] in names else [0] * 20 for cell in
+             before_states])
+        tensor_acted_card_ids_in_action = torch.Tensor(
+            [d2v_model.docvecs[names.index(cell[2])]
+              if cell[2] in names else [0] * 20 for cell in
+             before_states])
+        tensor_acted_card_sides_in_action = torch.LongTensor(
+            [cell[3] for cell in before_states])
+        before_states = [tensor_action_categories,tensor_acting_card_ids_in_action,
+                         tensor_acted_card_ids_in_action,tensor_acted_card_sides_in_action]
+        #before_states = torch.Tensor(before_states)#torch.LongTensor(before_states)
+        #before_states = before_states.cuda() if cuda else before_states
         #Detailed_State_data_2_Tensor(before_states,cuda=cuda,normalize=True)
         actions = [cell.action for cell in tmp]
         actions = torch.LongTensor(actions)#torch.stack(actions, dim=0)
@@ -617,10 +641,12 @@ class New_Dual_ReplayMemory:
         detailed_action_codes = [cell.detailed_action_code for cell in tmp]
         detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes,cuda=cuda)
         states['detailed_action_codes'] = detailed_action_codes
-        states['before_states'] = before_states
+        
         if cuda:
             actions = actions.cuda()
             rewards = rewards.cuda()
+            before_states = [cell.cuda() for cell in before_states]
+        states['before_states'] = before_states
 
         return states, actions, rewards
 
@@ -645,8 +671,10 @@ def get_data(f,player_num=0):
     #hand_ids = [int(Card_Category[card.card_category].value != 0)*\
     #                       ((Card_Category[card.card_category].value-1)*1000+
     #                            card.card_id+500)for card in player.hand]
-    hand_ids = [((Card_Category[card.card_category].value-1)*1000+
-                                card.card_id+500) for card in player.hand]
+
+    hand_ids = [names.index(card.name) for card in player.hand]
+    #hand_ids = [((Card_Category[card.card_category].value-1)*1000+
+    #                            card.card_id+500) for card in player.hand]
     #hand_card_costs = [card.cost for card in player.hand]
     hand_card_costs = [card.cost/20 for card in player.hand]
     """
@@ -656,8 +684,8 @@ def get_data(f,player_num=0):
     """
     hand_ids.extend([0]*(9-len(player.hand)))
     hand_card_costs.extend([0]*(9-len(player.hand)))
-    deck_data = sorted([((Card_Category[card.card_category].value-1)*1000+
-                                card.card_id+500) for card in player.deck.deck])
+    deck_data = sorted([names.index(card.name)#((Card_Category[card.card_category].value-1)*1000+card.card_id+500)
+                        for card in player.deck.deck])
     deck_data.extend([0]*(40-len(player.deck.deck)))
     #follower_card_ids = []
     #amulet_card_ids = []
@@ -668,10 +696,10 @@ def get_data(f,player_num=0):
     opponent_mask =  [1 if i in opponent_creature_location else 0 for i in range(5)]
     able_to_evo = f.get_able_to_evo(player)
     able_to_evo = [1 if i in able_to_evo else 0 for i in range(5)] + opponent_mask#able_to_evo = [cell+1 for cell in able_to_evo]
-    follower_card_ids = [f.card_location[player_num][i].card_id + 500
+    follower_card_ids = [names.index(f.card_location[player_num][i].name)#f.card_location[player_num][i].card_id + 500
                          if i < len(f.card_location[player_num]) and f.card_location[player_num][
         i].card_category == "Creature" else 0 for i in range(5)] \
-                        + [f.card_location[opponent_num][i].card_id + 500
+                        + [names.index(f.card_location[opponent_num][i].name)#f.card_location[opponent_num][i].card_id + 500
                            if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Creature" else 0 for i in range(5)]
     follower_stats = [[f.card_location[player_num][i].power/20, f.card_location[player_num][i].get_current_toughness()/20,
@@ -703,10 +731,10 @@ def get_data(f,player_num=0):
     #                  + [f.card_location[opponent_num][i].card_id + 500
     #                     if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
     #    i].card_category == "Amulet" else 0 for i in range(5)]
-    amulet_card_ids = [f.card_location[player_num][i].card_id + 500
+    amulet_card_ids = [names.index(f.card_location[player_num][i].name)#f.card_location[player_num][i].card_id + 500
                        if i < len(f.card_location[player_num]) and f.card_location[player_num][
         i].card_category == "Amulet" else 0 for i in range(5)] \
-                      + [f.card_location[opponent_num][i].card_id + 500
+                      + [names.index(f.card_location[opponent_num][i].name)#f.card_location[opponent_num][i].card_id + 500
                          if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
         i].card_category == "Amulet" else 0 for i in range(5)]
     """
@@ -773,12 +801,19 @@ def Detailed_State_data_2_Tensor(datas,cuda=False, normalize=False):
     #print(type(datas))
     #print(type(datas[0]))
     #hand_ids = torch.LongTensor([[0 for _ in range(9)] for _ in range(data_len)])
-    hand_ids = torch.LongTensor([[datas[i]["hand_ids"][j] for j in range(9)] for i in range(data_len)])
+
+    hand_ids = torch.Tensor([[d2v_model.docvecs[datas[i]["hand_ids"][j]] for j in range(9)] for i in range(data_len)])
+    # hand_ids = torch.LongTensor([[datas[i]["hand_ids"][j] for j in range(9)] for i in range(data_len)])
     #hand_card_costs = torch.Tensor([[0 for j in range(9)] for i in range(data_len)])
     hand_card_costs = torch.Tensor([[datas[i]["hand_card_costs"][j] for j in range(9)] for i in range(data_len)])
-    follower_card_ids = torch.LongTensor([[datas[i]["follower_card_ids"][j] for j in range(10)] for i in range(data_len)])
+
+    follower_card_ids = torch.Tensor(
+        [[d2v_model.docvecs[datas[i]["follower_card_ids"][j]] for j in range(10)] for i in range(data_len)])
+    # follower_card_ids = torch.LongTensor([[datas[i]["follower_card_ids"][j] for j in range(10)] for i in range(data_len)])
     #follower_card_ids = torch.LongTensor([[0 for _ in range(10)] for _ in range(data_len)])
-    amulet_card_ids = torch.LongTensor([[datas[i]["amulet_card_ids"][j] for j in range(10)] for i in range(data_len)])
+
+    amulet_card_ids = torch.Tensor([[d2v_model.docvecs[datas[i]["amulet_card_ids"][j]] for j in range(10)] for i in range(data_len)])
+    # amulet_card_ids = torch.LongTensor([[datas[i]["amulet_card_ids"][j] for j in range(10)] for i in range(data_len)])
     #amulet_card_ids = torch.LongTensor([[0 for _ in range(10)] for _ in range(data_len)])
     follower_abilities = torch.LongTensor([[[datas[i]["follower_abilities"][j][k] if k < len(
         datas[i]["follower_abilities"][j]) else 0 for k in range(15)] for j in range(10)] for i in range(data_len)])
@@ -815,7 +850,10 @@ def Detailed_State_data_2_Tensor(datas,cuda=False, normalize=False):
     life_datas = torch.Tensor([datas[i]["life_data"][0] for i in range(data_len)])
     class_datas = torch.LongTensor([datas[i]["life_data"][1] for i in range(data_len)])
     deck_type_datas = torch.LongTensor([datas[i]["life_data"][2] for i in range(data_len)])
-    deck_datas = torch.LongTensor([datas[i]["deck_data"] for i in range(data_len)])
+    #d2v_mdoel.docvecs
+    deck_datas = [[d2v_model.docvecs[cell] for cell in datas[i]["deck_data"]] for i in range(data_len)]
+    deck_datas = torch.Tensor(deck_datas)
+    #deck_datas = torch.LongTensor([datas[i]["deck_data"] for i in range(data_len)])
     #if normalize:
     #   normalized_tensors =[hand_card_costs,follower_stats,pp_datas,life_datas]
     #    for tensor in normalized_tensors:
@@ -854,12 +892,21 @@ def Detailed_action_code_2_Tensor(action_codes, cuda = False):
 
     tensor_action_categories = torch.LongTensor(
         [[action_codes[i]['action_codes'][j][0] for j in range(45)] for i in range(action_code_len)])
-    tensor_acting_card_ids_in_action = torch.LongTensor(
-        [[action_codes[i]['action_codes'][j][1] for j in range(45)] for i in range(action_code_len)])
-    tensor_acted_card_ids_in_action = torch.LongTensor(
-        [[action_codes[i]['action_codes'][j][2] for j in range(45)] for i in range(action_code_len)])
+
+    # tensor_acting_card_ids_in_action = torch.LongTensor(
+    #     [[action_codes[i]['action_codes'][j][1] for j in range(45)] for i in range(action_code_len)])
+    tensor_acting_card_ids_in_action = torch.Tensor(
+        [[d2v_model.docvecs[names.index(action_codes[i]['action_codes'][j][1])]
+          if action_codes[i]['action_codes'][j][1] in names else [0]*20 for j in range(45)] for i in range(action_code_len)])
+
+    # tensor_acted_card_ids_in_action = torch.LongTensor(
+    #     [[action_codes[i]['action_codes'][j][2] for j in range(45)] for i in range(action_code_len)])
+    tensor_acted_card_ids_in_action = torch.Tensor(
+        [[d2v_model.docvecs[names.index(action_codes[i]['action_codes'][j][2])]
+          if action_codes[i]['action_codes'][j][2] in names else [0]*20 for j in range(45)] for i in range(action_code_len)])
     tensor_acted_card_sides_in_action = torch.LongTensor(
         [[action_codes[i]['action_codes'][j][3] for j in range(45)] for i in range(action_code_len)])
+
     able_to_choice = torch.Tensor([action_codes[i]['able_to_choice'] for i in range(action_code_len)])
     action_choice_len = torch.Tensor([[int(sum(action_codes[i]['able_to_choice']))] for i in range(action_code_len)])
     action_codes_dict = {'action_categories': tensor_action_categories,
