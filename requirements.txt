@@ -11,3 +11,4 @@ pandas
 torch==1.4.0
 matplotlib
 pytorch_memlab
+gensim==3.8.0
