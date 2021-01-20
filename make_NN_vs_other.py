@@ -8,7 +8,7 @@ try:
 except RuntimeError:
     pass
 
-from test import *  # importの依存関係により必ず最初にimport
+from emulator_test import *  # importの依存関係により必ず最初にimport
 from Field_setting import *
 from Player_setting import *
 from Policy import *

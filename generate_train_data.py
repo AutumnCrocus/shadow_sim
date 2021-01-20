@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 import torch.optim as optim
-from test import * #importの依存関係により必ず最初にimport
+from emulator_test import * #importの依存関係により必ず最初にimport
 from Field_setting import *
 from Player_setting import *
 

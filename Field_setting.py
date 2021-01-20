@@ -1022,6 +1022,10 @@ class Field:
         can_be_targeted = self.get_can_be_targeted(player_num=player_num)
         regal_targets = []
         assert target_type in [0, 1]
+        player = self.players[player_num]
+        player_side = self.card_location[player_num]
+        opponent_side = self.card_location[1-player_num]
+        player_side_followers = self.get_creature_location()[player_num]
         target_category = 0
         target_card_ids = []
         if target_type == 0:
@@ -1038,73 +1042,48 @@ class Field:
                 if target_category == Target_Type.ENEMY_FOLLOWER.value:
                     regal_targets = can_be_targeted
                     if with_ids:
-                        side = self.card_location[1-player_num]
-                        #target_card_ids = [(side[location_id].card_id+500,1) for location_id in regal_targets]
-                        target_card_ids = [(side[location_id].name, 1) for location_id in regal_targets]
+                        target_card_ids = [(opponent_side[location_id].name, 1) for location_id in regal_targets]
                 elif target_category == Target_Type.ALLIED_FOLLOWER.value:
                     regal_targets = self.get_creature_location()[player_num]
                     if with_ids:
-                        side = self.card_location[player_num]
-                        #target_card_ids = [(side[location_id].card_id+500,0) for location_id in regal_targets]
-                        target_card_ids = [(side[location_id].name, 0) for location_id in regal_targets]
+                        target_card_ids = [(player_side[location_id].name, 0) for location_id in regal_targets]
                 elif target_category == Target_Type.ENEMY.value:
                     regal_targets = [-1] + can_be_targeted
                     if with_ids:
-                        side = self.card_location[1-player_num]
-                        #target_card_ids = [(EMBEDDING_RANGE,1)]+[(side[location_id].card_id+500,1) for location_id in can_be_targeted]
-                        target_card_ids = [(EMBEDDING_RANGE, 1)] + [(side[location_id].name, 1) for location_id
+                        target_card_ids = [(EMBEDDING_RANGE, 1)] + [(opponent_side[location_id].name, 1) for location_id
                                                                     in can_be_targeted]
                 elif target_category == Target_Type.FOLLOWER.value:
-                    sides = self.get_creature_location()
-                    player_side = sides[player_num]
                     regal_targets = [(1 - player_num, card_id) for card_id in can_be_targeted]\
                         + [(player_num, card_id) for card_id in player_side]
                     if with_ids:
-                        player_locations = self.card_location[player_num]
-                        opponent_locations = self.card_location[1-player_num]
-                        #oppoenent:1 player:0
-                        #target_card_ids = [(opponent_locations[location_id].card_id+500,1) for location_id in can_be_targeted]+\
-                        #                    [(player_locations[location_id].card_id+500,0) for location_id in player_side]
-                        target_card_ids = [(opponent_locations[location_id].name,1) for location_id in can_be_targeted]+\
-                                            [(player_locations[location_id].name,0) for location_id in player_side]
+                        target_card_ids = [(opponent_side[location_id].name,1) for location_id in can_be_targeted]+\
+                                            [(player_side[location_id].name,0) for location_id in player_side_followers]
 
                 elif target_category == Target_Type.CARD.value:
                     regal_targets = [(1 - player_num, card_id) for card_id, target_thing
-                                     in enumerate(self.card_location[1 - player_num]) if target_thing.can_be_targeted()]+\
+                                     in enumerate(opponent_side) if target_thing.can_be_targeted()]+\
                     [(player_num, card_id) for card_id, target_thing
-                     in enumerate(self.card_location[player_num])]
+                     in enumerate(player_side)]
                     if with_ids:
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,1) for card_id, target_thing
-                        #              in enumerate(self.card_location[1 - player_num]) if target_thing.can_be_targeted()]+\
-                        #                         #     [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0) for card_id, target_thing
-                        #                         #      in enumerate(self.card_location[player_num])]
                         target_card_ids = [(target_thing.name,1) for card_id, target_thing
-                                     in enumerate(self.card_location[1 - player_num]) if target_thing.can_be_targeted()]+\
+                                     in enumerate(opponent_side) if target_thing.can_be_targeted()]+\
                             [(target_thing.name,0) for card_id, target_thing
-                             in enumerate(self.card_location[player_num])]
+                             in enumerate(player_side)]
 
 
                 elif target_category == Target_Type.ALLIED_CARD.value:
                     
-                    field_len = len(self.card_location[player_num])
+                    field_len = len(player_side)
                     regal_targets = list(range(field_len))
                     if with_ids:
-                        #target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0)
-                        #                   for location_id,target_thing in enumerate(self.card_location[player_num])]
                         target_card_ids = [(target_thing.name,0)
-                                           for location_id, target_thing in enumerate(self.card_location[player_num])]
+                                           for location_id, target_thing in enumerate(player_side)]
                 elif target_category == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
-                    player_len = len(self.card_location[player_num])
+                    player_len = len(player_side)
                     product = itertools.product(
                         range(player_len), can_be_targeted)
                     regal_targets = [(player_target_id, opponent_target_id) for player_target_id, opponent_target_id in product]
                     if with_ids:
-                        player_side = self.card_location[player_num]
-                        opponent_side = self.card_location[1-player_num]
-                        #target_card_ids = [("double",1000*(Card_Category[player_side[card_id_set[0]].card_category].value-1)+
-                        #                    player_side[card_id_set[0]].card_id+500,
-                        #                    opponent_side[card_id_set[1]].card_id+500)\
-                        #                   for card_id_set in regal_targets]
                         target_card_ids = [("double",player_side[card_id_set[0]].name,
                                             opponent_side[card_id_set[1]].name)\
                                            for card_id_set in regal_targets]
@@ -1113,35 +1092,26 @@ class Field:
                     hand_len = len(self.players[player_num].hand)
                     regal_targets = list(range(hand_len))
                     if with_ids:
-                        #target_card_ids = [(1000*(Card_Category[player.hand[hand_id].card_category].value-1)+\
-                        #                    player.hand[hand_id].card_id+500,0) for hand_id in regal_targets]
                         target_card_ids = [(player.hand[hand_id].name,0) for hand_id in regal_targets]
                 elif target_category == Target_Type.ENEMY_CARD.value:
 
-                    regal_targets = [location_id for location_id, target_thing in enumerate(self.card_location[1 - player_num])
+                    regal_targets = [location_id for location_id, target_thing in enumerate(opponent_side)
                         if target_thing.can_be_targeted()]
                     if with_ids:
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+\
-                        #                     target_thing.card_id+500,1) for location_id, target_thing \
-                        #                    in enumerate(self.card_location[1 - player_num])
                         target_card_ids = [(target_thing.name,1) for location_id, target_thing \
-                                           in enumerate(self.card_location[1 - player_num])
+                                           in enumerate(opponent_side)
                         if target_thing.can_be_targeted()]
                 elif target_category == Target_Type.ALLY.value:
-                    field_len = len(self.card_location[player_num])
+                    field_len = len(player_side)
                     regal_targets = [-1] + [range(field_len)]
                     if with_ids:
-                        # target_card_ids = [(EMBEDDING_RANGE,0)] + [(1000*(Card_Category[target_thing.card_category].value-1)+\
-                        #                     target_thing.card_id+500,0) for target_thing in self.card_location[player_num]]
                         target_card_ids = [(EMBEDDING_RANGE,0)] + [(target_thing.name,0) \
-                                                                   for target_thing in self.card_location[player_num]]
+                                                                   for target_thing in player_side]
 
                 elif target_category == Target_Type.ALLIED_AMULET.value:
-                    field_len = len(self.card_location[player_num])
+                    field_len = len(player_side)
                     regal_targets = list(set(range(field_len)) - set(can_be_targeted))
                     if with_ids:
-                        player_side = self.card_location[player_num]
-                        # target_card_ids = [(2000+player_side[location_id].card_id+
                         target_card_ids = [(player_side[location_id].name, 0) for location_id in
                                            regal_targets]
 
@@ -1150,103 +1120,68 @@ class Field:
                 if target_category == Target_Type.ENEMY_FOLLOWER.value:
 
                     regal_targets = [card_id for card_id in can_be_targeted if
-                                     evo_target_regulation(self.card_location[1 - player_num][card_id], card)]
+                                     evo_target_regulation(opponent_side[card_id], card)]
                     if with_ids:
-                        side = self.card_location[player_num]
-                        # target_card_ids = [(side[location_id].card_id + 500, 1) for location_id in regal_targets]
-                        target_card_ids = [(side[location_id].name, 1) for location_id in regal_targets]
+                        target_card_ids = [(player_side[location_id].name, 1) for location_id in regal_targets]
 
                 elif target_category == Target_Type.ALLIED_FOLLOWER.value:
-
-                    regal_targets = [card_id for card_id in self.get_creature_location()[player_num] if
-                                     evo_target_regulation(self.card_location[player_num][card_id], card)]
+                    regal_targets = [card_id for card_id in player_side_followers if
+                                     evo_target_regulation(player_side[card_id], card)]
                     if with_ids:
-                        side = self.card_location[player_num]
-                        # target_card_ids = [(side[location_id].card_id+500,0) for location_id in regal_targets]
-                        target_card_ids = [(side[location_id].name, 0) for location_id in regal_targets]
+                        target_card_ids = [(player_side[location_id].name, 0) for location_id in regal_targets]
 
                 elif target_category == Target_Type.ENEMY.value:
                     regal_targets = [-1] +  [card_id for card_id in can_be_targeted if
-                                     evo_target_regulation(self.card_location[1 - player_num][card_id], card)]
+                                     evo_target_regulation(opponent_side[card_id], card)]
                     if with_ids:
                         target_card_ids = [(EMBEDDING_RANGE, 1)]
                         if len(regal_targets)>1:
-                            side = self.card_location[1-player_num]
-                            target_card_ids += [(side[location_id].name, 1) for location_id in
+                            target_card_ids += [(opponent_side[location_id].name, 1) for location_id in
                                                 regal_targets[1:]]
-                            # target_card_ids += [(side[location_id].card_id+500,1) for location_id in regal_targets[1:]]
-
 
 
                 elif target_category == Target_Type.FOLLOWER.value:
-                    player_side = self.get_creature_location()[player_num]
                     regal_targets = [(1 - player_num, card_id) for card_id in can_be_targeted
-                                     if evo_target_regulation(self.card_location[1 - player_num][card_id], card)]\
-                        + [(player_num, card_id) for card_id in player_side
-                           if evo_target_regulation(self.card_location[1 - player_num][card_id], card)]
+                                     if evo_target_regulation(opponent_side[card_id], card)]\
+                        + [(player_num, card_id) for card_id in player_side_followers
+                           if evo_target_regulation(opponent_side[card_id], card)]
                     if with_ids:
-                        player_locations = self.card_location[player_num]
-                        opponent_locations = self.card_location[1-player_num]
-                        target_card_ids = [(opponent_locations[location_id].name,1) for location_id in can_be_targeted
+                        target_card_ids = [(opponent_side[location_id].name,1) for location_id in can_be_targeted
                                            if(1-player_num,location_id) in regal_targets]+\
-                                            [(player_locations[location_id].name,0) for location_id in player_side
+                                            [(player_side[location_id].name,0) for location_id in player_side
                                              if(player_num,location_id) in regal_targets]
-                        # target_card_ids = [(opponent_locations[location_id].card_id+500,1) for location_id in can_be_targeted
-                        #                    if(1-player_num,location_id) in regal_targets]+\
-                        #                     [(player_locations[location_id].card_id+500,0) for location_id in player_side
-                        #                      if(player_num,location_id) in regal_targets]
-
-
                 elif target_category == Target_Type.CARD.value:
                     regal_targets = [(1 - player_num, card_id) for card_id, target_thing
-                                     in enumerate(self.card_location[1 - player_num]) if target_thing.can_be_targeted()
-                                     and evo_target_regulation(target_thing, card)]
-                    +[(player_num, card_id) for card_id, target_thing
-                     in enumerate(self.card_location[player_num]) if evo_target_regulation(target_thing, card)]
+                                     in enumerate(opponent_side) if target_thing.can_be_targeted()
+                                     and evo_target_regulation(target_thing, card)]+\
+                                            [(player_num, card_id) for card_id, target_thing
+                                                in enumerate(player_side) if evo_target_regulation(target_thing, card)]
                     if with_ids:
                         target_card_ids = [(target_thing.name,1) for card_id, target_thing
-                                     in enumerate(self.card_location[1 - player_num]) if (1-player_num,card_id) in regal_targets and target_thing.can_be_targeted()]+\
+                                     in enumerate(opponent_side) if (1-player_num,card_id) in regal_targets and target_thing.can_be_targeted()]+\
                             [(target_thing.name,0) for card_id, target_thing\
-                             in enumerate(self.card_location[player_num]) if (1-player_num,card_id) in regal_targets]
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,1) for card_id, target_thing
-                        #              in enumerate(self.card_location[1 - player_num]) if (1-player_num,card_id) in regal_targets and target_thing.can_be_targeted()]+\
-                        #     [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0) for card_id, target_thing
-                        #      in enumerate(self.card_location[player_num]) if (1-player_num,card_id) in regal_targets]
+                             in enumerate(player_side) if (1-player_num,card_id) in regal_targets]
 
                 elif target_category == Target_Type.ALLIED_CARD.value:
-                    #for card_id, target_thing in enumerate(self.card_location[player_num]):
-                    #    if evo_target_regulation(target_thing, card):
-                    #        regal_targets.append(card_id)
-                    regal_targets = [location_id for location_id, target_thing in enumerate(self.card_location[player_num])
+                    regal_targets = [location_id for location_id, target_thing in enumerate(player_side)
                                      if evo_target_regulation(target_thing, card)]
                     if with_ids:
                         target_card_ids = [(target_thing.name,0)
-                                           for location_id,target_thing in enumerate(self.card_location[player_num])
+                                           for location_id,target_thing in enumerate(player_side)
                                            if location_id in regal_targets]
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0)
-                        #                    for location_id,target_thing in enumerate(self.card_location[player_num])
-                        #                    if location_id in regal_targets]
-
 
                 elif target_category == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
-                    player_len = len(self.card_location[player_num])
+                    player_len = len(player_side)
                     product = itertools.product(
                         range(player_len), can_be_targeted)
                     regal_targets = [(player_target_id, opponent_target_id)
                                      for player_target_id, opponent_target_id in product
-                                     if evo_target_regulation(self.card_location[1 - player_num][opponent_target_id],
+                                     if evo_target_regulation(opponent_side[opponent_target_id],
                                                               card)]
                     if with_ids:
-                        player_side = self.card_location[player_num]
-                        opponent_side = self.card_location[1-player_num]
                         target_card_ids = [("double",player_side[card_id_set[0]].name,
                                             opponent_side[card_id_set[1]].name)\
                                            for card_id_set in regal_targets]
-                        # target_card_ids = [("double",1000*(Card_Category[player_side[card_id_set[0]].card_category].value-1)+
-                        #                     player_side[card_id_set[0]].card_id+500,
-                        #                     opponent_side[card_id_set[1]].card_id+500)\
-                        #                    for card_id_set in regal_targets]
-
 
                 elif target_category == Target_Type.CARD_IN_HAND.value:
 
@@ -1254,47 +1189,33 @@ class Field:
                                      if evo_target_regulation(hand_card, card)]
                     if with_ids:
                         target_card_ids = [(player.hand[hand_id].name, 0) for hand_id in regal_targets]
-                        # target_card_ids = [(1000 * (Card_Category[player.hand[hand_id].card_category].value - 1) + \
-                        #                     player.hand[hand_id].card_id + 500, 0) for hand_id in regal_targets]
-
 
                 elif target_category == Target_Type.ENEMY_CARD.value:
 
-                    regal_targets = [location_id for location_id, target_thing in enumerate(self.card_location[1 - player_num])
+                    regal_targets = [location_id for location_id, target_thing in enumerate(opponent_side)
                         if target_thing.can_be_targeted() and evo_target_regulation(target_thing, card)]
                     if with_ids:
-                        target_card_ids = [(target_thing.name,1) for location_id, target_thing in enumerate(self.card_location[1 - player_num])
+                        target_card_ids = [(target_thing.name,1) for location_id, target_thing in enumerate(opponent_side)
                         if location_id in regal_targets and target_thing.can_be_targeted()]
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+\
-                        #                     target_thing.card_id+500,1) for location_id, target_thing in enumerate(self.card_location[1 - player_num])
-                        # if location_id in regal_targets and target_thing.can_be_targeted()]
 
                 elif target_category == Target_Type.ALLY.value:
                     regal_targets = [-1] + [card_id
-                        for card_id, target_thing in enumerate(self.card_location[player_num])
+                        for card_id, target_thing in enumerate(player_side)
                                             if evo_target_regulation(target_thing,card)]
                     if with_ids:
                         target_card_ids = [(EMBEDDING_RANGE,0)] + \
                                           [(target_thing.name, 0) for location_id, target_thing in
-                                           enumerate(self.card_location[player_num])
+                                           enumerate(player_side)
                                            if location_id in regal_targets]
-                        # [(1000*(Card_Category[target_thing.card_category].value-1)+\
-                        #   target_thing.card_id+500,0) for location_id,target_thing in enumerate(self.card_location[player_num])
-                        #             if location_id in regal_targets]
-
-
 
                 elif target_category == Target_Type.ALLIED_AMULET.value:
-                    field_len = len(self.card_location[player_num])
+                    field_len = len(player_side)
                     amulet_ids = list(set(range(field_len)) - set(can_be_targeted))
                     regal_targets = [card_id for card_id in amulet_ids
-                                     if evo_target_regulation(self.card_location[player_num][card_id],card)]
+                                     if evo_target_regulation(player_side[card_id],card)]
                     if with_ids:
-                        player_side = self.card_location[player_num]
                         target_card_ids = [(player_side[location_id].name, 0) for location_id in
                                            regal_targets]
-                        # target_card_ids = [(2000+player_side[location_id].card_id+500,0) for location_id in regal_targets]
-
 
         elif target_type == 1:
             target_category = None
@@ -1327,84 +1248,58 @@ class Field:
                 if target_category == Target_Type.ENEMY_FOLLOWER.value:
                     regal_targets = can_be_targeted
                     if with_ids:
-                        side = self.card_location[1-player_num]
-                        # target_card_ids = [(side[location_id].card_id+500,1) for location_id in regal_targets]
-                        target_card_ids = [(side[location_id].name, 1) for location_id in regal_targets]
+                        target_card_ids = [(opponent_side[location_id].name, 1) for location_id in regal_targets]
 
                 elif target_category == Target_Type.ALLIED_FOLLOWER.value:
-                    regal_targets = self.get_creature_location()[player_num]
+                    regal_targets = player_side_followers
                     if with_ids:
-                        side = self.card_location[player_num]
-                        # target_card_ids = [(side[location_id].card_id+500,0) for location_id in regal_targets]
-                        target_card_ids = [(side[location_id].name, 0) for location_id in regal_targets]
+                        target_card_ids = [(player_side[location_id].name, 0) for location_id in player_side_followers]
 
 
                 elif target_category == Target_Type.ENEMY.value:
                     regal_targets = [-1] + can_be_targeted
                     if with_ids:
-                        side = self.card_location[1-player_num]
-                        # target_card_ids = [(EMBEDDING_RANGE,1)]+[(side[location_id].card_id+500,1) for location_id in can_be_targeted]
-                        target_card_ids = [(EMBEDDING_RANGE, 1)] + [(side[location_id].name, 1) for location_id
+                        target_card_ids = [(EMBEDDING_RANGE, 1)] + [(opponent_side[location_id].name, 1) for location_id
                                                                     in can_be_targeted]
 
-
                 elif target_category == Target_Type.FOLLOWER.value:
-
-                    player_side = self.get_creature_location()[player_num]
                     regal_targets = [(1 - player_num, card_id) for card_id in can_be_targeted] \
-                                    + [(player_num, card_id) for card_id in player_side]
+                                    + [(player_num, card_id) for card_id in player_side_followers]
                     if with_ids:
-                        player_locations = self.card_location[player_num]
-                        opponent_locations = self.card_location[1-player_num]
                         #oppoenent:1 player:0
-                        target_card_ids = [(opponent_locations[location_id].name,1) for location_id in can_be_targeted]+\
-                                            [(player_locations[location_id].name,0) for location_id in player_side]
-                        # target_card_ids = [(opponent_locations[location_id].card_id+500,1) for location_id in can_be_targeted]+\
-                        #                     [(player_locations[location_id].card_id+500,0) for location_id in player_side]
+                        target_card_ids = [(opponent_side[location_id].name,1) for location_id in can_be_targeted]+\
+                                            [(player_side[location_id].name,0) for location_id in player_side]
 
 
                 elif target_category == Target_Type.CARD.value:
                     regal_targets = [(1 - player_num, card_id) for card_id, target_thing
-                                     in enumerate(self.card_location[1 - player_num]) if target_thing.can_be_targeted()]
-                    +[(player_num, card_id) for card_id, target_thing
-                      in enumerate(self.card_location[player_num])]
+                                     in enumerate(opponent_side) if target_thing.can_be_targeted()]+\
+                                        [(player_num, card_id) for card_id, target_thing
+                                            in enumerate(player_side)]
                     if with_ids:
                         target_card_ids = [(target_thing.name,1) for card_id, target_thing
-                                     in enumerate(self.card_location[1 - player_num]) if target_thing.can_be_targeted()]+\
+                                     in enumerate(opponent_side) if target_thing.can_be_targeted()]+\
                             [(target_thing.name,0) for card_id, target_thing
-                             in enumerate(self.card_location[player_num])]
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,1) for card_id, target_thing
-                        #              in enumerate(self.card_location[1 - player_num]) if target_thing.can_be_targeted()]+\
-                        #     [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0) for card_id, target_thing
-                        #      in enumerate(self.card_location[player_num])]
+                             in enumerate(player_side)]
 
                 elif target_category == Target_Type.ALLIED_CARD.value:
-                    field_len = len(self.card_location[player_num])
+                    field_len = len(player_side)
                     regal_targets = list(range(field_len))
                     if with_ids:
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0)
-                        #                    for location_id,target_thing in enumerate(self.card_location[player_num])]
                         target_card_ids = [(target_thing.name,0)
-                                           for location_id,target_thing in enumerate(self.card_location[player_num])]
+                                           for location_id,target_thing in enumerate(player_side)]
 
 
                 elif target_category == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
-                    player_len = len(self.card_location[player_num])
+                    player_len = len(player_side)
                     product = itertools.product(
                         range(player_len), can_be_targeted)
                     regal_targets = [(player_target_id, opponent_target_id)
                                      for player_target_id, opponent_target_id in product]
                     if with_ids:
-                        player_side = self.card_location[player_num]
-                        opponent_side = self.card_location[1-player_num]
                         target_card_ids = [("double",player_side[card_id_set[0]].name,
                                             opponent_side[card_id_set[1]].name)\
                                            for card_id_set in regal_targets]
-                        # target_card_ids = [("double",1000*(Card_Category[player_side[card_id_set[0]].card_category].value-1)+
-                        #                     player_side[card_id_set[0]].card_id+500,
-                        #                     opponent_side[card_id_set[1]].card_id+500)\
-                        #                    for card_id_set in regal_targets]
-
 
                 elif target_category == Target_Type.CARD_IN_HAND.value:
                     hand_len = len(self.players[player_num].hand)
@@ -1414,148 +1309,94 @@ class Field:
                     if with_ids:
                         target_card_ids = [(player.hand[hand_id].name,0) for hand_id in range(hand_len)
                                            if hand_id != itself_index]
-                        # target_card_ids = [(1000*(Card_Category[player.hand[hand_id].card_category].value-1)+\
-                        #                     player.hand[hand_id].card_id+500,0) for hand_id in range(hand_len)
-                        #                    if hand_id != itself_index]
 
 
 
                 elif target_category == Target_Type.ENEMY_CARD.value:
-                    regal_targets = [card_id for card_id, target_thing in enumerate(self.card_location[1 - player_num])
+                    regal_targets = [card_id for card_id, target_thing in enumerate(opponent_side)
                                      if target_thing.can_be_targeted()]
                     if with_ids:
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+\
-                        #                     target_thing.card_id+500,1) for location_id, target_thing in enumerate(self.card_location[1 - player_num])
-                        # if target_thing.can_be_targeted()]
-                        target_card_ids = [(target_thing.name,1) for location_id, target_thing in enumerate(self.card_location[1 - player_num])
+                        target_card_ids = [(target_thing.name,1) for location_id, target_thing in enumerate(opponent_side)
                         if target_thing.can_be_targeted()]
 
                 elif target_category == Target_Type.ALLY.value:
-                    field_len = len(self.card_location[player_num])
+                    field_len = len(player_side)
                     regal_targets = [-1] + [range(field_len)]
                     if with_ids:
-                        # target_card_ids = [(EMBEDDING_RANGE,0)] + [(1000*(Card_Category[target_thing.card_category].value-1)+\
-                        #                     target_thing.card_id+500,0) for target_thing in self.card_location[player_num]]
-                        target_card_ids = [(EMBEDDING_RANGE,0)] + [(target_thing.name,0) for target_thing in self.card_location[player_num]]
+                        target_card_ids = [(EMBEDDING_RANGE,0)] + [(target_thing.name,0) for target_thing in player_side]
 
 
                 elif target_category == Target_Type.ALLIED_AMULET.value:
-                    field_len = len(self.card_location[player_num])
+                    field_len = len(player_side)
                     regal_targets = list(set(range(field_len)) - set(can_be_targeted))
                     if with_ids:
-                        player_side = self.card_location[player_num]
-                        #target_card_ids = [(2000+player_side[location_id].card_id+500,0) for location_id in regal_targets]
                         target_card_ids = [(player_side[location_id].name, 0) for location_id in
                                            regal_targets]
 
-
-                #print(target_category)
-                #print(card)
-                #assert False
             else:
                 if target_category == Target_Type.ENEMY_FOLLOWER.value:
                     regal_targets = [card_id for card_id in can_be_targeted if
-                                     regulation_func(self.card_location[1 - player_num][card_id])]
+                                     regulation_func(opponent_side[card_id])]
                     if with_ids:
-                        opponent_side = self.card_location[1-player_num]
-                        # target_card_ids = [(opponent_side[location_id].card_id + 500, 1) for location_id in regal_targets]
                         target_card_ids = [(opponent_side[location_id].name, 1) for location_id in regal_targets]
 
-
-
                 elif target_category == Target_Type.ALLIED_FOLLOWER.value:
-                    regal_targets = [card_id for card_id in self.get_creature_location()[player_num] if
-                                     regulation_func(self.card_location[player_num][card_id])]
+                    regal_targets = [card_id for card_id in player_side_followers if
+                                     regulation_func(player_side[card_id])]
                     if with_ids:
-                        side = self.card_location[player_num]
-                        # target_card_ids = [(side[location_id].card_id+500,0) for location_id in regal_targets]
-                        target_card_ids = [(side[location_id].name, 0) for location_id in regal_targets]
-
-
-
+                        target_card_ids = [(player_side[location_id].name, 0) for location_id in regal_targets]
 
                 elif target_category == Target_Type.ENEMY.value:
                     regal_targets = [-1] + [card_id for card_id in can_be_targeted if
-                                            regulation_func(self.card_location[1 - player_num][card_id])]
+                                            regulation_func(opponent_side[card_id])]
                     if with_ids:
                         target_card_ids = [(EMBEDDING_RANGE, 1)]
                         if len(regal_targets)>1:
-                            opponent_side = self.card_location[1-player_num]
-                            #target_card_ids += [(opponent_side[location_id].card_id+500,1) for location_id in regal_targets[1:]]
                             target_card_ids += [(opponent_side[location_id].name, 1) for location_id in
                                                 regal_targets[1:]]
 
-
-
-
                 elif target_category == Target_Type.FOLLOWER.value:
-                    player_side = self.get_creature_location()[player_num]
                     regal_targets = [(1 - player_num, card_id) for card_id in can_be_targeted
-                                     if regulation_func(self.card_location[1 - player_num][card_id])] \
-                                    + [(player_num, card_id) for card_id in player_side
-                                       if regulation_func(self.card_location[1 - player_num][card_id])]
+                                     if regulation_func(opponent_side[card_id])] \
+                                    + [(player_num, card_id) for card_id in player_side_followers
+                                       if regulation_func(player_side[card_id])]
                     if with_ids:
-                        player_locations = self.card_location[player_num]
-                        opponent_locations = self.card_location[1-player_num]
-                        target_card_ids = [(opponent_locations[location_id].name,1) for location_id in can_be_targeted
+                        target_card_ids = [(opponent_side[location_id].name,1) for location_id in can_be_targeted
                                            if(1-player_num,location_id) in regal_targets]+\
-                                            [(player_locations[location_id].name,0) for location_id in player_side
+                                            [(player_side[location_id].name,0) for location_id in player_side_followers
                                              if(player_num,location_id) in regal_targets]
-                        # target_card_ids = [(opponent_locations[location_id].card_id+500,1) for location_id in can_be_targeted
-                        #                    if(1-player_num,location_id) in regal_targets]+\
-                        #                     [(player_locations[location_id].card_id+500,0) for location_id in player_side
-                        #                      if(player_num,location_id) in regal_targets]
-
 
                 elif target_category == Target_Type.CARD.value:
                     regal_targets = [(1 - player_num, card_id) for card_id, target_thing
-                                     in enumerate(self.card_location[1 - player_num]) if target_thing.can_be_targeted()
+                                     in enumerate(opponent_side) if target_thing.can_be_targeted()
                                      and regulation_func(target_thing)]\
                         +[(player_num, card_id) for card_id, target_thing
-                          in enumerate(self.card_location[player_num]) if regulation_func(target_thing)]
+                          in enumerate(player_side) if regulation_func(target_thing)]
                     if with_ids:
                         target_card_ids = [(target_thing.name,1) for card_id, target_thing
-                                     in enumerate(self.card_location[1 - player_num]) if (1-player_num,card_id) in regal_targets and target_thing.can_be_targeted()]+\
+                                     in enumerate(opponent_side) if (1-player_num,card_id) in regal_targets and target_thing.can_be_targeted()]+\
                             [(target_thing.name,0) for card_id, target_thing
-                             in enumerate(self.card_location[player_num]) if (player_num,card_id) in regal_targets]
-                        # target_card_ids = [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,1) for card_id, target_thing
-                        #              in enumerate(self.card_location[1 - player_num]) if (1-player_num,card_id) in regal_targets and target_thing.can_be_targeted()]+\
-                        #     [(1000*(Card_Category[target_thing.card_category].value-1)+target_thing.card_id+500,0) for card_id, target_thing
-                        #      in enumerate(self.card_location[player_num]) if (player_num,card_id) in regal_targets]
-
-
+                             in enumerate(player_side) if (player_num,card_id) in regal_targets]
 
                 elif target_category == Target_Type.ALLIED_CARD:
-                    regal_targets = [card_id for card_id, target_thing in enumerate(self.card_location[player_num])
+                    regal_targets = [card_id for card_id, target_thing in enumerate(player_side)
                                      if regulation_func(target_thing)]
                     if with_ids:
                         target_card_ids = [(target_thing.name, 0)
-                                           for location_id, target_thing in enumerate(self.card_location[player_num])
+                                           for location_id, target_thing in enumerate(player_side)
                                            if location_id in regal_targets]
-                        # target_card_ids = [(1000 * (
-                        #             Card_Category[target_thing.card_category].value - 1) + target_thing.card_id + 500,
-                        #                     0)
-                        #                    for location_id, target_thing in enumerate(self.card_location[player_num])
-                        #                    if location_id in regal_targets]
 
                 elif target_category == Target_Type.ALLIED_CARD_AND_ENEMY_FOLLOWER.value:
-                    player_len = len(self.card_location[player_num])
+                    player_len = len(player_side)
                     product = itertools.product(
                         range(player_len), can_be_targeted)
                     regal_targets = [(player_target_id, opponent_target_id)
                                      for player_target_id, opponent_target_id in product
-                                     if regulation_func(self.card_location[1 - player_num][opponent_target_id])]
+                                     if regulation_func(opponent_side[opponent_target_id])]
                     if with_ids:
-                        player_side = self.card_location[player_num]
-                        opponent_side = self.card_location[1-player_num]
                         target_card_ids = [("double",player_side[card_id_set[0]].name,
                                             opponent_side[card_id_set[1]].name)\
                                            for card_id_set in regal_targets]
-                        # target_card_ids = [("double",1000*(Card_Category[player_side[card_id_set[0]].card_category].value-1)+
-                        #                     player_side[card_id_set[0]].card_id+500,
-                        #                     opponent_side[card_id_set[1]].card_id+500)\
-                        #                    for card_id_set in regal_targets]
-
 
                 elif target_category == Target_Type.CARD_IN_HAND.value:
                     itself_index = self.players[player_num].hand.index(card)
@@ -1564,48 +1405,35 @@ class Field:
                     if with_ids:
                         player = self.players[player_num]
                         hand_len = len(player.hand)
-                        # target_card_ids = [(1000*(Card_Category[player.hand[hand_id].card_category].value-1)+\
-                        #                     player.hand[hand_id].card_id+500,0) for hand_id in range(hand_len)
-                        #                    if hand_id != itself_index and regulation_func(player.hand[hand_id])]
                         target_card_ids = [(player.hand[hand_id].name,0) for hand_id in range(hand_len)
                                            if hand_id != itself_index and regulation_func(player.hand[hand_id])]
 
 
                 elif target_category == Target_Type.ENEMY_CARD.value:
-                    regal_targets = [card_id for card_id, target_thing in enumerate(self.card_location[1 - player_num])
+                    regal_targets = [card_id for card_id, target_thing in enumerate(opponent_side)
                                      if target_thing.can_be_targeted() and regulation_func(target_thing)]
                     if with_ids:
-                        # target_card_ids = [(1000 * (Card_Category[target_thing.card_category].value - 1) + \
-                        #                     target_thing.card_id + 500, 1) for location_id, target_thing in
-                        #                    enumerate(self.card_location[1 - player_num])
-                        #                    if location_id in regal_targets and target_thing.can_be_targeted()]
                         target_card_ids = [(target_thing.name, 1) for location_id, target_thing in
-                                           enumerate(self.card_location[1 - player_num])
+                                           enumerate(opponent_side)
                                            if location_id in regal_targets and target_thing.can_be_targeted()]
 
                 elif target_category == Target_Type.ALLY.value:
                     regal_targets = [-1] + [card_id
-                                            for card_id, target_thing in enumerate(self.card_location[player_num])
+                                            for card_id, target_thing in enumerate(player_side)
                                             if regulation_func(target_thing)]
                     if with_ids:
-                        # target_card_ids = [(EMBEDDING_RANGE,0)] + [(1000*(Card_Category[target_thing.card_category].value-1)+\
-                        #                     target_thing.card_id+500,0) for location_id,target_thing in enumerate(self.card_location[player_num])
-                        #                               if location_id in regal_targets]
                         target_card_ids = [(EMBEDDING_RANGE,0)] + [(target_thing.name,0) for location_id,target_thing \
-                                                                   in enumerate(self.card_location[player_num])
+                                                                   in enumerate(player_side)
                                                       if location_id in regal_targets]
 
                 elif target_category == Target_Type.ALLIED_AMULET.value:
-                    field_len = len(self.card_location[player_num])
+                    field_len = len(player_side)
                     amulet_ids = list(set(range(field_len)) - set(can_be_targeted))
                     regal_targets = [card_id for card_id in amulet_ids
-                                     if regulation_func(self.card_location[player_num][card_id])]
+                                     if regulation_func(player_side[card_id])]
                     if with_ids:
-                        player_side = self.card_location[player_num]
                         target_card_ids = [(player_side[location_id].name, 0) for location_id in
                                            regal_targets]
-                        # target_card_ids = [(2000 + player_side[location_id].card_id + 500, 0) for location_id in
-                        #                    regal_targets]
 
         card.current_target = target_category
         if with_ids:
@@ -2076,23 +1904,6 @@ class Field:
             else:
                 action_codes.append((0, 0, PADDING_TARGET,PADDING_SIDE))
                 able_to_choice.append(0)
-        # for play_id in range(9):
-        #     if play_id in able_to_play:
-        #         target_card = player.hand[play_id]
-        #         category_num = Card_Category[target_card.card_category].value - 1
-        #         long_card_id = target_card.card_id + margin + category_range * category_num
-        #         action_codes.append((Action_Code.PLAY_CARD.value,
-        #                                 long_card_id, 0, 0, 0))
-        #         #assert long_card_id < 3*category_range and long_card_id > 0,"{}".format(long_card_id)
-        #         able_to_choice.append(1)
-        #     else:
-        #         action_codes.append((0, 0, 0, 0, 0))
-        #         able_to_choice.append(0)
-
-        #[(Action_Code.PLAY_CARD.value, player.hand[play_id].card_id + 500 + 1000 * (Card_Category[player.hand[play_id].card_category].value - 1), 0, 0,
-        #  0) if play_id in able_to_play else (0, 0, 0, 0, 0) for play_id in range(9)]
-        #[1 if play_id in able_to_play else 0 for play_id in range(9)]
-
         follower_attack_codes = []
         player_attack_codes = []
         evolve_codes = []

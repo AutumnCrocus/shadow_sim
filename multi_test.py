@@ -14,7 +14,7 @@ except RuntimeError:
     pass
 # -
 
-from test import *  # importの依存関係により必ず最初にimport
+from emulator_test import *  # importの依存関係により必ず最初にimport
 from Field_setting import *
 from Player_setting import *
 from Policy import *
@@ -27,6 +27,7 @@ import datetime
 # net = New_Dual_Net(100)
 import os
 from torch.autograd import detect_anomaly
+from adabound import AdaBound,AdaBoundW
 GAMMA = 0.9
 parser = argparse.ArgumentParser(description='デュアルニューラルネットワーク学習コード')
 
@@ -60,6 +61,8 @@ parser.add_argument('--OMP_NUM', help='num of threads used in OMP',default=0,typ
 parser.add_argument('--loss_th', help='accepted test loss limit',default=10,type=int)
 parser.add_argument('--step_iter', help='MCTS_step_iteration',default=100,type=int)
 parser.add_argument('--supervised', help='if model use other model')
+parser.add_argument('--data_rate', help='the rate of data used by train',default=0.8,type=float)
+parser.add_argument('--w_list', help='list of weight decay',default=[0.001,0.002,0.004,0.008],type=lambda txt:list(map(float,txt.split(","))))
 args = parser.parse_args()
 
 deck_flg = args.fixed_deck_ids#list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
@@ -356,12 +359,13 @@ import itertools
 
 def multi_train(data):
     net, memory, batch_size, iteration_num, train_ids,p_num,current_weight_decay = data
-    optimizer =  optim.AdamW(net.parameters(), weight_decay=current_weight_decay)
+    #optimizer =  optim.AdamW(net.parameters(), weight_decay=current_weight_decay)
+    optimizer = AdaBoundW(net.parameters(),weight_decay=current_weight_decay)
     all_loss, MSE, CEE = 0, 0, 0
 
     all_states, all_actions, all_rewards = memory
     states_keys = tuple(all_states.keys())
-    normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
+    normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states','target'})
     value_keys = tuple(all_states['values'].keys())
     action_code_keys = tuple(all_states['detailed_action_codes'].keys())
     batch_id_list = train_ids
@@ -372,7 +376,11 @@ def multi_train(data):
         net.zero_grad()
         key = random.sample(batch_id_list,k=batch_size)
         states = {}
-        states.update({dict_key : torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+        try:
+            states.update({dict_key : torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+        except Exception as e:
+            print(normal_states_keys,key)
+            raise e
         states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
                             for sub_key in value_keys}
         states['detailed_action_codes'] = {sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
@@ -468,7 +476,7 @@ def multi_eval(data):
     return all_loss, MSE, CEE
 
 
-from test import *  # importの依存関係により必ず最初にimport
+from emulator_test import *  # importの依存関係により必ず最初にimport
 from Field_setting import *
 from Player_setting import *
 from Policy import *
@@ -533,6 +541,7 @@ def run_main():
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
+        test_R = New_Dual_ReplayMemory(100000)
         if epoch == 0 and args.supervised is not None:
             episode_len = 1000
             if args.supervised == "Random":
@@ -562,34 +571,29 @@ def run_main():
         print("\n" * (p_size+1))
         pool.terminate()  # add this.
         pool.close()  # add this.
-
+        # [[result_data,result_data,...,battle_data], ...]
         battle_data = [cell.pop(-1) for cell in memory]
-        memories = []
-        [memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(p_size)]
+
+        #memories = []
+        #[memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(p_size)]
+        # [[result_data,result_data,...], [result_data,result_data,...],...]
         sum_of_choice = max(sum([cell["sum_of_choices"] for cell in battle_data]),1)
         sum_of_code = max(sum([cell["sum_code"] for cell in battle_data]),1)
         win_num = sum([cell["win_num"] for cell in battle_data])
         sum_end_turn = sum([cell["end_turn"] for cell in battle_data])
-        memories = list(itertools.chain.from_iterable(memory))
-        memories = list(itertools.chain.from_iterable(memories))
+        # [[result_data,result_data,...], [result_data,result_data,...],...]
+        #result_data: 一対戦
+        origin_memories = list(itertools.chain.from_iterable(memory))
+        #origin_memories = random.shuffle(origin_memories)
+        # [result_data,result_data,...,result_data,result_data]
+        #memories = list(itertools.chain.from_iterable(origin_memories))
+        print(type(memory),type(origin_memories),int(episode_len*args.data_rate),len(origin_memories))
+        memories = list(itertools.chain.from_iterable(origin_memories[:int(episode_len*args.data_rate)]))
+        test_memories = list(itertools.chain.from_iterable(origin_memories[int(episode_len*args.data_rate):]))
         follower_attack_num = 0
         all_able_to_follower_attack = 0
 
         for data in memories:
-            #print(data[0])
-#             after_state = Detailed_State_data(data[0].hand_ids, data[0].hand_card_costs,
-#                                 data[0].follower_card_ids, data[0].amulet_card_ids,
-#                                 data[0].follower_stats, data[0].follower_abilities,
-#                                 data[0].able_to_evo, data[0].life_data,
-#                                 data[0].pp_data, data[0].able_to_play,
-#                                 data[0].able_to_attack, data[0].able_to_creature_attack,
-#                                                   data[0].deck_data)
-#             after_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
-#                             data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
-#                             data[0]['follower_stats'], data[0]['follower_abilities'],
-#                             data[0]['able_to_evo'], data[0]['life_data'],
-#                             data[0]['pp_data'], data[0]['able_to_play'],
-#                             data[0]['able_to_attack'], data[0]['able_to_creature_attack'],data[0]['deck_data'])
             after_state = {"hand_ids":data[0]['hand_ids'], 
                      "hand_card_costs":data[0]['hand_card_costs'], 
                      "follower_card_ids":data[0]['follower_card_ids'], 
@@ -604,26 +608,37 @@ def run_main():
                      "able_to_creature_attack":data[0]['able_to_creature_attack'],
                      "deck_data":data[0]['deck_data']}
             before_state = data[2]
-            """
-            before_state = Detailed_State_data(data[2]['hand_ids'], data[2]['hand_card_costs'],
-                            data[2]['follower_card_ids'], data[2]['amulet_card_ids'],
-                            data[2]['follower_stats'], data[2]['follower_abilities'],
-                            data[2]['able_to_evo'], data[2]['life_data'],
-                            data[2]['pp_data'], data[2]['able_to_play'],
-                            data[2]['able_to_attack'], data[2]['able_to_creature_attack'],
-                            data[2]['deck_data'])
-            """
             hit_flg = int(1 in data[3]['able_to_choice'][10:35])
             all_able_to_follower_attack += hit_flg
             follower_attack_num +=  hit_flg * int(data[1] >= 10 and data[1] <= 34)
             R.push(after_state,data[1], before_state, data[3], data[4])
+        for data in test_memories:
+            after_state = {"hand_ids":data[0]['hand_ids'],
+                     "hand_card_costs":data[0]['hand_card_costs'],
+                     "follower_card_ids":data[0]['follower_card_ids'],
+                     "amulet_card_ids":data[0]['amulet_card_ids'],
+                     "follower_stats":data[0]['follower_stats'],
+                     "follower_abilities":data[0]['follower_abilities'],
+                     "able_to_evo":data[0]['able_to_evo'],
+                     "life_data":data[0]['life_data'],
+                     "pp_data":data[0]['pp_data'],
+                     "able_to_play":data[0]['able_to_play'],
+                     "able_to_attack":data[0]['able_to_attack'],
+                     "able_to_creature_attack":data[0]['able_to_creature_attack'],
+                     "deck_data":data[0]['deck_data']}
+            before_state = data[2]
+            hit_flg = int(1 in data[3]['able_to_choice'][10:35])
+            all_able_to_follower_attack += hit_flg
+            follower_attack_num +=  hit_flg * int(data[1] >= 10 and data[1] <= 34)
+            test_R.push(after_state,data[1], before_state, data[3], data[4])
 
 
         print("win_rate:{:.3%}".format(win_num/episode_len))
         print("mean_of_num_of_choice:{:.3f}".format(sum_of_choice/sum_of_code))
         print("follower_attack_ratio:{:.3%}".format(follower_attack_num/max(1,all_able_to_follower_attack)))
         print("mean end_turn:{:.3f}".format(sum_end_turn/episode_len))
-        print("sample_size:{}".format(len(R.memory)))
+        print("train_data_size:{}".format(len(R.memory)))
+        print("test_data_size:{}".format(len(test_R.memory)))
         net.train()
         prev_net = copy.deepcopy(net)
 
@@ -639,7 +654,7 @@ def run_main():
                 net = New_Dual_Net(node_num)
                 reset_count += 1
                 print("reset_num:",reset_count)
-            p_size = 2
+            p_size = 2# if args.cuda is None else 1
             if cuda_flg:
                 net = net.cuda()
             net.share_memory()
@@ -649,27 +664,38 @@ def run_main():
             all_states, all_actions, all_rewards = all_data
             memory_len = all_actions.size()[0]
             all_data_ids = list(range(memory_len))
-            train_ids = random.sample(all_data_ids, k=int(memory_len * 0.85))
-            test_ids =list(set(all_data_ids)-set(train_ids))
-            min_loss = [0,100,100,100]
+            train_ids = random.sample(all_data_ids, k=memory_len)
+            #train_ids = random.sample(all_data_ids, k=int(memory_len * 0.85))
+
+
+            #test_ids =list(set(all_data_ids)-set(train_ids))
+            test_data = test_R.sample(batch_size,all=True,cuda=cuda_flg)
+            test_states, test_actions, test_rewards = test_data
+            test_memory_len = test_actions.size()[0]
+            test_ids = list(range(test_memory_len))
+            min_loss = [0,0.0,100,100,100]
             best_train_data = [100,100,100]
-            next_nets = [copy.deepcopy(net) for k in range(4)]
-            iteration_num = (int(memory_len * 0.85) // batch)*iteration
-            for weight_scale in range(4):
+            w_list = args.w_list
+            next_nets = [copy.deepcopy(net) for k in range(len(w_list))]
+            iteration_num = int(memory_len//batch)*iteration #(int(memory_len * 0.85) // batch)*iteration
+            
+            for weight_scale in range(len(w_list)):
                 target_net = next_nets[weight_scale]
                 target_net.train()
-                print("weight_decay:",10**(-weight_scale))
-                iter_data = [[target_net,all_data,batch,iteration_num//p_size,train_ids,i,10**(-weight_scale)]
+                print("weight_decay:",w_list[weight_scale])
+                iter_data = [[target_net,all_data,batch,iteration_num//p_size,train_ids,i,w_list[weight_scale]]
                              for i in range(p_size)]
                 #iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
                 #            for i in range(p_size)]
-                freeze_support()
-
-                pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
-                loss_data = pool.map(multi_train, iter_data)
-                pool.terminate()  # add this.
-                pool.close()  # add this.
-                print("\n" * p_size)
+                if p_size == 1:
+                    loss_data = [multi_train(iter_data[0])]
+                else:
+                    freeze_support()
+                    pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+                    loss_data = pool.map(multi_train, iter_data)
+                    pool.terminate()  # add this.
+                    pool.close()  # add this.
+                    print("\n" * p_size)
                 #imap = pool.imap(multi_train, iter_data)
                 #loss_data = list(tqdm(imap, total=p_size))
                 #[(1,1,1),(),()]
@@ -687,29 +713,47 @@ def run_main():
                 test_objective_loss = 0
                 test_MSE = 0
                 test_CEE = 0
-                states_keys = tuple(all_states.keys())
-                value_keys = tuple(all_states['values'].keys())
+                states_keys = tuple(test_states.keys())#tuple(all_states.keys())
+                value_keys = tuple(test_states['values'].keys())#tuple(all_states['values'].keys())
                 normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
-                action_code_keys = tuple(all_states['detailed_action_codes'].keys())
+
+                action_code_keys = tuple(test_states['detailed_action_codes'].keys())
+                #tuple(all_states['detailed_action_codes'].keys())
+
                 target_net.eval()
                 for i in tqdm(range(separate_num)):
                     key = [test_ids[i]]
                     states = {}
-                    states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
-                    states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
+
+                    states.update({dict_key: torch.clone(test_states[dict_key][key]) for dict_key in normal_states_keys})
+                    #states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+
+                    states['values'] = {sub_key: torch.clone(test_states['values'][sub_key][key]) \
                                         for sub_key in value_keys}
+                    #states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
+                    #                    for sub_key in value_keys}
+
                     states['detailed_action_codes'] = {
-                        sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                        sub_key: torch.clone(test_states['detailed_action_codes'][sub_key][key])
                         for sub_key in action_code_keys}
-                    orig_before_states = all_states["before_states"]
+                    # states['detailed_action_codes'] = {
+                    #     sub_key: torch.clone(all_states['detailed_action_codes'][sub_key][key])
+                    #     for sub_key in action_code_keys}
+
+                    orig_before_states = test_states["before_states"]
+                    #orig_before_states = all_states["before_states"]
+
                     #states['before_states'] = torch.clone(orig_before_states[key])
                     states['before_states'] = [torch.clone(orig_before_states[i][key]) for i in range(4)]
 #                     states['before_states'] = {dict_key: torch.clone(orig_before_states[dict_key][key]) for dict_key in
 #                                                normal_states_keys}
 #                     states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
 #                                                          for sub_key in value_keys}
-                    actions = all_actions[key]
-                    rewards = all_rewards[key]
+
+                    actions = test_actions[key]
+                    rewards = test_rewards[key]
+                    #actions = all_actions[key]
+                    #rewards = all_rewards[key]
                     states['target'] = {'actions': actions, 'rewards': rewards}
                     torch.cuda.empty_cache()
                     _, v, loss = target_net(states, target=True)
@@ -731,8 +775,8 @@ def run_main():
                 print("AVE | Over_All_Loss(test ): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                       .format(test_objective_loss, test_MSE, test_CEE))
                 print(test_MSE, separate_num)
-                if min_loss[1] > test_objective_loss:
-                    min_loss = [weight_scale,test_objective_loss,test_MSE, test_CEE]
+                if min_loss[2] > test_objective_loss:
+                    min_loss = [weight_scale,w_list[weight_scale],test_objective_loss,test_MSE, test_CEE]
                     best_train_data = [train_objective_loss, train_MSE, train_CEE]
             print("best_data:",min_loss)
             writer.add_scalars(LOG_PATH+'Over_All_Loss', {'train': best_train_data[0],
