@@ -193,14 +193,14 @@ creature_has_evo_effect_target = {
     creature_name_to_id["Maisy, Red Riding Hood"]:Target_Type.ENEMY_FOLLOWER.value,
     creature_name_to_id["Lyrial, Celestial Archer"]:Target_Type.ENEMY.value}
 creature_target_regulation = {
-    creature_name_to_id["Tsubaki"]: lambda x: x.power >= 5,
-    creature_name_to_id["Princess Vanguard"]: lambda x: x.origin_cost == 1,
+    creature_name_to_id["Tsubaki"]: lambda target,card: target.power >= 5,
+    creature_name_to_id["Princess Vanguard"]: lambda target,card: target.origin_cost == 1,
     creature_name_to_id["Sahaquiel"]: lambda
-        card: card.card_category == "Creature" and card.card_class.name == "NEUTRAL",
-    creature_name_to_id["Little Soulsquasher"]: lambda card: card.evolved,
-    creature_name_to_id["White General"]: lambda card: card.trait.name == "OFFICER",
-    creature_name_to_id["Big Knuckle Bodyguard"]: lambda x: x.get_current_toughness() <= 3}
-another_target_func = lambda creature, itself: id(creature) != id(itself)
+        target,card: target.card_category == "Creature" and target.card_class.name == "NEUTRAL",
+    creature_name_to_id["Little Soulsquasher"]: lambda target,card: target.evolved,
+    creature_name_to_id["White General"]: lambda target,card: target.trait.name == "OFFICER",
+    creature_name_to_id["Big Knuckle Bodyguard"]: lambda target,card: target.get_current_toughness() <= 3}
+another_target_func = lambda target, itself: id(target) != id(itself)
 evo_target_regulation = {
     creature_name_to_id["Wind Reader Zell"]: another_target_func}
 creature_ability_condition = {
@@ -286,9 +286,9 @@ spell_has_target = tsv_2_ability_dict("All_spell_target_list.tsv", name_to_id=sp
 # 4:自分と相手のフォロワー,5:自分と相手の全てのカード,6:自分の場のカード,7:自分の場のカードと相手の場のフォロワー,8:自分の他の手札
 # 9:相手の場の全てのカード
 spell_target_regulation = {
-    spell_name_to_id["Kaleidoscopic Glow"]: lambda x: x.origin_cost <= 2,
-    spell_name_to_id["Blackened Scripture"]: lambda x: x.get_current_toughness() <= 3,
-    spell_name_to_id["Seraphic Blade"]: lambda x: x.origin_cost <= 2}
+    spell_name_to_id["Kaleidoscopic Glow"]: lambda target,card: target.origin_cost <= 2,
+    spell_name_to_id["Blackened Scripture"]: lambda target,card: target.get_current_toughness() <= 3,
+    spell_name_to_id["Seraphic Blade"]: lambda target,card: target.origin_cost <= 2}
 spell_cost_change_ability_list = {
     # 20: 1,
     spell_name_to_id["Diabolic Drain"]: 1,
