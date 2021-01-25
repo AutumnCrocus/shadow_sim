@@ -430,7 +430,7 @@ class Creature(Card):
         #self.ability = creature_list[card_id][3][:]
         self.cost,self.power,self.toughness,_, card_data = target_follower_data[0:5]
         self.ability = target_follower_data[3][:]
-        self.origin_cost = int(self.cost)
+        self.origin_cost = self.cost
         self.card_class = LeaderClass(card_data[0])#LeaderClass(creature_list[card_id][4][0])
         self.trait = Trait(card_data[-1])
         if self.card_class.name == "RUNE":
@@ -548,33 +548,25 @@ class Creature(Card):
     #@jit
     def get_copy(self):
         creature = Creature(self.card_id)
-        creature.cost = int(self.cost)  # カードのコスト
-        creature.power = int(self.power)  # カードの攻撃力
-        creature.toughness = int(self.toughness)  # カードの体力
+        creature.cost = self.cost  # カードのコスト
+        creature.power = self.power  # カードの攻撃力
+        creature.toughness = self.toughness  # カードの体力
         creature.buff = self.buff[:]  # スタッツ上昇量
         creature.until_turn_end_buff = self.until_turn_end_buff[:]  # ターン終了時までのスタッツ上昇量
         creature.ability = list(self.ability[:])
         creature.tmp_keyword_ability = [[list(self.tmp_keyword_ability[0][0][:]),list(self.tmp_keyword_ability[0][1][:])],
                                         [list(self.tmp_keyword_ability[1][0][:]),list(self.tmp_keyword_ability[1][1][:])]]
         creature.lastword_ability = self.lastword_ability[:]
-        """
-        if len(creature.turn_start_ability) != len(self.turn_start_ability):
-            creature.turn_start_ability = copy.deepcopy(self.turn_start_ability)
-        if len(creature.turn_end_ability) != len(self.turn_end_ability):
-            creature.turn_end_ability = copy.deepcopy(self.turn_end_ability)
-        if len(creature.trigger_ability) != len(self.trigger_ability):
-            creature.trigger_ability = copy.deepcopy(self.trigger_ability)
-        """
         creature.turn_start_ability = self.turn_start_ability[:]
         creature.turn_end_ability = self.turn_end_ability[:]
         creature.trigger_ability = self.trigger_ability[:]
 
         creature.is_in_field = self.is_in_field
         creature.is_in_graveyard = self.is_in_graveyard
-        creature.damage = int(self.damage)
+        creature.damage = self.damage
         creature.is_tapped = self.is_tapped
-        creature.current_attack_num = int(self.current_attack_num)
-        creature.can_attack_num = int(self.can_attack_num)
+        creature.current_attack_num = self.current_attack_num
+        creature.can_attack_num = self.can_attack_num
         creature.evolved = self.evolved
         #if len(creature.in_battle_ability) != len(self.in_battle_ability):
         #    creature.in_battle_ability = copy.deepcopy(self.in_battle_ability)
@@ -582,10 +574,10 @@ class Creature(Card):
         if self.card_class.name == "RUNE":
             creature.spell_boost = None
             if creature_list[self.card_id][4][1][0]:
-                creature.spell_boost = int(self.spell_boost)
+                creature.spell_boost = self.spell_boost
                 creature.cost_down = self.cost_down
         if self.current_target is not None:
-            creature.current_target = int(self.current_target)
+            creature.current_target = self.current_target
         return creature
 
     def untap(self):
@@ -609,8 +601,7 @@ class Creature(Card):
                 self.is_in_field = False
                 self.is_in_graveyard = True
             return amount
-        else:
-            return 0
+        return 0
 
     def restore_toughness(self, amount):
         tmp = int(self.damage)
@@ -626,9 +617,10 @@ class Creature(Card):
         if self.current_attack_num >= self.can_attack_num:
             return False
         if self.evolved: return True
-        if any((i in self.ability) for i in [KeywordAbility.STORM.value, KeywordAbility.RUSH.value]): return True
-        if not self.is_tapped: return True
-        return False
+        if any(ability in self.ability for ability in [KeywordAbility.STORM.value, KeywordAbility.RUSH.value]): return True
+        return not self.is_tapped
+        #if not self.is_tapped: return True
+        #return False
 
     def can_attack_to_player(self):
         if KeywordAbility.CANT_ATTACK.value in self.ability:
@@ -637,18 +629,23 @@ class Creature(Card):
             return False
         if KeywordAbility.CANT_ATTACK_TO_PLAYER.value in self.ability: return False
         if KeywordAbility.STORM.value in self.ability: return True
-        if not self.is_tapped: return True
-        return False
+        return not self.is_tapped
+        #if not self.is_tapped: return True
+        #return False
 
     def can_be_targeted(self):
-        if KeywordAbility.CANT_BE_TARGETED.value in self.ability: return False
-        if KeywordAbility.AMBUSH.value in self.ability: return False
-        return True
+        return not any(ability in self.ability for ability \
+                       in [KeywordAbility.CANT_BE_TARGETED.value,KeywordAbility.AMBUSH.value])
+        # if KeywordAbility.CANT_BE_TARGETED.value in self.ability: return False
+        # if KeywordAbility.AMBUSH.value in self.ability: return False
+        # return True
 
     def can_be_attacked(self):
-        if KeywordAbility.CANT_BE_ATTACKED.value in self.ability: return False
-        if KeywordAbility.AMBUSH.value in self.ability: return False
-        return True
+        return not any(ability in self.ability for ability \
+                       in [KeywordAbility.CANT_BE_ATTACKED.value,KeywordAbility.AMBUSH.value])
+        # if KeywordAbility.CANT_BE_ATTACKED.value in self.ability: return False
+        # if KeywordAbility.AMBUSH.value in self.ability: return False
+        # return True
 
     def get_active_ability(self):
         assert self.have_active_ability, "invalid acitve ability error"
@@ -791,11 +788,11 @@ class Spell(Card):
 
     def get_copy(self):
         spell = Spell(self.card_id)
-        spell.cost = int(self.cost)
+        spell.cost = self.cost
         if self.card_class.name == "RUNE":
             spell.spell_boost = None
             if spell_list[self.card_id][1][1][0]:
-                spell.spell_boost = int(self.spell_boost)
+                spell.spell_boost = self.spell_boost
                 spell.cost_down = self.cost_down
         if self.current_target is not None:
             spell.current_target = int(self.current_target)

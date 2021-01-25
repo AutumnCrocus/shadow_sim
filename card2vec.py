@@ -3,7 +3,7 @@ import json
 #import MeCab
 from gensim.models import doc2vec
 import os
-
+TARGET_GAME_NAME = "all"
 
 def load_json(target_game_name):
     # カード名とカードテキストの入力データ作成
@@ -30,20 +30,20 @@ def load_json(target_game_name):
                 names.append(card["name_"])
                 pp = str(card["pp_"]) #"pp: " +
                 card_type = card["type_"] #"type: " +
-                """
-                pp = "pp: " + str(card["pp_"])
-                craft = "craft: " + card["craft_"].replace("craft","")
-                card_type = "type: " + card["type_"]
-                base_atk = "baseAtk: -"
-                base_def = "baseDef: -"
-                evo_atk = "evoAtk : -"
-                evo_def = "evoDef: -"
-                if "Follower" in card_type:
-                    base_atk = "baseAtk: " + str(card["baseAtk_"])
-                    base_def = "baseDef: " + str(card["baseDef_"])
-                    evo_atk = "evoAtk: " + str(card["evoAtk_"])
-                    evo_def = "evoDef: " + str(card["evoDef_"])
-                """
+
+                # pp = "pp: " + str(card["pp_"])
+                # craft = "craft: " + card["craft_"].replace("craft","")
+                # card_type = "type: " + card["type_"]
+                # base_atk = "baseAtk: -"
+                # base_def = "baseDef: -"
+                # evo_atk = "evoAtk : -"
+                # evo_def = "evoDef: -"
+                # if "Follower" in card_type:
+                #     base_atk = "baseAtk: " + str(card["baseAtk_"])
+                #     base_def = "baseDef: " + str(card["baseDef_"])
+                #     evo_atk = "evoAtk: " + str(card["evoAtk_"])
+                #     evo_def = "evoDef: " + str(card["evoDef_"])
+
                 base_effect = card["baseEffect_"] #"baseEffect: " +
                 base_effect = base_effect.replace("\n","$")
                 evo_effect = card["evoEffect_"] # "evoEffect: " +
@@ -85,14 +85,14 @@ def load_json(target_game_name):
                 #doc = nlp(parse_result)
                 #parse_result = " ".join([word.lemma for sent in doc.sentences for word in sent.words])
 
-                """
-                parse_result = craft + " " + card_type + "\n"
-                parse_result += pp + "\n"
-                parse_result += base_atk + " " + base_def + "\n"
-                parse_result += base_effect + "\n"
-                parse_result += evo_atk + " " + evo_def + "\n"
-                parse_result += evo_effect
-                """
+
+                # parse_result = craft + " " + card_type + "\n"
+                # parse_result += pp + "\n"
+                # parse_result += base_atk + " " + base_def + "\n"
+                # parse_result += base_effect + "\n"
+                # parse_result += evo_atk + " " + evo_def + "\n"
+                # parse_result += evo_effect
+
                 #mecab_result = mecab.parse(card["text"])
                 if parse_result is False:
                     text += "\n"
@@ -112,9 +112,9 @@ def load_json(target_game_name):
                 #    text += parse_result + "\n"
                 #    texts.append(card["evoEffect_"])
 
-
-    with open(target_game_name + ".txt", "w") as file:
-        file.write(text)
+    if os.path.isfile(TARGET_GAME_NAME + ".txt") is False:
+        with open(target_game_name + ".txt", "w") as file:
+            file.write(text)
 
     return names, texts
 
@@ -134,7 +134,7 @@ def generate_doc2vec_model(target_game_name,size=300,window=8):
 
 
 if __name__ == '__main__':
-    TARGET_GAME_NAME = "all"
+
     names, texts = load_json(TARGET_GAME_NAME)
     import argparse
     parser = argparse.ArgumentParser(description='Card2Vec学習コード')

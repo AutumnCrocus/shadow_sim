@@ -188,7 +188,7 @@ def creature_ability_025(field, player, opponent, virtual, target, itself):
 def creature_ability_026(field, player, opponent, virtual, target, itself):
     if target is not None and target < len(field.card_location[opponent.player_num]):
         #if itself.target_regulation(field.card_location[opponent.player_num][target]):
-        if card_setting.creature_target_regulation[itself.target_regulation](field.card_location[opponent.player_num][target]):
+        if card_setting.creature_target_regulation[itself.target_regulation](field.card_location[opponent.player_num][target],itself):
             destroy_opponent_creature(field, opponent, virtual, target)
     elif target is not None:
         able_targets = field.get_regal_targets(itself, target_type=1, player_num=player.player_num)
@@ -204,7 +204,7 @@ def creature_ability_027(field, player, opponent, virtual, target, itself):
     """
     if target is not None:
         target_creature = field.card_location[player.player_num][target]
-        if not card_setting.creature_target_regulation[itself.target_regulation](target_creature):
+        if not card_setting.creature_target_regulation[itself.target_regulation](target_creature,itself):
             #if not itself.target_regulation(target_creature):
             mylogger.info("target_id:{}".format(target))
             field.show_field()
@@ -683,7 +683,7 @@ def creature_ability_081(field, player, opponent, virtual, target, itself):
             field.show_field()
             assert False
         target_creature = field.card_location[opponent.player_num][target]
-        if card_setting.creature_target_regulation[itself.target_regulation](target_creature) == False:
+        if card_setting.creature_target_regulation[itself.target_regulation](target_creature,itself) == False:
         #if itself.target_regulation(target_creature) == False:
             mylogger.info("illigal target error(target={})".format(target))
             field.show_field()
@@ -764,7 +764,7 @@ def creature_ability_088(field, player, opponent, virtual, target, itself):
         return
     assert target < len(field.card_location[player.player_num]), "Out-of-range!"
     target_creature = field.card_location[player.player_num][target]
-    assert card_setting.creature_target_regulation[itself.target_regulation](target_creature), "invalid target!(name:{})".format(target_creature.name)
+    assert card_setting.creature_target_regulation[itself.target_regulation](target_creature,itself), "invalid target!(name:{})".format(target_creature.name)
     #assert itself.target_regulation(target_creature), "invalid target!(name:{})".format(target_creature.name)
     buff_creature(target_creature, params=[2, 0])
     if not virtual:

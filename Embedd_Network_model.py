@@ -275,7 +275,7 @@ class Dual_State_Net(nn.Module):
         self.emb1 = nn.Embedding(2797,len(d2v_model.docvecs[0]),padding_idx=0)
         self.emb1.weight = nn.Parameter(d2v_ini_weight)
 
-        #nn.Embedding(3000,n_mid,padding_idx=0)
+        #nn.Embedding(2797,n_mid,padding_idx=0)
         #nn.init.kaiming_normal_(self.emb1.weight)
 
         self.concat_layer = nn.Linear(self.short_mid,self.short_mid)

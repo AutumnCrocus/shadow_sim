@@ -49,7 +49,7 @@ parser.add_argument('--node_num', help='node_num', default=100,type=int)
 parser.add_argument('--weight_decay', help='weight_decay', default=1e-2,type=float)
 parser.add_argument('--check', help='check score')
 parser.add_argument('--deck_list', help='deck_list',default="0,1,4,5,10,11")
-parser.add_argument('--model_name', help='model_name', default=None)
+parser.add_argument('--model_name', help='model_name', default=None,type=lambda text:text.replace("\r",""))
 parser.add_argument('--opponent_model_name', help='opponent_model_name', default=None)
 parser.add_argument('--th', help='threshold',default=1e-3,type=float)
 parser.add_argument('--WR_th', help='WR_threshold',default=0.55,type=float)
@@ -780,13 +780,13 @@ def run_main():
                     best_train_data = [train_objective_loss, train_MSE, train_CEE]
             print("best_data:",min_loss)
             writer.add_scalars(LOG_PATH+'Over_All_Loss', {'train': best_train_data[0],
-                                                'test': min_loss[1]
+                                                'test': min_loss[-3]
                                                 }, epoch)
             writer.add_scalars(LOG_PATH+'MSE', {'train': best_train_data[1],
-                                                'test': min_loss[2]
+                                                'test': min_loss[-2]
                                                 }, epoch)
             writer.add_scalars(LOG_PATH+'CEE', {'train': best_train_data[2],
-                                                'test': min_loss[3]
+                                                'test': min_loss[-1]
                                                 }, epoch)
             net = next_nets[min_loss[0]]
             loss_history.append(sum_of_loss / iteration)

@@ -22,7 +22,6 @@ check_follower = lambda card:card.card_category=="Creature"
 from Game_setting import get_data
 from trigger_ability_list import *
 mylogger = get_module_logger(__name__)
-
 class Field:
     def __init__(self, max_field_num):
         self.card_location = [[], []]
