@@ -1,0 +1,1 @@
+python3 multi_test.py --fixed_deck_ids "100" --epoch_list "5,10" --multi_train True --cpu_num 2 --node_num 40 --episode_num 100 --epoch_num 64 --WR_th 0.51 --evaluate_num 200  --w_list "1e-5" --supervised Aggro

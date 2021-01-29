@@ -2,6 +2,7 @@
 
 import torch
 import os
+from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support, Value, Array, Manager,cpu_count
 #os.environ["OMP_NUM_THREADS"] = "4" if torch.cuda.is_available() else "6"
 os.environ["PYTHONWARNINGS"] = 'ignore:semaphore_tracker:UserWarning'
 #import torchvision
@@ -54,13 +55,13 @@ class PositionalEncoding(nn.Module):
         return self.dropout(x)
 
 class New_Dual_Net(nn.Module):
-    def __init__(self,n_mid):
+    def __init__(self,n_mid,rand=False):
         super(New_Dual_Net, self).__init__()
-        self.state_net =Dual_State_Net(n_mid)
+        self.state_net =Dual_State_Net(n_mid,rand=rand)
         
         self.emb1 = self.state_net.emb1#nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
-        
-        layer = [Dual_ResNet(n_mid+45,n_mid+45) for _ in range(3)]
+        layer_num = 3
+        layer = [Dual_ResNet(n_mid+45,n_mid+45) for _ in range(layer_num)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
         self.action_value_net = Action_Value_Net(self,mid_size=n_mid)
@@ -246,7 +247,7 @@ class New_Dual_Net(nn.Module):
         return super(New_Dual_Net, self).cpu()
 
 class Dual_State_Net(nn.Module):
-    def __init__(self, n_mid):
+    def __init__(self, n_mid,rand=False):
         super(Dual_State_Net, self).__init__()
         self.short_mid = n_mid//10
         self.value_layer = nn.Linear(6+15+10+1+1+1,self.short_mid)#nn.Linear(5+15+n_mid,n_mid)
@@ -271,12 +272,13 @@ class Dual_State_Net(nn.Module):
         nn.init.kaiming_normal_(self.amulet_value_layer.weight)
         self.field_value_layer = nn.Linear(20, 10)#nn.Linear(10, 10)#nn.Linear(n_mid, n_mid)
         nn.init.kaiming_normal_(self.field_value_layer.weight)
+        if rand:
+            self.emb1 = nn.Embedding(2797, len(d2v_model.docvecs[0]), padding_idx=0)
+            nn.init.kaiming_normal_(self.emb1.weight)
+        else:
+            self.emb1 = nn.Embedding(2797,len(d2v_model.docvecs[0]),padding_idx=0)
+            self.emb1.weight = nn.Parameter(d2v_ini_weight)
 
-        self.emb1 = nn.Embedding(2797,len(d2v_model.docvecs[0]),padding_idx=0)
-        self.emb1.weight = nn.Parameter(d2v_ini_weight)
-
-        #nn.Embedding(2797,n_mid,padding_idx=0)
-        #nn.init.kaiming_normal_(self.emb1.weight)
 
         self.concat_layer = nn.Linear(self.short_mid,self.short_mid)
         nn.init.kaiming_normal_(self.concat_layer.weight)
@@ -483,7 +485,8 @@ class Action_Value_Net(nn.Module):
         #self.lin3 = nn.Linear(36,mid_size)
         self.lin3 = nn.Linear(66, mid_size)
         nn.init.kaiming_normal_(self.lin3.weight)
-        layer = [Dual_ResNet(mid_size, mid_size) for _ in range(3)]
+        layer = [Dual_ResNet(45*mid_size, 45*mid_size) for _ in range(3)]
+        #[Dual_ResNet(mid_size, mid_size) for _ in range(3)]
         self.lin4 = nn.ModuleList(layer)
         #self.mish = Mish()
         self.action_catgory_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
@@ -547,9 +550,17 @@ class Action_Value_Net(nn.Module):
         #print("{}".format([cell.size() for cell in input_tensors]))
         # tmp = torch.cat([new_states,embed_action_categories,embed_play_card_ids,embed_field_card_ids], dim=2)
         tmp = torch.cat(input_tensors, dim=2)
-        output1 = self.prelu_1(self.lin1(tmp))
+        #print(tmp.size(),label.size())
+        label_tensor=torch.stack([label]*tmp.size()[-1],dim=2)
+        tmp = tmp * label_tensor
+        #(-1,45,2*mid_size+20+4)
+        output1 = self.prelu_1(self.lin1(tmp)).view(-1,45*self.n_mid)#(-1,45,n_mid)→(-1,45*n_mid)
+        for i in range(len(self.lin4)):
+            output1 = self.prelu_3(self.lin4[i](output1))
+            
+        output1 = output1.view(-1,45,self.n_mid)
         output2 = self.prelu_2(self.lin2(output1)).view(-1,45)
-        output = output2 * label
+        output = output2 * label#(-1,45)[0,1]
 
         return output
 
@@ -600,6 +611,7 @@ class Dual_Loss(nn.Module):
         CEE = torch.mean(tmp_CEE2)
         #pai = pai.t()[0]
         #CEE = self.cross_entropy(p,pai)#softmaxも含まれている
+        #loss = CEE
         loss = MSE + CEE
         #L2正則化はoptimizer
 
@@ -611,62 +623,153 @@ class New_Dual_ReplayMemory:
         self.capacity = CAPACITY # メモリの最大長さ
         self.memory = []
         self.index = 0
+        #self.sub_dict = [None,None,None,None,None,None]
 
     def push(self, state, action, before_state, detailed_action_code, reward):
         if len(self.memory) < self.capacity:
             self.memory.append(None) #メモリが満タンじゃないときには追加
-        self.memory[self.index] = Dual_State_value(state, action, before_state, detailed_action_code, reward)
+        #self.memory[self.index] = Dual_State_value(state, action, before_state, detailed_action_code, reward)
+        self.memory[self.index] = {'state':state, 'action':action, 'before_state':before_state,
+                                   'detailed_action_code':detailed_action_code, 'reward':reward}
         self.index = (self.index + 1) % self.capacity
 
-    def sample(self, batch_size,all=False,cuda=False):
+    def sep_sample(self,data):
+        tmp,p_num = data
+        cuda = self.cuda
+        states = [cell['state'] for cell in tmp]  # [cell.state for cell in tmp]
+        states = Detailed_State_data_2_Tensor(states, cuda=cuda, normalize=True)
+        before_states = [list(cell['before_state']) for cell in tmp]
+        # [list(cell.before_state) for cell in tmp]
+        # print(before_states)
+
+        tensor_action_categories = torch.LongTensor(
+            [cell[0] for cell in before_states])
+        tensor_acting_card_ids_in_action = torch.LongTensor(
+            [names.index(cell[1])
+             if cell[1] in names else 0 for cell in
+             before_states])
+        tensor_acted_card_ids_in_action = torch.LongTensor(
+            [names.index(cell[2])
+             if cell[2] in names else 0 for cell in
+             before_states])
+        tensor_acted_card_sides_in_action = torch.LongTensor(
+            [cell[3] for cell in before_states])
+        actions = [cell['action'] for cell in tmp]  # [cell.action for cell in tmp]
+        actions = torch.LongTensor(actions)  # torch.stack(actions, dim=0)
+        rewards = [[cell['reward']] for cell in tmp]  # [[cell.reward] for cell in tmp]
+        rewards = torch.FloatTensor(rewards)
+        before_states = [tensor_action_categories, tensor_acting_card_ids_in_action,
+                         tensor_acted_card_ids_in_action, tensor_acted_card_sides_in_action]
+        if cuda:
+            actions = actions.cuda()
+            rewards = rewards.cuda()
+            before_states = [cell.cuda() for cell in before_states]
+        detailed_action_codes = [cell['detailed_action_code'] for cell in
+                                 tmp]  # [cell.detailed_action_code for cell in tmp]
+        detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes, cuda=cuda)
+        states['detailed_action_codes'] = detailed_action_codes
+        states['before_states'] = before_states
+        #self.sub_dict[p_num] = [states,actions,rewards]
+        return states, actions, rewards
+
+    def sample(self, batch_size,all=False,cuda=False,multi=0):
         if all:
             #tmp = self.memory
             tmp = random.sample(self.memory, len(self.memory))
         else:
             tmp = random.sample(self.memory, batch_size)
-        states = [cell.state for cell in tmp]
-        states = Detailed_State_data_2_Tensor(states,cuda=cuda,normalize=True)
-        before_states = [list(cell.before_state) for cell in tmp]
-        #print(before_states)
 
-        tensor_action_categories = torch.LongTensor(
-            [cell[0]for cell in before_states])
-        tensor_acting_card_ids_in_action = torch.LongTensor(
-            [names.index(cell[1])
-              if cell[1] in names else 0 for cell in
-             before_states])
-        # tensor_acting_card_ids_in_action = torch.Tensor(
-        #     [d2v_model.docvecs[names.index(cell[1])]
-        #       if cell[1] in names else [0] * 20 for cell in
-        #      before_states])
-        tensor_acted_card_ids_in_action = torch.LongTensor(
-            [names.index(cell[2])
-              if cell[2] in names else 0 for cell in
-             before_states])
-        # tensor_acted_card_ids_in_action = torch.Tensor(
-        #     [d2v_model.docvecs[names.index(cell[2])]
-        #       if cell[2] in names else [0] * 20 for cell in
-        #      before_states])
-        tensor_acted_card_sides_in_action = torch.LongTensor(
-            [cell[3] for cell in before_states])
+        if multi > 0:
+            self.cuda = cuda
+            data_len = len(tmp)
+            small_data_len = data_len //multi
+            iter_data = [(tmp[i*small_data_len:min((i+1)*small_data_len,data_len)],i) for i in range(multi)]
+            pool = Pool(multi, initializer=tqdm.set_lock, initargs=(RLock(),))
+            """
+                ans = {'values': {'life_datas': life_datas,
+                          'class_datas': class_datas,
+                          'deck_type_datas':deck_type_datas,
+                          'hand_card_costs': hand_card_costs,
+                          'follower_stats': follower_stats,
+                          'pp_datas': pp_datas,
+                          'able_to_play': able_to_play,
+                          'able_to_attack': able_to_attack,
+                          'able_to_creature_attack': able_to_creature_attack,
+                          },
+               'hand_ids': hand_ids,
+               'follower_card_ids': follower_card_ids,
+               'amulet_card_ids': amulet_card_ids,
+               'follower_abilities': follower_abilities,
+               'able_to_evo': able_to_evo,
+               'deck_datas':deck_datas,
+               'detailed_action_codes':{'action_categories': tensor_action_categories,
+                             'acting_card_ids': tensor_acting_card_ids_in_action,
+                             'acted_card_ids': tensor_acted_card_ids_in_action,
+                             'acted_card_sides': tensor_acted_card_sides_in_action,
+                             'able_to_choice': able_to_choice,
+                             'action_choice_len':action_choice_len}
+               'before_states' = [LongTensor,LongTensor,LongTensor,LongTensor]
+               }
 
-        #before_states = torch.Tensor(before_states)#torch.LongTensor(before_states)
-        #before_states = before_states.cuda() if cuda else before_states
-        #Detailed_State_data_2_Tensor(before_states,cuda=cuda,normalize=True)
-        actions = [cell.action for cell in tmp]
-        actions = torch.LongTensor(actions)#torch.stack(actions, dim=0)
-        rewards = [[cell.reward] for cell in tmp]
-        rewards = torch.FloatTensor(rewards)
-        before_states = [tensor_action_categories,tensor_acting_card_ids_in_action,
-                         tensor_acted_card_ids_in_action,tensor_acted_card_sides_in_action]
-        if cuda:
-            actions = actions.cuda()
-            rewards = rewards.cuda()
-            before_states = [cell.cuda() for cell in before_states]
-        detailed_action_codes = [cell.detailed_action_code for cell in tmp]
-        detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes,cuda=cuda)
-        states['detailed_action_codes'] = detailed_action_codes
-        states['before_states'] = before_states
+            """
+            data_list = pool.map(self.sep_sample,iter_data)#(dict,tensor,tensor)
+            #pool.map(self.sep_sample, iter_data)  # (dict,tensor,tensor)
+            #data_list = [self.sub_dict[i] for i in range(multi)]
+            pool.terminate()
+            pool.close()
+            states = {}
+            dict_list = [cell[0] for cell in data_list]
+            action_list = [cell[1] for cell in data_list]
+            actions = torch.cat(action_list,dim=0)
+            reward_list = [cell[2] for cell in data_list]
+            rewards = torch.cat(reward_list, dim=0)
+            for key in list(dict_list[0].keys()):
+                if key == 'values' or key == 'detailed_action_codes':
+                    states[key] = {}
+                    for sub_key in list(dict_list[0][key].keys()):
+                        states[key][sub_key] = torch.cat([cell[key][sub_key] for cell in dict_list],dim=0)
+
+                elif key == 'before_states':
+                    states[key] = [torch.cat([cell[key][i] for cell in dict_list]) for i in range(4)]
+                else:
+                    states[key] = torch.cat([cell[key] for cell in dict_list],dim=0)
+
+
+            #torch.cat(dim=0)
+
+        else:
+            states = [cell['state'] for cell in tmp]#[cell.state for cell in tmp]
+            states = Detailed_State_data_2_Tensor(states,cuda=cuda,normalize=True)
+            before_states = [list(cell['before_state']) for cell in tmp]
+            #[list(cell.before_state) for cell in tmp]
+            #print(before_states)
+
+            tensor_action_categories = torch.LongTensor(
+                [cell[0]for cell in before_states])
+            tensor_acting_card_ids_in_action = torch.LongTensor(
+                [names.index(cell[1])
+                  if cell[1] in names else 0 for cell in
+                 before_states])
+            tensor_acted_card_ids_in_action = torch.LongTensor(
+                [names.index(cell[2])
+                  if cell[2] in names else 0 for cell in
+                 before_states])
+            tensor_acted_card_sides_in_action = torch.LongTensor(
+                [cell[3] for cell in before_states])
+            actions = [cell['action'] for cell in tmp]#[cell.action for cell in tmp]
+            actions = torch.LongTensor(actions)#torch.stack(actions, dim=0)
+            rewards = [[cell['reward']] for cell in tmp]#[[cell.reward] for cell in tmp]
+            rewards = torch.FloatTensor(rewards)
+            before_states = [tensor_action_categories,tensor_acting_card_ids_in_action,
+                             tensor_acted_card_ids_in_action,tensor_acted_card_sides_in_action]
+            if cuda:
+                actions = actions.cuda()
+                rewards = rewards.cuda()
+                before_states = [cell.cuda() for cell in before_states]
+            detailed_action_codes = [cell['detailed_action_code'] for cell in tmp]#[cell.detailed_action_code for cell in tmp]
+            detailed_action_codes = Detailed_action_code_2_Tensor(detailed_action_codes,cuda=cuda)
+            states['detailed_action_codes'] = detailed_action_codes
+            states['before_states'] = before_states
 
 
         return states, actions, rewards

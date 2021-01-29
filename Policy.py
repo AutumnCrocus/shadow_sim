@@ -5423,14 +5423,14 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         single_before_state = before_states[0]
         if single_before_state[1] in Embedd_Network_model.names:
             acting_id=Embedd_Network_model.names.index(single_before_state[1])
-            acting_id = Embedd_Network_model.d2v_model.docvecs[acting_id]
+            #acting_id = Embedd_Network_model.d2v_model.docvecs[acting_id]
         else:
-            acting_id = [0]*20
+            acting_id = 0#*20
         if single_before_state[2] in Embedd_Network_model.names:
             acted_id = Embedd_Network_model.names.index(single_before_state[2])
-            acted_id = Embedd_Network_model.d2v_model.docvecs[acted_id]
+            #acted_id = Embedd_Network_model.d2v_model.docvecs[acted_id]
         else:
-            acted_id = [0] * 20
+            acted_id = 0# * 20
         # if single_before_state[3] in Embedd_Network_model.names:
         #     _id = Embedd_Network_model.names.index(single_before_state[3])
         #     acted_id = Embedd_Network_model.d2v_model.docvecs[acted_id]
@@ -5439,13 +5439,14 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
         side_id = single_before_state[3]
         single_before_state = (single_before_state[0],acting_id,acted_id,side_id)
         #print(single_before_state)
-        before_states = [single_before_state]
+        #before_states = [single_before_state]
         #print(single_before_state)
         try:
-            states['before_states'] = [torch.Tensor([single_before_state[0]]),
-                                       torch.Tensor([single_before_state[1]]),
-                                       torch.Tensor([single_before_state[2]]),
-                                       torch.Tensor([single_before_state[3]])]
+            states['before_states'] = [torch.LongTensor([cell]) for cell in single_before_state]
+            # states['before_states'] = [torch.Tensor([single_before_state[0]]),
+            #                            torch.Tensor([single_before_state[1]]),
+            #                            torch.Tensor([single_before_state[2]]),
+            #                            torch.Tensor([single_before_state[3]])]
         except Exception as e:
 
             print(e)

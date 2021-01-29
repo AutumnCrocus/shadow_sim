@@ -63,6 +63,9 @@ parser.add_argument('--step_iter', help='MCTS_step_iteration',default=100,type=i
 parser.add_argument('--supervised', help='if model use other model')
 parser.add_argument('--data_rate', help='the rate of data used by train',default=0.8,type=float)
 parser.add_argument('--w_list', help='list of weight decay',default=[0.001,0.002,0.004,0.008],type=lambda txt:list(map(float,txt.split(","))))
+parser.add_argument('--rand', help='if model use random initial embedding')
+parser.add_argument('--epoch_list', help='list of epoch num as train',default=[100],type=lambda txt:list(map(int,txt.split(","))))
+parser.add_argument('--multi_sample_num', help='num of sampling process',default=0,type=int)
 args = parser.parse_args()
 
 deck_flg = args.fixed_deck_ids#list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
@@ -170,6 +173,7 @@ def preparation(episode_data):
 def multi_preparation(episode_data):
     #partial_iteration = episode_data[-2]
     p_num = episode_data[-1]
+    #print("p_num:",p_num)
     info = f'#{p_num:>2} '
     all_result_data = []
     shared_count = episode_data[-3]
@@ -369,12 +373,22 @@ def multi_train(data):
     value_keys = tuple(all_states['values'].keys())
     action_code_keys = tuple(all_states['detailed_action_codes'].keys())
     batch_id_list = train_ids
+    batch_id_len = len(batch_id_list)
     all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
     info = f'#{p_num:>2} '
+    #print("p_num2:",p_num)
     for i in tqdm(range(iteration_num),desc=info,position=p_num):
         optimizer.zero_grad()
         net.zero_grad()
         key = random.sample(batch_id_list,k=batch_size)
+#         first_id = (i*batch_size) % batch_id_len
+#         last_id = (i*batch_size+batch_size) % batch_id_len
+#         if first_id < last_id:
+#             assert last_id - first_id == batch_size,"{},{},{}".format(first_id,last_id,last_id - first_id)
+#             key = batch_id_list[first_id:last_id]
+#         else:
+#             key = batch_id_list[first_id:]+batch_id_list[:last_id]
+#         if p_num == 0 and i == 0:print("len:",len(key))
         states = {}
         try:
             states.update({dict_key : torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
@@ -500,7 +514,7 @@ def run_main():
 
     cuda_flg = args.cuda is not None
     node_num = args.node_num
-    net = New_Dual_Net(node_num)
+    net = New_Dual_Net(node_num,rand=args.rand)
     print(next(net.parameters()).is_cuda)
     
     if args.model_name is not None:
@@ -524,36 +538,40 @@ def run_main():
     prev_net = copy.deepcopy(net)
     optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
 
-    LOG_PATH = "log_{}_{}_{}_{}_{}_{}/".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-                                                             t1.second)
+    #LOG_PATH = "log_{}_{}_{}_{}_{}_{}/".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
+    #                                                         t1.second)
+    date = "{}_{}_{}_{}".format(t1.month, t1.day, t1.hour, t1.minute)
+    LOG_PATH = "{}episode_{}nodes_deckids{}_{}/".format(episode_len,node_num,args.fixed_deck_ids,date)
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
     th = args.WR_th
     last_updated = 0
     reset_count = 0
     min_loss = 100
     loss_th = args.loss_th
+            
+    #pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+        
     #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
 
         net.cpu()
         prev_net.cpu()
+        net.share_memory()
 
         print("epoch {}".format(epoch + 1))
         t3 = datetime.datetime.now()
         R = New_Dual_ReplayMemory(100000)
         test_R = New_Dual_ReplayMemory(100000)
-        if epoch == 0 and args.supervised is not None:
-            episode_len = 1000
-            if args.supervised == "Random":
-                supervise_policy = [RandomPolicy(), RandomPolicy()]
-            elif args.supervised == "Aggro":
+        episode_len = args.episode_num
+        if args.supervised is not None:#epoch == 0 and args.supervised is not None:
+            if args.supervised == "Aggro":
                 supervise_policy = [AggroPolicy(), AggroPolicy()]
             else: 
                 supervise_policy = [New_GreedyPolicy(), New_GreedyPolicy()]
             p1 = Player(9, True, policy=supervise_policy[0], mulligan=Min_cost_mulligan_policy())
             p2 = Player(9, False, policy=supervise_policy[1], mulligan=Min_cost_mulligan_policy())
         else:
-            episode_len = args.episode_num
+
             p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
                         ,mulligan=Min_cost_mulligan_policy())
             p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
@@ -566,7 +584,7 @@ def run_main():
         #iter_data = [[p1, p2,shared_value,single_iter,i] for i in range(double_p_size)]
         iter_data = [[p1, p2, shared_value, episode_len, i] for i in range(p_size)]
         freeze_support()
-        pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+        pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))
         memory = pool.map(multi_preparation, iter_data)
         print("\n" * (p_size+1))
         pool.terminate()  # add this.
@@ -651,16 +669,16 @@ def run_main():
         pass_flg = False
         if args.multi_train is not None:
             if last_updated > args.max_update_interval - 3:
-                net = New_Dual_Net(node_num)
+                net = New_Dual_Net(node_num,rand=args.rand)
                 reset_count += 1
                 print("reset_num:",reset_count)
-            p_size = 2# if args.cuda is None else 1
+            p_size = min(args.cpu_num,2)# if args.cuda is None else 1
             if cuda_flg:
                 net = net.cuda()
             net.share_memory()
             net.train()
             net.zero_grad()
-            all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
+            all_data = R.sample(batch_size,all=True,cuda=cuda_flg,multi=args.multi_sample_num)
             all_states, all_actions, all_rewards = all_data
             memory_len = all_actions.size()[0]
             all_data_ids = list(range(memory_len))
@@ -669,32 +687,41 @@ def run_main():
 
 
             #test_ids =list(set(all_data_ids)-set(train_ids))
-            test_data = test_R.sample(batch_size,all=True,cuda=cuda_flg)
+            test_data = test_R.sample(batch_size,all=True,cuda=cuda_flg,multi=args.multi_sample_num)
             test_states, test_actions, test_rewards = test_data
             test_memory_len = test_actions.size()[0]
             test_ids = list(range(test_memory_len))
             min_loss = [0,0.0,100,100,100]
             best_train_data = [100,100,100]
             w_list = args.w_list
-            next_nets = [copy.deepcopy(net) for k in range(len(w_list))]
-            iteration_num = int(memory_len//batch)*iteration #(int(memory_len * 0.85) // batch)*iteration
-            
-            for weight_scale in range(len(w_list)):
+            epoch_list = args.epoch_list
+            next_nets = [copy.deepcopy(net) for k in range(len(epoch_list))]
+            #[copy.deepcopy(net) for k in range(len(w_list))]
+            #iteration_num = int(memory_len//batch)*iteration #(int(memory_len * 0.85) // batch)*iteration
+            pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))
+            weight_scale = 0
+
+            #for weight_scale in range(len(w_list)):
+            for epoch_scale in range(len(epoch_list)):
                 target_net = next_nets[weight_scale]
                 target_net.train()
-                print("weight_decay:",w_list[weight_scale])
+                #print("weight_decay:",w_list[weight_scale])
+                print("epoch_num:",epoch_list[epoch_scale])
+                iteration_num = int(memory_len//batch)*epoch_list[epoch_scale]
                 iter_data = [[target_net,all_data,batch,iteration_num//p_size,train_ids,i,w_list[weight_scale]]
                              for i in range(p_size)]
+#                 iter_data = [[target_net,all_data,batch,iteration_num//p_size,train_ids,i,w_list[weight_scale]]
+#                              for i in range(p_size)]
                 #iter_data = [[net,all_data,batch,iteration//p_size,train_ids,i]
                 #            for i in range(p_size)]
                 if p_size == 1:
                     loss_data = [multi_train(iter_data[0])]
                 else:
                     freeze_support()
-                    pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
+                    #pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
                     loss_data = pool.map(multi_train, iter_data)
-                    pool.terminate()  # add this.
-                    pool.close()  # add this.
+                    #pool.terminate()  # add this.
+                    #pool.close()  # add this.
                     print("\n" * p_size)
                 #imap = pool.imap(multi_train, iter_data)
                 #loss_data = list(tqdm(imap, total=p_size))
@@ -709,7 +736,8 @@ def run_main():
                       .format(train_objective_loss, train_MSE, train_CEE))
             #all_states, all_actions, all_rewards = all_data
                 test_ids_len = len(test_ids)
-                separate_num = test_ids_len
+                #separate_num = test_ids_len
+                separate_num = test_ids_len//128
                 test_objective_loss = 0
                 test_MSE = 0
                 test_CEE = 0
@@ -722,7 +750,10 @@ def run_main():
 
                 target_net.eval()
                 for i in tqdm(range(separate_num)):
-                    key = [test_ids[i]]
+                    #key = [test_ids[i]]
+                    first_id = (i*128) % test_ids_len
+                    last_id = ((i+1)*128) % test_ids_len
+                    key = test_ids[first_id:last_id] if first_id < last_id else test_ids[first_id:] + test_ids[:last_id]
                     states = {}
 
                     states.update({dict_key: torch.clone(test_states[dict_key][key]) for dict_key in normal_states_keys})
@@ -775,19 +806,31 @@ def run_main():
                 print("AVE | Over_All_Loss(test ): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                       .format(test_objective_loss, test_MSE, test_CEE))
                 print(test_MSE, separate_num)
+                writer.add_scalars(LOG_PATH+'Over_All_Loss'+":"+str(epoch), {'train': train_objective_loss,
+                                                'test': test_objective_loss
+                                                }, epoch_list[epoch_scale])
+                writer.add_scalars(LOG_PATH+'MSE'+":"+str(epoch), {'train': train_MSE,
+                                                'test': test_MSE
+                                                }, epoch_list[epoch_scale])
+                writer.add_scalars(LOG_PATH+'CEE'+":"+str(epoch), {'train': train_CEE,
+                                                'test': test_CEE
+                                                }, epoch_list[epoch_scale])
                 if min_loss[2] > test_objective_loss:
-                    min_loss = [weight_scale,w_list[weight_scale],test_objective_loss,test_MSE, test_CEE]
+                    #min_loss = [weight_scale,w_list[weight_scale],test_objective_loss,test_MSE, test_CEE]
+                    min_loss = [epoch_scale,epoch_list[epoch_scale],test_objective_loss,test_MSE, test_CEE]
                     best_train_data = [train_objective_loss, train_MSE, train_CEE]
             print("best_data:",min_loss)
-            writer.add_scalars(LOG_PATH+'Over_All_Loss', {'train': best_train_data[0],
-                                                'test': min_loss[-3]
-                                                }, epoch)
-            writer.add_scalars(LOG_PATH+'MSE', {'train': best_train_data[1],
-                                                'test': min_loss[-2]
-                                                }, epoch)
-            writer.add_scalars(LOG_PATH+'CEE', {'train': best_train_data[2],
-                                                'test': min_loss[-1]
-                                                }, epoch)
+            pool.terminate()  # add this.
+            pool.close()  # add this.
+#             writer.add_scalars(LOG_PATH+'Over_All_Loss', {'train': best_train_data[0],
+#                                                 'test': min_loss[-3]
+#                                                 }, epoch)
+#             writer.add_scalars(LOG_PATH+'MSE', {'train': best_train_data[1],
+#                                                 'test': min_loss[-2]
+#                                                 }, epoch)
+#             writer.add_scalars(LOG_PATH+'CEE', {'train': best_train_data[2],
+#                                                 'test': min_loss[-1]
+#                                                 }, epoch)
             net = next_nets[min_loss[0]]
             loss_history.append(sum_of_loss / iteration)
             p_size = cpu_num
@@ -909,14 +952,15 @@ def run_main():
             print("AVE(train) | Over_All_Loss: {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                   .format(train_objective_loss,train_MSE,train_CEE))
             test_ids_len = len(test_ids)
-            batch_len = 100 if 100 < test_ids_len else 10
+            batch_len = 512 if 512 < test_ids_len else 128
             separate_num = test_ids_len // batch_len
-            separate_num = test_ids_len
+            #separate_num = test_ids_len
             test_objective_loss = 0
             test_MSE = 0
             test_CEE = 0
             for i in tqdm(range(separate_num)):
-                key = [test_ids[i]]#test_ids[i*batch_len:min(test_ids_len,(i+1)*batch_len)] # [batch_id_list[(j+i*batch)%memory_len] for j in range(batch)]
+                #key = [test_ids[i]]#test_ids[i*batch_len:min(test_ids_len,(i+1)*batch_len)]
+                key = test_ids[i*batch_len:min(test_ids_len,(i*1)*batch_len)]
                 states = {}
                 states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
                 states['values'] = {sub_key: torch.clone(all_states['values'][sub_key][key]) \
@@ -1081,6 +1125,8 @@ def run_main():
  
 
     writer.close()
+    #pool.terminate()
+    #pool.close()
     print('Finished Training')
 
     PATH = "model/{}_{}_finished_{}_nodes.pth".format(t1.month, t1.day,node_num)
