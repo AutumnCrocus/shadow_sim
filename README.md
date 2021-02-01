@@ -14,6 +14,10 @@ currently implementing self-play AI for Shadowverse
 - [ ] implement AI learning from self-play
 - [ ] implement GUI 
 - [ ] implement all card (hard)
+### Demo code
+If you want to see battle demo, run this code:
+
+**python3 emulator_test.py --mode demo**
 
 ### Database
  **json-data I use**
