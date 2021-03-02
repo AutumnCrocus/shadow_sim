@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 # +
-
-from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support, Value, Array, Manager,cpu_count
+if __name__ == "__main__":
+    from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support, Value, Array, Manager,cpu_count
+    try:
+        set_start_method('spawn')
+        print("spawn is run.")
+        #set_start_method('fork') GPU使用時CUDA initializationでerror
+        #print('fork')
+    except RuntimeError:
+        pass
 import ctypes
 import os
 #os.environ["OMP_NUM_THREADS"] = "4"
-try:
-    set_start_method('spawn')
-    print("spawn is run.")
-    #set_start_method('fork') GPU使用時CUDA initializationでerror
-    #print('fork')
-except RuntimeError:
-    pass
+
 # -
 
 from emulator_test import *  # importの依存関係により必ず最初にimport
@@ -364,8 +365,8 @@ import itertools
 def multi_train(data):
     net, memory, batch_size, iteration_num, train_ids,p_num,current_weight_decay = data
     #optimizer =  optim.AdamW(net.parameters(), weight_decay=current_weight_decay)
-    #optimizer = AdaBoundW(net.parameters(),weight_decay=current_weight_decay)
-    optimizer = optim.SGD(net.parameters(),lr=0.01)
+    #optimizer = AdaBoundW(net.parameters(),lr=0.001)
+    optimizer = optim.SGD(net.parameters(),lr=5e-3)
     all_loss, MSE, CEE = 0, 0, 0
 
     all_states, all_actions, all_rewards = memory
@@ -503,6 +504,7 @@ if args.limit_OMP:
 if args.OMP_NUM > 0:
     os.environ["OMP_NUM_THREADS"] = str(args.OMP_NUM)
 def run_main():
+    import subprocess
     from torch.utils.tensorboard import SummaryWriter
     print(args)
     p_size = cpu_num
@@ -592,6 +594,9 @@ def run_main():
         #pool.terminate()  # add this.
         #pool.close()  # add this.
         # [[result_data,result_data,...,battle_data], ...]
+        del p1
+        del p2
+        del iter_data
         battle_data = [cell.pop(-1) for cell in memory]
 
         #memories = []
@@ -673,6 +678,7 @@ def run_main():
                 print("reset_num:",reset_count)
             p_size = min(args.cpu_num,3)# if args.cuda is None else 1
             if cuda_flg:
+                torch.cuda.empty_cache() 
                 net = net.cuda()
             net.share_memory()
             net.train()
@@ -691,15 +697,18 @@ def run_main():
             best_train_data = [100,100,100]
             w_list = args.w_list
             epoch_list = args.epoch_list
-            next_nets = [copy.deepcopy(net) for k in range(len(epoch_list))]
+            next_net = net#[copy.deepcopy(net) for k in range(len(epoch_list))]
             #[copy.deepcopy(net) for k in range(len(w_list))]
             #iteration_num = int(memory_len//batch)*iteration #(int(memory_len * 0.85) // batch)*iteration
             weight_scale = 0
             freeze_support()
+            print("pid:",os.getpid())
+            #cmd = "pgrep --parent {} | xargs kill -9".format(int(os.getpid()))
+            #proc = subprocess.call( cmd , shell=True)
             with Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),)) as pool:
                 #for weight_scale in range(len(w_list)):
                 for epoch_scale in range(len(epoch_list)):
-                    target_net = next_nets[weight_scale]
+                    target_net = copy.deepcopy(net)
                     target_net.train()
                     target_net.share_memory()
                     #print("weight_decay:",w_list[weight_scale])
@@ -754,44 +763,13 @@ def run_main():
                     test_overall_loss = sum_of_loss / p_size
                     test_state_value_loss = sum_of_MSE / p_size
                     test_action_value_loss = sum_of_CEE / p_size
-    #                 for i in tqdm(range(separate_num)):
-    #                     #key = [test_ids[i]]
-    #                     first_id = (i*batch) % test_ids_len
-    #                     last_id = ((i+1)*batch) % test_ids_len
-    #                     key = test_ids[first_id:last_id] if first_id < last_id else test_ids[first_id:] + test_ids[:last_id]
-    #                     states = {}
-    #                     states.update({dict_key: torch.clone(test_states[dict_key][key]) for dict_key in normal_states_keys})
-    #                     states['values'] = {sub_key: torch.clone(test_states['values'][sub_key][key]) \
-    #                                         for sub_key in value_keys}
-    #                     states['detailed_action_codes'] = {
-    #                         sub_key: torch.clone(test_states['detailed_action_codes'][sub_key][key])
-    #                         for sub_key in action_code_keys}
-    #                     orig_before_states = test_states["before_states"]
-    #                     states['before_states'] = [torch.clone(orig_before_states[i][key]) for i in range(4)]
-    #                     actions = test_actions[key]
-    #                     rewards = test_rewards[key]
-    #                     states['target'] = {'actions': actions, 'rewards': rewards}
-    #                     torch.cuda.empty_cache()
-    #                     _, v, loss = target_net(states, target=True)
-    #                     if float(torch.std(v)) < 0.01:
-    #                         assert False,"all same output!!!\n {}".format(v)
-    #                     test_objective_loss += float(loss[0].item())
-    #                     test_MSE += float(loss[1].item())
-    #                     test_CEE += float(loss[2].item())
-    #                     del loss
-
-    #                 print("")
-
-    #                 separate_num = max(1, separate_num)
-
-    #                 test_objective_loss /= separate_num
-    #                 test_MSE /= separate_num
-    #                 test_CEE /= separate_num
                     pass_flg = test_overall_loss > loss_th
 
                     print("AVE | Over_All_Loss(test ): {:.3f} | MSE: {:.3f} | CEE:{:.3f}" \
                           .format(test_overall_loss, test_state_value_loss, test_action_value_loss))
+                    
                     target_epoch=epoch_list[epoch_scale]
+                    print("debug1:",target_epoch)
                     writer.add_scalars(TAG+"/"+'Over_All_Loss', {'train:'+str(target_epoch): train_overall_loss,
                                                     'test:'+str(target_epoch): test_overall_loss
                                                     }, epoch)
@@ -801,32 +779,23 @@ def run_main():
                     writer.add_scalars(TAG+"/"+'action_value_loss', {'train:'+str(target_epoch): train_action_value_loss,
                                                     'test:'+str(target_epoch): test_action_value_loss
                                                     }, epoch)
-                    if min_loss[2] > test_overall_loss:
-                        #min_loss = [weight_scale,w_list[weight_scale],test_objective_loss,test_MSE, test_CEE]
+                    print("debug2:",target_epoch)
+                    if min_loss[2] > test_overall_loss and test_overall_loss > train_overall_loss:
+                        next_net = target_net
                         min_loss = [epoch_scale,epoch_list[epoch_scale],test_overall_loss,
                                     test_state_value_loss, test_action_value_loss]
-                print("\n"*p_size +"best_data:",min_loss)
-    #             writer.add_scalars(LOG_PATH+'Over_All_Loss', {'train': best_train_data[0],
-    #                                                 'test': min_loss[-3]
-    #                                                 }, epoch)
-    #             writer.add_scalars(LOG_PATH+'MSE', {'train': best_train_data[1],
-    #                                                 'test': min_loss[-2]
-    #                                                 }, epoch)
-    #             writer.add_scalars(LOG_PATH+'CEE', {'train': best_train_data[2],
-    #                                                 'test': min_loss[-1]
-    #                                                 }, epoch)
-                net = next_nets[min_loss[0]]
-                loss_history.append(sum_of_loss / iteration)
-                p_size = cpu_num
-                del R
-                del test_R
-            #pool.terminate()
-            #pool.close()
-#             del actions
-#             del all_data
-#             del all_states
-#             del all_actions
-#             del all_rewards
+                        print("current best:",min_loss)
+                print("finish training")
+                pool.terminate()  # add this.
+                pool.close()  # add this.
+                #print(cmd)
+                #proc = subprocess.call( cmd , shell=True)
+            print("\n"*p_size +"best_data:",min_loss)
+            net = next_net#copy.deepcopy(next_nets[min_loss[0]])
+            #del next_net
+            loss_history.append(sum_of_loss / iteration)
+            p_size = cpu_num
+
 
         else:
             prev_optimizer = copy.deepcopy(optimizer)
@@ -1004,9 +973,12 @@ def run_main():
             
             loss_history.append(test_objective_loss)
 
-
+        print("evaluate step")
+        del R
+        del test_R
         net.cpu()
         prev_net.cpu()
+        print("evaluate ready")
         if pass_flg:
             min_WR = 0
             WR = 0
@@ -1030,13 +1002,16 @@ def run_main():
 
             freeze_support()
             with Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),)) as pool:
-                memory = pool.map(multi_battle, iter_data)
+                _ = pool.map(multi_battle, iter_data)
             print("\n" * (match_num+1))
+            del iter_data
+            del p1
+            del p2
             # Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
 #             pool.terminate()  # add this.
 #             pool.close()  # add this.
 
-            memory = list(memory)
+            #memory = list(memory)
             match_num = len(test_deck_list) #if deck_flg is None else p_size
             min_WR=1.0
             #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
@@ -1059,6 +1034,9 @@ def run_main():
             print(result_table)
             min_WR =  min(result_table.values())
             WR = sum(result_table.values())/len(result_table.values())
+            del result_table
+            #del shared_key
+            #del Battle_Result
             #WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
             #min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
             
@@ -1078,6 +1056,8 @@ def run_main():
             win_flg = True
             print("new_model win! WR:{:.1%} min:{:.1%}".format(WR,min_WR))
         else:
+            del net
+            net = None
             net = prev_net
             print("new_model lose... WR:{:.1%}".format(WR))
         torch.cuda.empty_cache()
@@ -1177,12 +1157,9 @@ def check_score():
         elif fixed_opponent == "Random":
             p2 = Player(9, False, policy=RandomPolicy(), mulligan=Simple_mulligan_policy())
     else:
-        if opponent_net is not None:  # epoch < 5:
-            p2 = Player(9, False, policy=AggroPolicy(), mulligan=Min_cost_mulligan_policy())
-            # p2 = Player(9, False, policy=Opponent_Modeling_ISMCTSPolicy())
-        else:
-            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=opponent_net, cuda=cuda_flg)
-                        , mulligan=Min_cost_mulligan_policy())
+        assert opponent_net is not None
+        p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=opponent_net, cuda=cuda_flg)
+                    , mulligan=Min_cost_mulligan_policy())
     # p2 = Player(9, False, policy=RandomPolicy(), mulligan=Min_cost_mulligan_policy())
     p2.name = "Bob"
     Battle_Result = {}

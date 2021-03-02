@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # +
-from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock
+
 
 #     try:
 #         set_start_method('spawn')
@@ -27,6 +27,7 @@ import matplotlib.pyplot as plt
 import os
 if __name__ == "__main__":
     os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+    from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock
 mylogger = get_module_logger(__name__)
 from my_enum import *
 import argparse

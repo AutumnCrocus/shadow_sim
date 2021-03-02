@@ -64,7 +64,9 @@ class New_Dual_Net(nn.Module):
         
         self.emb1 = self.state_net.emb1#nn.Embedding(3000,n_mid,padding_idx=0)#1000枚*3カテゴリー（空白含む）
         layer_num = 2#3
-        layer = [Dual_ResNet(n_mid+45,n_mid+45) for _ in range(layer_num)]
+        self.vec_size = self.state_net.vec_size
+        self.hiddden_size = 2*self.vec_size+5
+        layer = [Dual_ResNet(n_mid+self.hiddden_size,n_mid+self.hiddden_size) for _ in range(layer_num)]
         self.layer = nn.ModuleList(layer)
         self.layer_len = len(self.layer)
         self.action_value_net = Action_Value_Net(self,mid_size=n_mid)
@@ -81,7 +83,7 @@ class New_Dual_Net(nn.Module):
         #self.conv = nn.Conv1d(in_channels=100,out_channels=1,kernel_size=1)
         self.relu = torch.tanh#torch.sigmoid()#nn.ReLU()
         self.prelu = torch.tanh#torch.sigmoid()#nn.PReLU(init=0.01)
-        self.integrate_layer = nn.Linear(n_mid+45,n_mid)
+        self.integrate_layer = nn.Linear(n_mid+self.hiddden_size,n_mid)
         nn.init.kaiming_normal_(self.integrate_layer.weight)
         self.rnn = nn.LSTM(input_size=n_mid,hidden_size=n_mid,batch_first=True,num_layers=3)
         #nn.init.kaiming_normal_(self.rnn.weight)
@@ -171,7 +173,7 @@ class New_Dual_Net(nn.Module):
                                   embed_acted_card_ids,embed_acted_card_sides]
         #for cell in input_tensors:
         #    print(cell.size())
-        before_states = torch.cat(input_tensors,dim=1).view(-1,45)
+        before_states = torch.cat(input_tensors,dim=1).view(-1,2*self.vec_size+5)
         #before_states = self.state_net(states["before_states"])
         current_states = current_states# - before_states
         #print(x_1[0])
@@ -436,7 +438,7 @@ class Action_Value_Net(nn.Module):
     def __init__(self,parent_net,mid_size = 100):
         super(Action_Value_Net, self).__init__()
         self.n_mid = mid_size
-        self.short_mid = mid_size//10
+        self.short_mid = mid_size
         #self.emb1 = nn.Embedding(5, mid_size)  # 行動のカテゴリー
         #nn.init.kaiming_normal_(self.emb1.weight)
         self.emb1 = parent_net.emb1
@@ -444,7 +446,7 @@ class Action_Value_Net(nn.Module):
         #nn.init.kaiming_normal_(self.emb2.weight)
         #self.emb3 = nn.Embedding(1000, mid_size, padding_idx=0)  # フォロワー1000枚
         #self.lin1 = nn.Linear(5*mid_size+4, mid_size)#nn.Linear(7 * mid_size, mid_size)
-        self.lin1 = nn.Linear(2*mid_size+20+4, mid_size)#nn.Linear(3*mid_size+4, mid_size)
+        self.lin1 = nn.Linear(2*mid_size+parent_net.vec_size+4, mid_size)#nn.Linear(3*mid_size+4, mid_size)
         # #nn.Linear(7 * mid_size, mid_size)
 
         nn.init.kaiming_normal_(self.lin1.weight)
@@ -452,8 +454,8 @@ class Action_Value_Net(nn.Module):
         self.lin2 = nn.Linear(mid_size, 1)
         nn.init.kaiming_normal_(self.lin2.weight)
         #self.lin3 = nn.Linear(36,mid_size)
-        self.lin3 = nn.Linear(66, mid_size)
-        nn.init.kaiming_normal_(self.lin3.weight)
+        #self.lin3 = nn.Linear(66, mid_size)
+        #nn.init.kaiming_normal_(self.lin3.weight)
         self.lin4_len=3
         layer = [Dual_ResNet(45*mid_size, 45*mid_size) for _ in range(self.lin4_len)]
         #[Dual_ResNet(mid_size, mid_size) for _ in range(3)]
@@ -461,7 +463,8 @@ class Action_Value_Net(nn.Module):
         #self.mish = Mish()
         self.action_catgory_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
         self.side_emb = nn.Embedding(3,1,padding_idx=2)
-        self.association_layer = nn.Linear(25,mid_size)#nn.Linear(10+1,mid_size)#nn.Linear(mid_size+1,mid_size)
+        
+        self.association_layer = nn.Linear(parent_net.vec_size+5,mid_size)#nn.Linear(10+1,mid_size)#nn.Linear(mid_size+1,mid_size)
         nn.init.kaiming_normal_(self.association_layer.weight)
         self.prelu_1 = nn.PReLU(init=0.01)
         self.prelu_2 = nn.PReLU(init=0.01)
@@ -652,7 +655,7 @@ class New_Dual_ReplayMemory:
         if multi > 0:
             self.cuda = cuda
             data_len = len(tmp)
-            process_num=cpu_count()-1
+            process_num=min(cpu_count()-1,64)
             small_data_len = data_len //process_num
             iter_data = [(tmp[i*small_data_len:min((i+1)*small_data_len,data_len)],i) for i in range(process_num)]
             freeze_support()
