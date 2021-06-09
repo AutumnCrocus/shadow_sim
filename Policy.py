@@ -2560,7 +2560,7 @@ class Information_Set_MCTSPolicy():
 
         #_, move = self.execute_best(self.current_node, player_num=player_num)
 
-        return# move
+        return 0,0,0
 
     def tree_policy(self, node, player_num=0):
 
@@ -5264,12 +5264,18 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             short_name = model_name.split(".pth")[0]
             #short_name = short_name.split("/")[1]
             self.name = "ExIt(model_name={})Policy".format(short_name)
-            self.net = New_Dual_Net(node_num)
+            #self.net = New_Dual_Net(node_num)
+            #if torch.cuda.is_available() and cuda:
+            #    self.net = self.net.cuda()
+            #    device = "cuda:0"
+            self.model_name = model_name
+            model_dict=torch.load('model/{}'.format(model_name))
+            n_size=model_dict["final_layer.weight"].size()[1]
+            self.net = New_Dual_Net(n_size)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
                 device = "cuda:0"
-            self.model_name = model_name
-            self.net.load_state_dict(torch.load('model/{}'.format(model_name), map_location=torch.device(device)))
+            self.net.load_state_dict(model_dict, map_location=torch.device(device))
             self.net.eval()
         else:
             if origin_model is not None:
@@ -5403,7 +5409,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             before_field = node.parent_node.field
             before_player = before_field.players[before_field.turn_player_num]
             try:
-                before_states = [before_field.get_single_detailed_action_code(before_player,action)]
+                before_states = [before_field.get_single_detailed_action_code(before_player, action)]
             except Exception as e:
                 print(action)
                 before_player.show_hand()
@@ -5670,6 +5676,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
                                           Action_Code.ATTACK_TO_FOLLOWER.value:10,
                                           Action_Code.ATTACK_TO_PLAYER.value:35,
                                           Action_Code.EVOLVE.value:40,0:0}
+        self.ini_states = [torch.LongTensor([cell]) for cell in (0, 0, 0, 2)]
 
     def decide(self, player, opponent, field):
 
@@ -5685,12 +5692,15 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         able_actions = starting_node.children_moves
         max_value_action = (0, 0, 0)
         max_state_value = -np.inf
-
-        pai,_ = self.state_value(starting_field, player_num)
-        w = 1/3
+        self.starting_field = starting_field
+        pai, _ = self.state_value(starting_field, player_num, start_flg=True)
+        w = 1 / 3
         if not field.secret:
             mylogger.info("able_actions:{}".format(able_actions))
             mylogger.info("pai:{}".format(pai))
+         
+
+            
         for action in able_actions:
             sim_field = Field_setting.Field(5)
             sim_field.set_data(starting_field)
@@ -5706,7 +5716,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
                 action_id = action_id + 4 * action[1] + action[2]
             else:
                 pass
-            _,value = self.state_value(sim_field, player_num)
+            _,value = self.state_value(sim_field, player_num, action=action)
             current_pai = float(pai[0][action_id])
             if not field.secret:
                 mylogger.info("action:{},state_value:{:.3f} pai:{:6.2%}".format(action, value,current_pai))
@@ -5719,23 +5729,52 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
 
         return max_value_action
 
-    def state_value(self, field, player_num):
+    def state_value(self, field, player_num, start_flg=False, action=(0, 0, 0)):
         player = field.players[player_num]
         if field.check_game_end():
-            return [[1/45]*45],int(player.life > 0 and not player.lib_out_flg)
+            return [[1 / 45] * 45], int(player.life > 0 and not player.lib_out_flg)
         states = self.get_data(field, player_num=player_num)
+        if start_flg:
+            before_states=[torch.LongTensor([cell]) for cell in (0, 0, 0, 2)]
+        else:
+            before_field = self.starting_field
+            before_player = before_field.players[before_field.turn_player_num]
+            
+            try:
+                before_states = [before_field.get_single_detailed_action_code(before_player, action)]
+            except Exception as e:
+                print(action)
+                before_player.show_hand()
+                before_field.show_field()
+                print(e)
+                assert False
 
-        before_states = self.origin_field_data
-        before_states = [before_states]
-        before_states = self.state_convertor(before_states,cuda=self.cuda)
-
-        states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor\
-            ([field.get_detailed_action_code(field.players[self.current_player_num])],cuda=self.cuda)
+            single_before_state = before_states[0]
+            if single_before_state[1] in Embedd_Network_model.names:
+                acting_id=Embedd_Network_model.names.index(single_before_state[1])
+            else:
+                acting_id = 0
+                # *20
+            if single_before_state[2] in Embedd_Network_model.names:
+                acted_id = Embedd_Network_model.names.index(single_before_state[2])
+            else:
+                acted_id = 0
+                # * 20
+            side_id = single_before_state[3]
+            single_before_state = (single_before_state[0],acting_id,acted_id,side_id)
+            try:
+                before_states = [torch.LongTensor([cell]) for cell in single_before_state]
+            except Exception as e:
+                print(e)
+                assert False
+            
         states['before_states'] = before_states
+        states['detailed_action_codes'] = Embedd_Network_model.Detailed_action_code_2_Tensor(
+            [field.get_detailed_action_code(
+            field.players[player_num])], cuda=self.cuda)
         pai, value = self.net(states)
         out_value = float(value[0])
-
-        return pai,out_value
+        return pai, out_value
 
     def get_data(self,f,player_num = 0):
         tmp = Game_setting.get_data(f,player_num=player_num)
