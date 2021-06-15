@@ -5251,7 +5251,7 @@ class Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
 
 class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
-    def __init__(self,model_name = None,origin_model = None, cuda=False,node_num=100,iteration=100):
+    def __init__(self,model_name = None,origin_model = None, cuda=False,node_num=100, hidden_num=6, iteration=100):
 
         super().__init__()
         self.iteration = iteration
@@ -5271,11 +5271,12 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
             self.model_name = model_name
             model_dict=torch.load('model/{}'.format(model_name))
             n_size=model_dict["final_layer.weight"].size()[1]
-            self.net = New_Dual_Net(n_size)
+            self.net = New_Dual_Net(n_size,hidden_num=hidden_num)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
                 device = "cuda:0"
-            self.net.load_state_dict(model_dict, map_location=torch.device(device))
+            self.net.load_state_dict(model_dict)
+            # self.net.load_state_dict(model_dict, map_location=torch.device(device))
             self.net.eval()
         else:
             if origin_model is not None:
@@ -5637,7 +5638,7 @@ class New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(Non_Rollout_OM_ISMCTSPolicy):
 
 
 class Dual_NN_GreedyPolicy(New_GreedyPolicy):
-    def __init__(self, model_name=None, origin_model=None, cuda=False,node_num=100):
+    def __init__(self, model_name=None, origin_model=None, cuda=False,node_num=100, hidden_num=6):
         super().__init__()
 
         self.policy_type = 2
@@ -5651,7 +5652,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
             short_name = model_name.split(".pth")[0]
             #short_name = short_name.split("/")[1]
             self.name = "GreedyExIt(model_name={})Policy".format(short_name)
-            self.net = New_Dual_Net(node_num)
+            self.net = New_Dual_Net(node_num ,hidden_num=hidden_num)
             if torch.cuda.is_available() and cuda:
                 self.net = self.net.cuda()
                 device = "cuda:0"
@@ -5697,7 +5698,10 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
         w = 1 / 3
         if not field.secret:
             mylogger.info("able_actions:{}".format(able_actions))
-            mylogger.info("pai:{}".format(pai))
+            show_pai = [(i, p) for i, p in enumerate(pai.tolist()[0]) if p > 0.0]
+            #print(show_pai)
+            for cell in show_pai: print("{:2.0f}: {:3.3%}".format(cell[0],cell[1]))
+            #mylogger.info("pai:".format())
          
 
             
@@ -5719,7 +5723,7 @@ class Dual_NN_GreedyPolicy(New_GreedyPolicy):
             _,value = self.state_value(sim_field, player_num, action=action)
             current_pai = float(pai[0][action_id])
             if not field.secret:
-                mylogger.info("action:{},state_value:{:.3f} pai:{:6.2%}".format(action, value,current_pai))
+                mylogger.info("action:{:<14} state_value:{:.3f} pai:{:6.2%}".format(str(action), value,current_pai))
             value += w * current_pai
             if value > max_state_value:
                 max_value_action = action

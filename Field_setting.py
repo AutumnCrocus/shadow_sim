@@ -1489,10 +1489,10 @@ class Field:
 
             if not virtual_flg:
                 observable_data = self.get_observable_data(player_num=turn_player_num)
-                for key in list(observable_data.keys()):
-                    print("{}".format(key))
-                    for sub_key in list(observable_data[key].keys()):
-                        print("{}:{}".format(sub_key, observable_data[key][sub_key]))
+                player_keys = list(observable_data.keys())
+                for sub_key in list(observable_data[player_keys[0]].keys()):
+                    print("{}:{},{}".format(sub_key,observable_data[player_keys[0]][sub_key],
+                                        observable_data[player_keys[1]][sub_key]))
                 self.players[turn_player_num].show_hand()
                 self.show_field()
 
@@ -1764,6 +1764,7 @@ class Field:
         board_diff /= 10
         value = board_diff*0.45+life_diff*0.45+hand_diff*0.1
         return 1/(1+np.exp(-(value*10)))
+    
     def get_single_detailed_action_code(self,player,action_code):
         margin = 500
         category_range = 1000

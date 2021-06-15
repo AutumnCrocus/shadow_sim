@@ -59,7 +59,7 @@ parser.add_argument('--evaluate_num', help='evaluate_num',default=100,type=int)
 parser.add_argument('--max_update_interval', help='max_update_interval',default=10,type=int)
 parser.add_argument('--limit_OMP',help="limit OMP_NUM_THREADS for quadro",default=False,type=bool)
 parser.add_argument('--OMP_NUM', help='num of threads used in OMP',default=0,type=int)
-parser.add_argument('--loss_th', help='accepted test loss limit',default=10,type=int)
+parser.add_argument('--loss_th', help='アーリーストッピングの猶予ステップ',default=10,type=int)
 parser.add_argument('--step_iter', help='MCTS_step_iteration',default=100,type=int)
 parser.add_argument('--supervised', help='if model use other model')
 parser.add_argument('--data_rate', help='the rate of data used by train',default=0.8,type=float)
@@ -67,6 +67,8 @@ parser.add_argument('--w_list', help='list of weight decay',default=[0.001,0.002
 parser.add_argument('--rand', help='if model use random initial embedding')
 parser.add_argument('--epoch_list', help='list of epoch num as train',default=[100],type=lambda txt:list(map(int,txt.split(","))))
 parser.add_argument('--multi_sample_num', help='num of sampling process',default=0,type=int)
+parser.add_argument('--hidden_num', help='num of hidden_layer',default=[6,6],type=lambda txt: list(map(int,txt.split(","))))
+parser.add_argument('--greedy_mode', help='use self-play greedy model',)
 args = parser.parse_args()
 
 deck_flg = args.fixed_deck_ids#list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
@@ -393,7 +395,7 @@ def multi_train(data):
 #         if p_num == 0 and i == 0:print("len:",len(key))
         states = {}
         try:
-            states.update({dict_key : torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
+            states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
         except Exception as e:
             print(normal_states_keys,key)
             raise e
@@ -517,7 +519,7 @@ def run_main():
 
     cuda_flg = args.cuda is not None
     node_num = args.node_num
-    net = New_Dual_Net(node_num,rand=args.rand)
+    net = New_Dual_Net(node_num,rand=args.rand,hidden_num=args.hidden_num[0])
     print(next(net.parameters()).is_cuda)
     
     if args.model_name is not None:
@@ -547,6 +549,7 @@ def run_main():
     LOG_PATH = "{}episode_{}nodes_deckids{}_{}/".format(episode_len,node_num,args.fixed_deck_ids,date)
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
     TAG="{}_{}_{}".format(episode_len,node_num,args.fixed_deck_ids)
+    early_stopper = EarlyStopping(patience=args.loss_th, verbose=True)
     th = args.WR_th
     last_updated = 0
     reset_count = 0
@@ -567,13 +570,15 @@ def run_main():
         R = New_Dual_ReplayMemory(100000)
         test_R = New_Dual_ReplayMemory(100000)
         episode_len = args.episode_num
-        if args.supervised is not None:#epoch == 0 and args.supervised is not None:
-            if args.supervised == "Aggro":
-                supervise_policy = [AggroPolicy(), AggroPolicy()]
-            else: 
-                supervise_policy = [New_GreedyPolicy(), New_GreedyPolicy()]
-            p1 = Player(9, True, policy=supervise_policy[0], mulligan=Min_cost_mulligan_policy())
-            p2 = Player(9, False, policy=supervise_policy[1], mulligan=Min_cost_mulligan_policy())
+        if args.greedy_mode is not None:
+            #if args.supervised == "Aggro":
+            #    supervise_policy = [AggroPolicy(), AggroPolicy()]
+            #else: 
+            #    supervise_policy = [New_GreedyPolicy(), New_GreedyPolicy()]
+            #p1 = Player(9, True, policy=supervise_policy[0], mulligan=Min_cost_mulligan_policy())
+            #p2 = Player(9, False, policy=supervise_policy[1], mulligan=Min_cost_mulligan_policy())
+            p1 = Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=net), mulligan=Min_cost_mulligan_policy())
+            p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=net), mulligan=Min_cost_mulligan_policy())
         else:
 
             p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
@@ -673,7 +678,7 @@ def run_main():
         pass_flg = False
         if args.multi_train is not None:
             if last_updated > args.max_update_interval - 3:
-                net = New_Dual_Net(node_num,rand=args.rand)
+                net = New_Dual_Net(node_num,rand=args.rand,hidden_num=args.hidden_num[0])
                 reset_count += 1
                 print("reset_num:",reset_count)
             p_size = min(args.cpu_num,3)# if args.cuda is None else 1
@@ -972,6 +977,7 @@ def run_main():
                   .format(test_objective_loss, test_MSE, test_CEE))
             
             loss_history.append(test_objective_loss)
+            if early_stopper.validate(test_objective_loss): break
 
         print("evaluate step")
         del R
@@ -984,11 +990,17 @@ def run_main():
             WR = 0
             print("evaluation of this epoch is passed.")
         else:
-            p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
-                        ,mulligan=Min_cost_mulligan_policy())
+            if args.greedy_mode is not None:
+                p1 = Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=net), mulligan=Min_cost_mulligan_policy())
+                p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=net), mulligan=Min_cost_mulligan_policy())
+            else:
+                p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
+                            ,mulligan=Min_cost_mulligan_policy())
+
+                p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=False,iteration=args.step_iter)
+                            ,mulligan=Min_cost_mulligan_policy())
+
             p1.name = "Alice"
-            p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=prev_net, cuda=False,iteration=args.step_iter)
-                        ,mulligan=Min_cost_mulligan_policy())
             p2.name = "Bob"
             test_deck_list = tuple(100,)  if deck_flg is None else deck_flg# (0,1,4,10,13)
             test_deck_list = tuple(itertools.product(test_deck_list,test_deck_list))
@@ -1115,17 +1127,23 @@ def check_score():
     loss_history = []
     check_deck_id = int(args.check_deck_id) if args.check_deck_id is not None else None
     cuda_flg = args.cuda == "True"
-    node_num = int(args.node_num)
-    net = New_Dual_Net(node_num)
+    #node_num = int(args.node_num)
+    #net = New_Dual_Net(node_num)
     model_name = args.model_name
     PATH = 'model/' + model_name
-    net.load_state_dict(torch.load(PATH))
+    model_dict=torch.load(PATH)
+    n_size=model_dict["final_layer.weight"].size()[1]
+    net = New_Dual_Net(n_size,hidden_num=args.hidden_num[0])
+    net.load_state_dict(model_dict)
     opponent_net = None
     if args.opponent_model_name is not None:
-        opponent_net = New_Dual_Net(node_num)
+        #opponent_net = New_Dual_Net(node_num)
         model_name = args.opponent_model_name
         PATH = 'model/' + model_name
-        opponent_net.load_state_dict(torch.load(PATH))
+        model_dict=torch.load(PATH)
+        n_size=model_dict["final_layer.weight"].size()[1]
+        opponent_net = New_Dual_Net(n_size,hidden_num=args.hidden_num[1])
+        opponent_net.load_state_dict(model_dict)
 
     if torch.cuda.is_available() and cuda_flg:
         net = net.cuda()
@@ -1138,8 +1156,13 @@ def check_score():
     G = Game()
     net.cpu()
     t3 = datetime.datetime.now()
-    p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=cuda_flg,iteration=args.step_iter)
-                , mulligan=Min_cost_mulligan_policy())
+    if args.greedy_mode is not None:
+        p1 = Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=net))
+    else:
+        p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net,
+                                                                            cuda=cuda_flg,
+                                                                            iteration=args.step_iter)
+                    , mulligan=Min_cost_mulligan_policy())
     #p1 = Player(9, True, policy=AggroPolicy())
     p1.name = "Alice"
     if fixed_opponent is not None:
@@ -1193,9 +1216,12 @@ def check_score():
     #    #Battle_Result[memory_cell[0]] = memory_cell[1]
     #    #min_WR = min(min_WR,memory_cell[1])
     print(shared_array)
+    txt_dict = {}
     for key in sorted(list((Battle_Result.keys()))):
-        print("{}:WR:{:.2%},first_WR:{:.2%}"\
-              .format(key,Battle_Result[key][0]/test_episode_len,2*Battle_Result[key][1]/test_episode_len))
+        cell = "{}:WR:{:.2%},first_WR:{:.2%}"\
+              .format(key,Battle_Result[key][0]/test_episode_len,2*Battle_Result[key][1]/test_episode_len)
+        print(cell)
+        txt_dict[key] = cell
     print(Battle_Result)
     result_name = model_name.split(".")[0] + ":" + args.deck_list
     deck_num = len(deck_list)
@@ -1211,6 +1237,8 @@ def check_score():
             for j in deck_list:
                 row.append(Battle_Result[(i, j)])
             writer.writerow(row)
+        for key in list(txt_dict.keys()):
+            writer.writerow([txt_dict[key]])
     #win_rate = sum([cell[0] for cell in memory])/episode_len
     #first_win_rate = [2*sum([cell[1][0] for cell in memory])/episode_len,
     #                  2 * sum([cell[1][1] for cell in memory]) / episode_len]

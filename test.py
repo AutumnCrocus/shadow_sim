@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # +
-from torch.multiprocessing import Pool, Process,
-set_start_method, cpu_count, RLock
+from torch.multiprocessing import Pool, Process, set_start_method, cpu_count, RLock
 import sys
 import numpy as np
 import random
@@ -1357,8 +1356,10 @@ def test_3(Player_1, Player_2, iteration, same_flg=False, result_name="shadow_re
             Turn_Players[i % 2].player_num = 0
             Turn_Players[(i + 1) % 2].is_first = False
             Turn_Players[(i + 1) % 2].player_num = 1
-            assert Turn_Players[0].player_num != Turn_Players[1].player_num, "same error {} name:{} {}"
-            .format(Turn_Players[0].player_num, Turn_Players[0].name, Turn_Players[1].name)
+            assert Turn_Players[0].player_num != Turn_Players[1].player_num,"same error {} name:{} {}".format(
+                Turn_Players[0].player_num,
+                Turn_Players[0].name,
+                Turn_Players[1].name)
             (win_lose[i % 2], win_lose[(i + 1) % 2], lib_num, end_turn, first, _) = game_play(Turn_Players[i % 2],
                                                                                               Turn_Players[(i + 1) % 2],
                                                                                               D[j],
@@ -1700,10 +1701,14 @@ if __name__ == '__main__':
     model_name = None
     if args.model_name is not None:
         model_name = args.model_name
-        node_num = int(args.node_num)
+        PATH = 'model/' + model_name
+        model_dict=torch.load(PATH)
+        node_num=model_dict["final_layer.weight"].size()[1]
         cuda = False  # torch.cuda.is_available()
+        hidden_num = int(input("hidden_num: "))
         if args.model_name == "ini":
-            origin_model = Embedd_Network_model.New_Dual_Net(args.node_num)
+            
+            origin_model = Embedd_Network_model.New_Dual_Net(args.node_num, hidden_num=hidden_num)
             Players.append(
                 Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=origin_model, node_num=node_num), mulligan=Min_cost_mulligan_policy()))
             # 28
@@ -1714,11 +1719,17 @@ if __name__ == '__main__':
             # 29
         else:
             Players.append(
-                Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name, node_num=node_num), mulligan=Min_cost_mulligan_policy()))
+                Player(9, True, policy=Dual_NN_GreedyPolicy(model_name=model_name,
+                                                            node_num=node_num,
+                                                            hidden_num=hidden_num),
+                       mulligan=Min_cost_mulligan_policy()))
             # 28
             Players.append(
                 Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(model_name=model_name,
-                                                                               cuda=cuda, node_num=node_num, iteration=args.step_iteration),
+                                                                               cuda=cuda,
+                                                                               node_num=node_num,
+                                                                               hidden_num=hidden_num,
+                                                                               iteration=args.step_iteration),
                        mulligan=Min_cost_mulligan_policy()))
             # 29
 
@@ -1893,8 +1904,8 @@ if __name__ == '__main__':
                         policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(
                             model_name=args.opponent_model_name, node_num=node_num),
                         mulligan=Min_cost_mulligan_policy())
-            if args.opponent_model_name is not None else copy.deepcopy(Players[b]):
-                d2 = copy.deepcopy(Players[b])
+            if args.opponent_model_name is not None:
+                d2  = copy.deepcopy(Players[b])
             make_mirror_match_table(d1, d2, n, deck_lists=deck_list, pairwise=args.pairwise is not None,
                                     out_put=args.output is not None)
     elif args.mode == "random_match":

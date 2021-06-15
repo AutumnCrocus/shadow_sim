@@ -240,10 +240,14 @@ class Player:
                 print("first:player")
             else:
                 print("first:opponent")
-            for key in list(observable_data.keys()):
-                print("{}".format(key))
-                for sub_key in list(observable_data[key].keys()):
-                    print("{}:{}".format(sub_key, observable_data[key][sub_key]))
+            player_keys = list(observable_data.keys())
+            for sub_key in list(observable_data[player_keys[0]].keys()):
+                print("{}:{},{}".format(sub_key,observable_data[player_keys[0]][sub_key],
+                                        observable_data[player_keys[1]][sub_key]))
+            #for key in list(observable_data.keys()):
+            #    print("{}".format(key))
+            #    for sub_key in list(observable_data[key].keys()):
+            #        print("{}:{}".format(sub_key, observable_data[key][sub_key]))
             self.show_hand()
             field.show_field()
             if able_to_play != []:
@@ -394,10 +398,14 @@ class HumanPlayer(Player):
         (can_play, can_attack, can_evo), (able_to_play, able_to_attack, able_to_creature_attack, able_to_evo) \
             = field.get_flag_and_choices(player, opponent, regal_targets)
         observable_data = field.get_observable_data(player_num=self.player_num)
-        for key in list(observable_data.keys()):
-            print("{}".format(key))
-            for sub_key in list(observable_data[key].keys()):
-                print("{}:{}".format(sub_key, observable_data[key][sub_key]))
+        if self.player_num == 0:
+            print("first:player")
+        else:
+            print("first:opponent")
+        player_keys = list(observable_data.keys())
+        for sub_key in list(observable_data[player_keys[0]].keys()):
+            print("{}:{},{}".format(sub_key,observable_data[player_keys[0]][sub_key],
+                                    observable_data[player_keys[1]][sub_key]))
 
         self.show_hand()
         field.show_field()
