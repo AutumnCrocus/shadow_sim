@@ -1019,14 +1019,8 @@ def run_main():
             del iter_data
             del p1
             del p2
-            # Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
-#             pool.terminate()  # add this.
-#             pool.close()  # add this.
-
-            #memory = list(memory)
             match_num = len(test_deck_list) #if deck_flg is None else p_size
             min_WR=1.0
-            #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
             Battle_Result = {(deck_id[0], deck_id[1]): \
                                  tuple(shared_array[3*index+1:3*index+3]) for index, deck_id in enumerate(test_deck_list)}
             #for memory_cell in memory:
@@ -1047,16 +1041,6 @@ def run_main():
             min_WR =  min(result_table.values())
             WR = sum(result_table.values())/len(result_table.values())
             del result_table
-            #del shared_key
-            #del Battle_Result
-            #WR = sum([Battle_Result[key][0] for key in list(Battle_Result.keys())])/(match_num*test_episode_len)
-            #min_WR = min([Battle_Result[key][0]/test_episode_len for key in list(Battle_Result.keys())])
-            
-            #WR = sum(Battle_Result.values())/match_num
-
-
-        #battle_data = [cell.pop(-1) for cell in memory]
-        #win_num = sum([cell["win_num"] for cell in battle_data])
 
         win_flg = False
         #WR=1.0
@@ -1073,13 +1057,6 @@ def run_main():
             net = prev_net
             print("new_model lose... WR:{:.1%}".format(WR))
         torch.cuda.empty_cache()
-
-
-
-
-
-
-
         t4 = datetime.datetime.now()
         print(t4-t3)
         # or (epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num)
@@ -1138,8 +1115,8 @@ def check_score():
     opponent_net = None
     if args.opponent_model_name is not None:
         #opponent_net = New_Dual_Net(node_num)
-        model_name = args.opponent_model_name
-        PATH = 'model/' + model_name
+        o_model_name = args.opponent_model_name
+        PATH = 'model/' + o_model_name
         model_dict=torch.load(PATH)
         n_size=model_dict["final_layer.weight"].size()[1]
         opponent_net = New_Dual_Net(n_size,hidden_num=args.hidden_num[1])
@@ -1174,7 +1151,8 @@ def check_score():
         elif fixed_opponent == "NR_OM":
             p2 = Player(9, False, policy=Non_Rollout_OM_ISMCTSPolicy(iteration=200), mulligan=Min_cost_mulligan_policy())
         elif fixed_opponent == "ExItGreedy":
-            p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=net))
+            tmp = opponent_net if opponent_net is not None else net
+            p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=tmp))
         elif fixed_opponent == "Greedy":
             p2 = Player(9, False, policy=New_GreedyPolicy(), mulligan=Simple_mulligan_policy())
         elif fixed_opponent == "Random":
@@ -1195,26 +1173,19 @@ def check_score():
     match_num = len(test_deck_list)
     manager = Manager()
     shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
-    #iter_data = [(p1, p2,test_episode_len, p_id ,cell) for p_id,cell in enumerate(deck_pairs)]
     iter_data = [(p1, p2, shared_array,episode_num, p_id, test_deck_list) for p_id in range(p_size)]
     freeze_support()
     print(p1.policy.name)
     print(p2.policy.name)
     pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
     memory = pool.map(multi_battle, iter_data)
-    #Battle_Results[(j, k)] = [win_lose[0] / iteration, first_num / iteration]
-
     pool.close()  # add this.
     pool.terminate()  # add this.
     print("\n" * (match_num + 1))
     memory = list(memory)
     min_WR=1.0
-    #Battle_Result = {(d,d):[0,0,0] for d in test_deck_list}
     Battle_Result = {(deck_id[0], deck_id[1]): \
                          tuple(shared_array[3*index+1:3*index+3]) for index, deck_id in enumerate(test_deck_list)}
-    #for memory_cell in memory:
-    #    #Battle_Result[memory_cell[0]] = memory_cell[1]
-    #    #min_WR = min(min_WR,memory_cell[1])
     print(shared_array)
     txt_dict = {}
     for key in sorted(list((Battle_Result.keys()))):
@@ -1239,11 +1210,6 @@ def check_score():
             writer.writerow(row)
         for key in list(txt_dict.keys()):
             writer.writerow([txt_dict[key]])
-    #win_rate = sum([cell[0] for cell in memory])/episode_len
-    #first_win_rate = [2*sum([cell[1][0] for cell in memory])/episode_len,
-    #                  2 * sum([cell[1][1] for cell in memory]) / episode_len]
-    #print("win_rate:{:.3%},first_win_rate:{:.3%} {:.3%}".format(win_rate,first_win_rate[0],first_win_rate[1]))
-
 
 if __name__ == "__main__":
     if args.check is not None:
