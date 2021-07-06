@@ -1,0 +1,2 @@
+python3 multi_test.py --fixed_deck_ids "5,10" --iteration_num 10 --multi_train True --cpu_num 3 --node_num 20 --episode_num 128 --epoch_num 64 --batch_size 32 --WR_th 0.45 --evaluate_num 100 --w_list "1.0e-7"   --limit_OMP True --cuda True  --epoch_list 1,2,4,8 --multi_sample_num 3  --step_iter 200 --hidden_num 2,2
+#Reborn: WR_th:0.51 Evolve: WR_th:0.45
