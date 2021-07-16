@@ -234,21 +234,7 @@ def multi_preparation(episode_data):
         for i in range(2):
             end_turn = int(train_data[i][-1][0]["life_data"][0][-1]*100)
             for data in train_data[i]:
-                
-                #print(0,data[0])
-                #print(2,data[2])
-                # assert False,"{}".format(data[0])
                 detailed_action_code = data[3]
-                #if sum(detailed_action_code["able_to_choice"]) == 1:
-                #    continue
-                #print(data[0])
-#                 after_state = Detailed_State_data(data[0].hand_ids, data[0].hand_card_costs,
-#                                 data[0].follower_card_ids, data[0].amulet_card_ids,
-#                                 data[0].follower_stats, data[0].follower_abilities,
-#                                 data[0].able_to_evo, data[0].life_data,
-#                                 data[0].pp_data, data[0].able_to_play,
-#                                 data[0].able_to_attack, data[0].able_to_creature_attack,
-#                                                   data[0].deck_data)
                 after_state = {"hand_ids":data[0]['hand_ids'], 
                          "hand_card_costs":data[0]['hand_card_costs'], 
                          "follower_card_ids":data[0]['follower_card_ids'], 
@@ -262,25 +248,13 @@ def multi_preparation(episode_data):
                          "able_to_attack":data[0]['able_to_attack'],
                          "able_to_creature_attack":data[0]['able_to_creature_attack'],
                          "deck_data":data[0]['deck_data']}
-#                 after_state = Detailed_State_data(data[0]['hand_ids'], data[0]['hand_card_costs'],
-#                                data[0]['follower_card_ids'], data[0]['amulet_card_ids'],
-#                                data[0]['follower_stats'], data[0]['follower_abilities'],
-#                                data[0]['able_to_evo'], data[0]['life_data'],
-#                                data[0]['pp_data'], data[0]['able_to_play'],
-#                                data[0]['able_to_attack'], data[0]['able_to_creature_attack'],
-#                                                  data[0]['deck_data'])
                 before_state = data[2]
 
                 action_probability = data[1]
                 sum_of_choices += sum(detailed_action_code['able_to_choice'])
                 sum_code += 1
-                #current_turn = int(data[0].life_data[0][-1] * 100)
-                #discount_rate = GAMMA**(end_turn-current_turn)
                 discounted_reward = reward[i]# * discount_rate
-                result_data.append((after_state, action_probability, before_state, detailed_action_code,discounted_reward))#, reward[i]))
-                #print("life_data:{}".format(data[2].life_data))
-                #end_turn = data[2].life_data[0][-1]
-                #result_data.append((before_state, action_probability, after_state, detailed_action_code, reward[1-i]))
+                result_data.append((after_state, action_probability, before_state, detailed_action_code,discounted_reward))
 
         battle_data["sum_of_choices"] += sum_of_choices
         battle_data["sum_code"] += sum_code
@@ -288,25 +262,18 @@ def multi_preparation(episode_data):
         battle_data["end_turn"] += end_turn
         all_result_data.append(result_data)
 
-    #all_result_data.append(battle_data)
-    #print("\033["+str(p_num)+"A", end="")
     return all_result_data
 
 import itertools
 def multi_battle(episode_data):
     count_limit = episode_data[-3]
-    #partial_iteration = episode_data[-3]
     p_id = episode_data[-2]
-    #deck_ids = episode_data[-1]
-    deck_id_data = episode_data[-1]#((deck_id,deck_id),)
+    deck_id_data = episode_data[-1]
     deck_data_len = len(deck_id_data)
     shared_array = episode_data[-4]
-    #win_rate_dict = {ele:{"win_num":0,"first_win_num":0}\
-    #                 for ele in deck_id_data}
     win_num = 0
     first_num = 0
-    info = f'#{str(p_id):>8} '#info = f'#{str(deck_ids):>8} '
-    #for episode in tqdm(range(partial_iteration),desc=info,position=p_id):
+    info = f'#{str(p_id):>8} '
     for _ in tqdm(range(deck_data_len*count_limit), desc=info, position=p_id):
         if all(shared_array[3*ele] >= count_limit for ele in range(deck_data_len)):
             break
@@ -348,26 +315,14 @@ def multi_battle(episode_data):
         reward = [win,lose]
         shared_array[3*deck_index + 1] += int(reward[int(episode % 2)] > 0)
         shared_array[3*deck_index + 2] += int(episode%2==0)*int(reward[0] > 0)
-        #current_dict = win_rate_dict[current_deck_id]
-        #current_dict["battle_num"] += 1
-        #current_dict["win_num"] += int(reward[int(episode % 2)] > 0)
-        #current_dict["first_win_num"] += int(episode%2==0)*int(reward[0] > 0)
-
-        #train_data, reward = G.start_for_dual(f, virtual_flg=True, target_player_num=episode % 2)
-
-        #win_num += int(reward[int(episode % 2)] > 0)
-        #first_num += int(episode%2==0)*int(reward[0] > 0)
-    #print(deck_ids,":",win_num/partial_iteration)
-    #print("\033[" + str(p_id) + "A", end="")
-    #return (deck_ids,win_num/partial_iteration,first_num/(partial_iteration//2))
-    return #win_rate_dict
+    return
 
 import itertools
 
 def multi_train(data):
     net, memory, batch_size, iteration_num, train_ids,p_num,current_weight_decay = data
-    #optimizer =  optim.AdamW(net.parameters(), weight_decay=current_weight_decay)
-    #optimizer = AdaBoundW(net.parameters(),lr=0.001)
+    # optimizer =  optim.AdamW(net.parameters(), weight_decay=current_weight_decay)
+    # optimizer = AdaBoundW(net.parameters(),lr=0.001)
     optimizer = optim.SGD(net.parameters(),lr=5e-3)
     all_loss, MSE, CEE = 0, 0, 0
 
@@ -385,14 +340,6 @@ def multi_train(data):
         optimizer.zero_grad()
         net.zero_grad()
         key = random.sample(batch_id_list,k=batch_size)
-#         first_id = (i*batch_size) % batch_id_len
-#         last_id = (i*batch_size+batch_size) % batch_id_len
-#         if first_id < last_id:
-#             assert last_id - first_id == batch_size,"{},{},{}".format(first_id,last_id,last_id - first_id)
-#             key = batch_id_list[first_id:last_id]
-#         else:
-#             key = batch_id_list[first_id:]+batch_id_list[:last_id]
-#         if p_num == 0 and i == 0:print("len:",len(key))
         states = {}
         try:
             states.update({dict_key: torch.clone(all_states[dict_key][key]) for dict_key in normal_states_keys})
@@ -405,11 +352,6 @@ def multi_train(data):
                             for sub_key in action_code_keys}
         orig_before_states = all_states["before_states"]
         states['before_states'] = [torch.clone(orig_before_states[i][key]) for i in range(4)]
-        #states['before_states'] = torch.clone(orig_before_states[key])
-#         states['before_states'] = {dict_key : torch.clone(orig_before_states[dict_key][key]) for dict_key in normal_states_keys}
-#         states['before_states']['values'] = {sub_key: torch.clone(orig_before_states['values'][sub_key][key]) \
-#                             for sub_key in value_keys}
-        
         actions = all_actions[key]
         rewards = all_rewards[key]
 
@@ -417,16 +359,8 @@ def multi_train(data):
 
         p, v, loss = net(states, target=True)
 
-        #     debug_log = [(v[j],rewards[j]) for j in range(v.size()[0])]
-        #     assert False, "all same output!!!\n {}".format(debug_log)
         loss[0].backward(retain_graph=False)
 
-        #         if float(torch.std(v)) < 0.01 and float(torch.std(rewards)) > 0.01 and float(loss[1].item()) > 0.5 and p_num == 0 and i > 10:
-        #             for batch_id in range(v.size()[0]):
-        #                 print("{}: {} --> {}".format(batch_id,float(v[batch_id]),float(rewards[batch_id])))
-        #             print("")
-        #             print("{}".format(float(loss[1].item())))
-        #             assert False
         all_loss += float(loss[0].item())
         MSE += float(loss[1].item())
         CEE += float(loss[2].item())
@@ -467,7 +401,6 @@ def multi_eval(data):
     batch_id_list = partitial_range
     partitial_len =  len(partitial_range)
     separate_num =partitial_len//batch_size
-    #states, actions, rewards = memory
     assert separate_num > 0,"zero sep.{},{},{}".format(partitial_len,batch_size,batch_id_list)
     info = f'#{p_num:>2} '
     for i in tqdm(range(separate_num),desc=info,position=p_num+1):
@@ -531,7 +464,7 @@ def run_main():
     net.zero_grad()
     epoch_interval = args.save_interval
     G = Game()
-    #Over_all_R = New_Dual_ReplayMemory(100000)
+
     episode_len = args.episode_num
     batch_size = args.batch_size
     iteration = args.iteration_num
@@ -543,8 +476,6 @@ def run_main():
     prev_net = copy.deepcopy(net)
     optimizer = optim.Adam(net.parameters(), weight_decay=weight_decay)
 
-    #LOG_PATH = "log_{}_{}_{}_{}_{}_{}/".format(t1.year, t1.month, t1.day, t1.hour, t1.minute,
-    #                                                         t1.second)
     date = "{}_{}_{}_{}".format(t1.month, t1.day, t1.hour, t1.minute)
     LOG_PATH = "{}episode_{}nodes_deckids{}_{}/".format(episode_len,node_num,args.fixed_deck_ids,date)
     writer = SummaryWriter(log_dir="./logs/" + LOG_PATH)
@@ -556,9 +487,6 @@ def run_main():
     min_loss = 100
     loss_th = args.loss_th
             
-    #pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
-        
-    #print(torch.cuda.is_available())
     for epoch in range(epoch_num):
 
         net.cpu()
@@ -571,16 +499,11 @@ def run_main():
         test_R = New_Dual_ReplayMemory(100000)
         episode_len = args.episode_num
         if args.greedy_mode is not None:
-            #if args.supervised == "Aggro":
-            #    supervise_policy = [AggroPolicy(), AggroPolicy()]
-            #else: 
-            #    supervise_policy = [New_GreedyPolicy(), New_GreedyPolicy()]
-            #p1 = Player(9, True, policy=supervise_policy[0], mulligan=Min_cost_mulligan_policy())
-            #p2 = Player(9, False, policy=supervise_policy[1], mulligan=Min_cost_mulligan_policy())
-            p1 = Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=net), mulligan=Min_cost_mulligan_policy())
-            p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=net), mulligan=Min_cost_mulligan_policy())
+            p1 = Player(9, True, policy=Dual_NN_GreedyPolicy(origin_model=net),
+                        mulligan=Min_cost_mulligan_policy())
+            p2 = Player(9, False, policy=Dual_NN_GreedyPolicy(origin_model=net),
+                        mulligan=Min_cost_mulligan_policy())
         else:
-
             p1 = Player(9, True, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
                         ,mulligan=Min_cost_mulligan_policy())
             p2 = Player(9, False, policy=New_Dual_NN_Non_Rollout_OM_ISMCTSPolicy(origin_model=net, cuda=False,iteration=args.step_iter)
@@ -596,27 +519,18 @@ def run_main():
         with Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),)) as pool:
             memory = pool.map(multi_preparation, iter_data)
         print("\n" * (p_size+1))
-        #pool.terminate()  # add this.
-        #pool.close()  # add this.
-        # [[result_data,result_data,...,battle_data], ...]
         del p1
         del p2
         del iter_data
         battle_data = [cell.pop(-1) for cell in memory]
 
-        #memories = []
-        #[memories.extend(list(itertools.chain.from_iterable(memory[i]))) for i in range(p_size)]
-        # [[result_data,result_data,...], [result_data,result_data,...],...]
         sum_of_choice = max(sum([cell["sum_of_choices"] for cell in battle_data]),1)
         sum_of_code = max(sum([cell["sum_code"] for cell in battle_data]),1)
         win_num = sum([cell["win_num"] for cell in battle_data])
         sum_end_turn = sum([cell["end_turn"] for cell in battle_data])
-        # [[result_data,result_data,...], [result_data,result_data,...],...]
-        #result_data: 一対戦
+        # [[result_data, result_data,...], [result_data, result_data,...],...]
+        # result_data: 1対戦のデータ
         origin_memories = list(itertools.chain.from_iterable(memory))
-        #origin_memories = random.shuffle(origin_memories)
-        # [result_data,result_data,...,result_data,result_data]
-        #memories = list(itertools.chain.from_iterable(origin_memories))
         print(type(memory),type(origin_memories),int(episode_len*args.data_rate),len(origin_memories))
         memories = list(itertools.chain.from_iterable(origin_memories[:int(episode_len*args.data_rate)]))
         test_memories = list(itertools.chain.from_iterable(origin_memories[int(episode_len*args.data_rate):]))
@@ -681,7 +595,7 @@ def run_main():
                 net = New_Dual_Net(node_num,rand=args.rand,hidden_num=args.hidden_num[0])
                 reset_count += 1
                 print("reset_num:",reset_count)
-            p_size = min(args.cpu_num,3)# if args.cuda is None else 1
+            p_size = min(args.cpu_num,3)
             if cuda_flg:
                 torch.cuda.empty_cache() 
                 net = net.cuda()
@@ -711,7 +625,6 @@ def run_main():
             #cmd = "pgrep --parent {} | xargs kill -9".format(int(os.getpid()))
             #proc = subprocess.call( cmd , shell=True)
             with Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),)) as pool:
-                #for weight_scale in range(len(w_list)):
                 for epoch_scale in range(len(epoch_list)):
                     target_net = copy.deepcopy(net)
                     target_net.train()
@@ -726,14 +639,10 @@ def run_main():
                         loss_data = [multi_train(iter_data[0])]
                     else:
                         freeze_support()
-                        #pool = Pool(p_size,initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
                         loss_data = pool.map(multi_train, iter_data)
-                        #pool.terminate()  # add this.
-                        #pool.close()  # add this.
+                        # pool.terminate()  # add this.
+                        # pool.close()  # add this.
                         print("\n" * p_size)
-                    #imap = pool.imap(multi_train, iter_data)
-                    #loss_data = list(tqdm(imap, total=p_size))
-                    #[(1,1,1),(),()]
                     sum_of_loss = sum(map(lambda data: data[0], loss_data))
                     sum_of_MSE = sum(map(lambda data: data[1], loss_data))
                     sum_of_CEE = sum(map(lambda data: data[2], loss_data))
@@ -751,7 +660,6 @@ def run_main():
                     normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
 
                     action_code_keys = tuple(test_states['detailed_action_codes'].keys())
-                    #tuple(all_states['detailed_action_codes'].keys())
 
                     target_net.eval()
                     iteration_num = int(memory_len//batch)
@@ -801,7 +709,6 @@ def run_main():
             loss_history.append(sum_of_loss / iteration)
             p_size = cpu_num
 
-
         else:
             prev_optimizer = copy.deepcopy(optimizer)
             if cuda_flg:
@@ -814,7 +721,6 @@ def run_main():
             current_net = copy.deepcopy(net).cuda() if cuda_flg else copy.deepcopy(net)
             all_data = R.sample(batch_size,all=True,cuda=cuda_flg)
             all_states, all_actions, all_rewards = all_data
-            #print("rewards:{}".format(rewards))
             states_keys = list(all_states.keys())
             value_keys = list(all_states['values'].keys())
             normal_states_keys = tuple(set(states_keys) - {'values', 'detailed_action_codes', 'before_states'})
@@ -823,8 +729,6 @@ def run_main():
             all_data_ids = list(range(memory_len))
             train_ids = random.sample(all_data_ids,k=int(memory_len*0.8))
             test_ids =list(set(all_data_ids)-set(train_ids))
-            #batch_id_list = list(range(memory_len))
-            #all_states['target'] = {'actions': all_actions, 'rewards': all_rewards}
             train_num = iteration*len(train_ids)
             nan_count = 0
 
@@ -1114,7 +1018,7 @@ def check_score():
     net.load_state_dict(model_dict)
     opponent_net = None
     if args.opponent_model_name is not None:
-        #opponent_net = New_Dual_Net(node_num)
+        # opponent_net = New_Dual_Net(node_num)
         o_model_name = args.opponent_model_name
         PATH = 'model/' + o_model_name
         model_dict=torch.load(PATH)
@@ -1175,8 +1079,13 @@ def check_score():
     shared_array = manager.Array("i",[0 for _ in range(3*len(test_deck_list))])
     iter_data = [(p1, p2, shared_array,episode_num, p_id, test_deck_list) for p_id in range(p_size)]
     freeze_support()
-    print(p1.policy.name)
-    print(p2.policy.name)
+    p1_name = p1.policy.name.replace("origin",args.model_name)
+    if args.opponent_model_name is not None:
+        p2_name = p2.policy.name.replace("origin",args.opponent_model_name)
+    else:
+        p2_name = p2.policy.name.replace("origin",args.model_name)
+    print(p1_name)
+    print(p2_name)
     pool = Pool(p_size, initializer=tqdm.set_lock, initargs=(RLock(),))  # 最大プロセス数:8
     memory = pool.map(multi_battle, iter_data)
     pool.close()  # add this.
@@ -1199,7 +1108,7 @@ def check_score():
     os.makedirs("Battle_Result", exist_ok=True)
     with open("Battle_Result/" + result_name, "w") as f:
         writer = csv.writer(f, delimiter='\t', lineterminator='\n')
-        row = ["{} vs {}".format(p1.policy.name, p2.policy.name)]
+        row = ["{} vs {}".format(p1_name, p2_name)]
         deck_names = [deck_id_2_name[deck_list[i]] for i in range(deck_num)]
         row = row + deck_names
         writer.writerow(row)
