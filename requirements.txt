@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 Pillow==6.0.0
 PyYAML==3.12
-=======
-Pillow>=7.1.0
-pyyaml>=4.2b1
->>>>>>> origin/master
 Cython
 scikit-learn
 termcolor==1.1.0
@@ -13,14 +8,3 @@ testpath==0.4.2
 tqdm==4.32.2
 numba
 pandas
-<<<<<<< HEAD
-torch
-torchvision
-matplotlib
-pytorch_memlab
-=======
-torch==1.4.0
-matplotlib
-pytorch_memlab
-gensim==3.8.0
->>>>>>> origin/master
