@@ -5,20 +5,13 @@ import os
 from torch.multiprocessing import Pool, Process, set_start_method,cpu_count, RLock,freeze_support, Value, Array, Manager,cpu_count
 #os.environ["OMP_NUM_THREADS"] = "4" if torch.cuda.is_available() else "6"
 os.environ["PYTHONWARNINGS"] = 'ignore:semaphore_tracker:UserWarning'
-#import torchvision
-#import torchvision.transforms as transforms
-#import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 import torch.nn as nn
 import torch.nn.functional as F
-from preprocess import *
-# import card2vec
-# from gensim.models import doc2vec
-# names, texts = card2vec.load_json("all")
-# d2v_model = doc2vec.Doc2Vec.load("all.model")
-# d2v_ini_weight = torch.Tensor([[0.0]*len(d2v_model.docvecs[0])]+[d2v_model.docvecs[i] for i in range(len(d2v_model.docvecs))])
 
+# from preprocess import *
+from preprocess import d2v_model, d2v_ini_weight 
 import sys
 from collections import namedtuple
 import copy
@@ -74,7 +67,7 @@ class New_Dual_Net(nn.Module):
         self.loss_fn = Dual_Loss()
         self.filtered_softmax = filtered_softmax()
         self.n_mid = n_mid
-        self.mish = torch.sigmoid#Mish()
+        # self.mish = torch.sigmoid#Mish()
         #self.direct_layer = nn.Linear(n_mid, n_mid)
         self.preprocess_len = 5
         preprocess_layer = [Dual_ResNet(n_mid,n_mid) for _ in range(self.preprocess_len)]
@@ -174,36 +167,13 @@ class New_Dual_Net(nn.Module):
         #embed_acted_card_sides = split_states[3].view(-1,1)#self.action_value_net.side_emb(split_states[3])  # (-1,45,?,n_mid)
         #print(split_states)
         embed_acted_card_sides = self.action_value_net.side_emb(split_states[3]).view(-1,1)
-        #print("split:",embed_action_categories.size(),embed_acting_card_ids.size(),
-        #     embed_acted_card_ids.size(),embed_acted_card_sides.size())
         input_tensors = [embed_action_categories,embed_acting_card_ids,
                                   embed_acted_card_ids,embed_acted_card_sides]
         #for cell in input_tensors:
         #    print(cell.size())
         before_states = torch.cat(input_tensors,dim=1).view(-1,2*self.vec_size+5)
         #before_states = self.state_net(states["before_states"])
-        current_states = current_states# - before_states
-        #print(x_1[0])
-        #x_2 = self.state_net(states["before_states"])
-        #x = torch.cat([x1,x2],dim=1)#self.prelu(self.integrate_layer(torch.cat([x1,x2],dim=1)))
-        #x = torch.stack([x2,x1],dim=1)
-        #x.size() = (-1,100)
-        #required (-1,2,100)
-        #x_3 = torch.stack([x_2, x_1], dim=1)
-        #x_3_1 = x_3.reshape(-1,2*self.n_mid)
-
-        # x_4, (_,_) = self.rnn(x_3)
-        # x_4 = x_4.reshape(-1,2*self.n_mid)
-        
-        #x_3 = x_1
-        #_,(h0, c0) = self.rnn(x_2.unsqueeze(1))
-        #x_3,(_,_) = self.rnn(x_1.unsqueeze(1),(h0,c0))
-        
-        #x_4=self.transformer_encoder(x_3).reshape(-1,self.n_mid)
-        #x_4 = x_3#.reshape(-1,self.n_mid)#+x_1+x_2
-
-        #print(x.size())
-
+        current_states = current_states
 
         x3 = torch.cat([current_states,before_states],dim=1)#current_states
         for i in range(self.layer_len):
@@ -214,30 +184,16 @@ class New_Dual_Net(nn.Module):
         # for i in range(self.layer_len):
         #     x = self.layer[i](x)
         x=self.prelu(self.integrate_layer(x3))#+x3
-        #print("current_states",current_states,"\n")
-        #print("x3",x3,"\n")
-        #print("x",x,"\n")
         tmp = self.action_value_net(x,detailed_action_codes,values,target=target)
         h_p2 = tmp
 
         out_p = self.filtered_softmax(h_p2, able_to_choice)
 
-        #for i in range(3):
-        #    x = self.relu(self.value_layer[i](x))
-        #before_x = self.conv(x.unsqueeze(-1))
-        v_x = x#x-x.max(dim=0).values if target else x
-        #print(v_x[0])
+        v_x = x
         for i in range(self.preprocess_len):
             v_x = self.preprocess_layer[i](v_x)
         out_v = torch.tanh(self.final_layer(v_x))#+before_x)
         if target:
-            #if self.cuda_flg:states['target'] = {key:states['target'][key].cuda() \
-            #                                    for key in ('rewards','actions')}
-            #             print(x_4)
-            #             print(x_1)
-            #             print(x3)
-            #             print(x)
-            
             z = states['target']['rewards']
             pai = states['target']['actions']
             return out_p, out_v, self.loss_fn(out_p, out_v, z, pai,action_choice_len)
@@ -303,16 +259,8 @@ class Dual_State_Net(nn.Module):
         self.deck_type_eye = torch.cat([torch.Tensor([[0] * 4]), torch.eye(4)], dim=0)
         self.pos_encoder = PositionalEncoding(n_mid, dropout=0.1)
 
-        #prelu_layer = [Mish() for i in range(7)]
-        #prelu_layer = [Mish() for i in range(7)]
-        #[Mish() for i in range(7)]
-        #[nn.PReLU(init=0.01) for i in range(7)]
-        #self.prelu_layer = nn.ModuleList(prelu_layer)
         self.prelu_layer = Mish()#torch.tanh
 
-        #self.modify_layer = nn.Linear(94*self.short_mid,4*n_mid)
-        #self.second_modify_layer = nn.Linear(4*n_mid,2*n_mid)
-        #self.third_modify_layer = nn.Linear(2*n_mid,n_mid)
         hidden_layer_num = 10
         origin = 94*self.short_mid
         node_shrink_range = (origin - n_mid) // hidden_layer_num
@@ -321,12 +269,8 @@ class Dual_State_Net(nn.Module):
         modify_layer = [nn.Linear(node_size_list[i], node_size_list[i+1]) for i in range(hidden_layer_num)]
         self.modify_layer = nn.ModuleList(modify_layer)
 
-        #nn.init.kaiming_normal_(self.modify_layer.weight)
         self.n_mid = n_mid
-        self.mish = torch.tanh
-        #self.init_weights()
-        #layer = [nn.Linear(n_mid,n_mid) for _ in range(3)]
-        #self.layer = nn.ModuleList(layer)
+        # self.mish = torch.tanh
 
     def cuda_all(self):
         self.class_eye = self.class_eye.cuda()
@@ -370,73 +314,45 @@ class Dual_State_Net(nn.Module):
 
         #src1 = follower_card_ids#self.emb1(follower_card_ids)(-1,10)→(-1,10,20)
         src1 = self.emb1(follower_card_ids)
-        # src1 = self.emb1(follower_card_ids)*np.sqrt(self.n_mid)
-        # src1 = self.pos_encoder(src1)
 
-        follower_cards = self.prelu_layer(self.field_value_layer(src1).view(-1, 10, 10))#+src1.view(-1, 10, 10))
+        follower_cards = self.prelu_layer(self.field_value_layer(src1).view(-1, 10, 10))
+        # (-1,10,10) = (batch_size, max_field_card_num, self.field_value_layer(src1))
+        
         x2 = torch.cat([stats, abilities,follower_cards,able_to_attack,able_to_creature_attack,able_to_evo],dim=2)
         _follower_values = self.prelu_layer(self.value_layer(x2))
-        
-        #follower_exist_filter = (follower_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
-        #print("follower_cards:{},exist_filter1:{}".format(follower_cards.size(),exist_filter1.size()))
-        #exist_filter1.expand(*[-1,10,self.n_mid])
-        follower_values = _follower_values# * follower_exist_filter
-        """
-        follower_cards = self.prelu_5(self.field_value_layer(self.emb1(follower_card_ids))).view(-1, 10,1)
-        x1 = torch.cat([stats, abilities,follower_cards],dim=2)
-        x1 = self.prelu_1(self.value_layer(x1))
-        exist_filter1 = (follower_card_ids != 0).float().view(-1,10,1)
-        x1 = x1 * exist_filter1
-        follower_values=x1.view(-1,10)
-        """
-        #src2 = amulet_card_ids#self.emb1(amulet_card_ids)
+
+        follower_values = _follower_values
         src2 = self.emb1(amulet_card_ids)
-        # src2 = self.pos_encoder(src2)
-        amulet_cards = self.prelu_layer(self.field_value_layer(src2).view(-1, 10,10))#+src2.view(-1, 10,10))
-        #print("amulet_cards:{}".format(amulet_cards.size()))
+        amulet_cards = self.prelu_layer(self.field_value_layer(src2).view(-1, 10,10))
+        # (-1,10,10) = (batch_size, max_field_card_num, self.field_value_layer(src2))
+        
         _amulet_values = torch.sigmoid(self.amulet_value_layer(amulet_cards))#amulet_cards
-        #amulet_exist_filter = (amulet_card_ids != 0).float().unsqueeze(-1)#.view(-1,self.n_mid)
-        #exist_filter2.expand(*[-1, 10, self.n_mid])
-        amulet_values = _amulet_values# * amulet_exist_filter
+        amulet_values = _amulet_values
 
         life_values = self.prelu_layer(self.life_layer(life_datas)).view(-1, 1,self.short_mid)
 
         src3 = self.emb1(hand_ids)
-        # src3 = self.pos_encoder(src3)
-        hand_cards = self.prelu_layer(self.hand_value_layer(src3).view(-1, 9,10))#+src3.view(-1, 9,10))
-        _hand_card_values = torch.sigmoid(self.hand_integrate_layer(hand_cards))#hand_cards
-        #hand_exist_filter = (hand_ids != 0).float().unsqueeze(-1)
-        hand_card_values = _hand_card_values# * hand_exist_filter
+        hand_cards = self.prelu_layer(self.hand_value_layer(src3).view(-1, 9,10))
+        # (-1,9,10) = (batch_size, max_hand_size, self.hand_value_layer(src3))
+        
+        _hand_card_values = torch.sigmoid(self.hand_integrate_layer(hand_cards))
+        hand_card_values = _hand_card_value
 
         src4 = deck_datas#self.emb1(deck_datas)
         src4 = self.emb1(deck_datas)
-        # src4 = self.pos_encoder(src4)
-        deck_cards = self.prelu_layer(self.deck_value_layer(src4).view(-1, 40,10))#+src4.view(-1,40,10))
-        _deck_card_values = torch.sigmoid(self.deck_integrate_layer(deck_cards))#deck_cards
-        #deck_exist_filter = (deck_datas != 0).float().unsqueeze(-1)
-        deck_card_values = _deck_card_values# * deck_exist_filter
+        deck_cards = self.prelu_layer(self.deck_value_layer(src4).view(-1, 40,10))
+        # (-1,40,10) = (batch_size, max_deck_size, self.deck_value_layer(src4))
         
-        #deck_card_values = torch.sum(hand_ids, dim=1).view(-1, 1)
-
-        #x = torch.cat([follower_values,amulet_values,life_values,class_values,hand_card_values],dim=1)
+        _deck_card_values = torch.sigmoid(self.deck_integrate_layer(deck_cards))#deck_cards
+        deck_card_values = _deck_card_values
         input_tensor = [follower_values,amulet_values,life_values,\
                        class_values,deck_type_values,hand_card_values,deck_card_values]
-        #print([cell.size() for cell in input_tensor])
         before_x = torch.cat(input_tensor,dim=1)
-
-        #x1 = torch.cat([follower_values,life_values,class_values,hand_card_values],dim=1)
 
         x = self.prelu_layer(self.concat_layer(before_x)).view(-1,94*self.short_mid)#+before_x).view(-1,94*self.short_mid)
 
         for i in range(self.modify_layer_num):
             x = self.prelu_layer(self.modify_layer[i](x))
-        #x = self.prelu_layer(self.modify_layer(x))
-        #x = self.prelu_layer(self.second_modify_layer(x))
-        #x = self.prelu_layer(self.third_modify_layer(x))
-        #print(before_x)
-        #print(x)
-
-
         return x
 
 
@@ -449,92 +365,66 @@ def get_data(f,player_num=0):
     hand_card_costs = [card.cost/20 for card in player.hand]
     hand_ids.extend([0]*(9-len(player.hand)))
     hand_card_costs.extend([0]*(9-len(player.hand)))
-    deck_data = sorted([names.index(card.name)#((Card_Category[card.card_category].value-1)*1000+card.card_id+500)
+    deck_data = sorted([names.index(card.name)# ((Card_Category[card.card_category].value-1)*1000+card.card_id+500)
                         for card in player.deck.deck])
     deck_data.extend([0]*(40-len(player.deck.deck)))
-    #follower_card_ids = []
-    #amulet_card_ids = []
-    #follower_stats = []
-    #follower_abilities = []
+    
     opponent_num = 1- player_num
     opponent_creature_location = f.get_creature_location()[opponent_num]
     opponent_mask =  [1 if i in opponent_creature_location else 0 for i in range(5)]
     able_to_evo = f.get_able_to_evo(player)
-    able_to_evo = [1 if i in able_to_evo else 0 for i in range(5)] + opponent_mask#able_to_evo = [cell+1 for cell in able_to_evo]
-    follower_card_ids = [names.index(f.card_location[player_num][i].name)#f.card_location[player_num][i].card_id + 500
-                         if i < len(f.card_location[player_num]) and f.card_location[player_num][
-        i].card_category == "Creature" else 0 for i in range(5)] \
-                        + [names.index(f.card_location[opponent_num][i].name)#f.card_location[opponent_num][i].card_id + 500
-                           if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
-        i].card_category == "Creature" else 0 for i in range(5)]
+    able_to_evo = [1 if i in able_to_evo else 0 for i in range(5)] + opponent_mask
+    
+    follower_card_ids = [names.index(f.card_location[player_num][i].name)
+                         if i < len(f.card_location[player_num])
+                         and f.card_location[player_num][i].card_category == "Creature"
+                         else 0 for i in range(5)] \
+                        + [names.index(f.card_location[opponent_num][i].name)
+                           if i < len(f.card_location[opponent_num])
+                           and f.card_location[opponent_num][i].card_category == "Creature"
+                           else 0 for i in range(5)]
+    
     follower_stats = [[f.card_location[player_num][i].power/20, f.card_location[player_num][i].get_current_toughness()/20,
                        1, int(f.card_location[player_num][i].can_attack_to_follower()), int(f.card_location[player_num][i].can_attack_to_player()),1]
-                      if i < len(f.card_location[player_num]) and f.card_location[player_num][
-        i].card_category == "Creature" else [0, 0, 0, 0, 0,0] for i in range(5)] \
+                      if i < len(f.card_location[player_num])
+                      and f.card_location[player_num][i].card_category == "Creature"
+                      else [0, 0, 0, 0, 0,0] for i in range(5)] \
                      + [[f.card_location[opponent_num][i].power/20, f.card_location[opponent_num][i].get_current_toughness()/20,
-                         1, 1, 1,1]
-                        if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
-        i].card_category == "Creature" else [0, 0, 0, 0, 0,0] for i in range(5)]
-    """
-    follower_stats = [[f.card_location[player_num][i].power/100, f.card_location[player_num][i].get_current_toughness()/100]
-                      if i < len(f.card_location[player_num]) and f.card_location[player_num][
-        i].card_category == "Creature" else [0, 0] for i in range(5)] \
-                     + [[f.card_location[opponent_num][i].power/100, f.card_location[opponent_num][i].get_current_toughness()/100]
-                        if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
-        i].card_category == "Creature" else [0, 0] for i in range(5)]
-    """
+                         1, 1, 1, 1]
+                        if i < len(f.card_location[opponent_num])
+                        and f.card_location[opponent_num][i].card_category == "Creature"
+                        else [0, 0, 0, 0, 0, 0] for i in range(5)]
+
     follower_abilities = [f.card_location[player_num][i].ability[:]
-                          if i < len(f.card_location[player_num]) and f.card_location[player_num][
-        i].card_category == "Creature" else [] for i in range(5)] \
+                          if i < len(f.card_location[player_num])
+                          and f.card_location[player_num][i].card_category == "Creature"
+                          else [] for i in range(5)] \
                          + [f.card_location[opponent_num][i].ability[:]
-                            if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
-        i].card_category == "Creature" else [] for i in range(5)]
+                            if i < len(f.card_location[opponent_num])
+                            and f.card_location[opponent_num][i].card_category == "Creature"
+                            else [] for i in range(5)]
 
-    #amulet_card_ids = [f.card_location[player_num][i].card_id + 500
-    #                   if i < len(f.card_location[player_num]) and f.card_location[player_num][
-    #    i].card_category == "Amulet" else 0 for i in range(5)] \
-    #                  + [f.card_location[opponent_num][i].card_id + 500
-    #                     if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
-    #    i].card_category == "Amulet" else 0 for i in range(5)]
     amulet_card_ids = [names.index(f.card_location[player_num][i].name)#f.card_location[player_num][i].card_id + 500
-                       if i < len(f.card_location[player_num]) and f.card_location[player_num][
-        i].card_category == "Amulet" else 0 for i in range(5)] \
-                      + [names.index(f.card_location[opponent_num][i].name)#f.card_location[opponent_num][i].card_id + 500
-                         if i < len(f.card_location[opponent_num]) and f.card_location[opponent_num][
-        i].card_category == "Amulet" else 0 for i in range(5)]
-    """
-    for j in range(2):
-        i = (player_num+j)%2
-        for card in f.card_location[i]:
-            if card.card_category == "Creature":
-                follower_card_ids.append(card.card_id+500)
-                follower_stats.append([card.power,card.get_current_toughness()])
-                follower_abilities.append(card.ability[:])
-                amulet_card_ids.append(0)
-            else:
-                follower_card_ids.append(0)
-                follower_stats.append([0,0])
-                follower_abilities.append([])
-                amulet_card_ids.append(card.card_id+500)
+                       if i < len(f.card_location[player_num]) 
+                       and f.card_location[player_num][i].card_category == "Amulet" 
+                       else 0 for i in range(5)] \
+                      + [names.index(f.card_location[opponent_num][i].name)
+                         if i < len(f.card_location[opponent_num])
+                         and f.card_location[opponent_num][i].card_category == "Amulet"
+                         else 0 for i in range(5)]
 
-        for k in range(len(f.card_location[i]),5):
-            follower_card_ids.append(0)
-            follower_stats.append([0, 0])
-            follower_abilities.append([])
-            amulet_card_ids.append(0)
-    """
     able_to_play = f.get_able_to_play(player)
-    able_to_play = [1 if i in able_to_play else 0 for i in range(9)]#[cell+1 for cell in able_to_play]
-    #able_to_play = f.get_able_to_play(player)
-    #able_to_play = [cell+1 for cell in able_to_play]
+    able_to_play = [1 if i in able_to_play else 0 for i in range(9)]
+    
     able_to_attack = f.get_able_to_attack(player)
     able_to_attack = [1 if i in able_to_attack else 0 for i in range(5)] + opponent_mask
+    
     able_to_creature_attack = f.get_able_to_creature_attack(player)
     able_to_creature_attack = [1 if i in able_to_creature_attack else 0 for i in range(5)] + opponent_mask
-    #life_data = [player.life, opponent.life,len(player.hand),len(opponent.hand) ,f.current_turn[player_num]]
+    
     life_data = [player.life/20, opponent.life/20, len(player.hand)/10, len(opponent.hand)/10,f.current_turn[player_num]/10]
-    #pp_data = [f.cost[player_num],f.remain_cost[player_num]]
     pp_data = [f.cost[player_num]/10, f.remain_cost[player_num]/10,f.cost[1-player_num]/10, f.remain_cost[1-player_num]/10]
+    #共に0~1に正規化
 
     class_data = [player.deck.leader_class.value,
                     opponent.deck.leader_class.value]
