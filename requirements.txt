@@ -1,0 +1,14 @@
+Pillow==6.0.0
+PyYAML==3.12
+Cython
+scikit-learn
+termcolor==1.1.0
+terminado==0.8.2
+testpath==0.4.2
+tqdm==4.32.2
+numba
+pandas
+torch
+torchvision
+matplotlib
+pytorch_memlab
