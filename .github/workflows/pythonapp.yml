@@ -1,0 +1,61 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Model Evaluation
+on:
+  push:
+    paths: ".github/workflows/*.yml"
+  workflow_dispatch:
+
+jobs:
+  build: 
+    env:
+      MODEL_NAME: 1_4_decklist_12_20_nodes_cuda.pth
+      O_MODEL_NAME: 1_4_decklist_12_20_nodes_cuda.pth
+      PLAYER_TYPES_A: "29,2"
+      PLAYER_TYPES_B: "29,24"
+      MODE: mirror
+      N: 400
+      DECK_LIST: "12"
+      NODE_NUM: 20
+      OPPONENT_TYPE: "Greedy"
+      CYCLE_NUM: 400
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.7
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+    - name: Cache pip
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip # This path is specific to Ubuntu
+        # 対応するrequirementsファイルにキャッシュヒットがあるかを見る
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          ${{ runner.os }}-
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+    - name: pip_lib
+      run: |
+        pip install -r requirements.txt
+    
+    #- name: Run Test1     
+    #  run: |
+    #   python3 multi_test.py --evaluate_num $N --check True --cpu_num 4 --model_name $MODEL_NAME --node_num $NODE_NUM --deck_list $DECK_LIST --fixed_opponent $OPPONENT_TYPE --step_iter $CYCLE_NUM
+
+    - name: Run Test1     
+      run: |
+       python3 test.py --N  $N --playertypes $PLAYER_TYPES_A --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
+    #- name: Run Test2     
+    #  run: |
+    #   python3 test.py --N  $N --playertypes $PLAYER_TYPES_B --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
+    #   
+    #- name: Run Test2     
+    #  run: |
+    #   python3 test.py --N  $N --playertype1 $PLAYER1 --playertype2 2 --decklist $DECK_LIST --mode $MODE --model_name $MODEL_NAME --node_num $NODE_NUM
+        
+       

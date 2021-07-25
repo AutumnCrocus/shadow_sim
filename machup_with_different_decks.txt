@@ -1,0 +1,110 @@
+Aggro_Policy vs Aggro_MCTS_Policy(100 games)
+win_rate:Aggro_Policyの勝率,first_win_rate:先攻プレイヤーの勝率(先後交互に対戦)
+Sword vs Sword
+win=49, lose=51, libout_num=0, win_rate:0.49 first_win_rate:0.45
+Haven vs Haven
+win=62, lose=38, libout_num=2, win_rate:0.62 first_win_rate:0.42
+Dragon vs Dragon
+win=29, lose=71, libout_num=0, win_rate:0.29 first_win_rate:0.55
+Rune vs Rune
+win=27, lose=73, libout_num=0, win_rate:0.27 first_win_rate:0.47
+Blood vs Blood
+win=32, lose=68, libout_num=0, win_rate:0.32 first_win_rate:0.52
+Shadow vs Shadow
+win=40, lose=60, libout_num=0, win_rate:0.4 first_win_rate:0.5
+Rune_Eeath vs Rune_Eeath
+win=38, lose=62, libout_num=0, win_rate:0.38 first_win_rate:0.54
+
+
+Sword vs Haven
+win=37, lose=63, libout_num=0, win_rate:0.37 first_win_rate:0.57
+Haven vs Sword
+win=39, lose=61, libout_num=0, win_rate:0.39 first_win_rate:0.35
+
+
+Dragon vs Haven
+win=42, lose=58, libout_num=0, win_rate:0.42 first_win_rate:0.72
+Haven vs Dragon
+win=39, lose=61, libout_num=0, win_rate:0.39 first_win_rate:0.21
+
+Sword vs Dragon
+win=37, lose=63, libout_num=0, win_rate:0.37 first_win_rate:0.45
+Dragon vs Sword 
+win=41, lose=59, libout_num=0, win_rate:0.41 first_win_rate:0.49
+
+
+Sword vs Rune
+win=42, lose=58, libout_num=0, win_rate:0.42 first_win_rate:0.92
+Rune vs Sword
+win=44, lose=56, libout_num=0, win_rate:0.44 first_win_rate:0.06
+
+Haven vs Rune
+win=41, lose=59, libout_num=1, win_rate:0.41 first_win_rate:0.53
+Rune vs Haven
+win=36, lose=64, libout_num=1, win_rate:0.36 first_win_rate:0.42
+
+Dragon vs Rune
+win=41, lose=59, libout_num=0, win_rate:0.41 first_win_rate:0.91
+Rune vs Dragon
+win=47, lose=53, libout_num=0, win_rate:0.47 first_win_rate:0.07
+
+
+Sword vs Blood
+win=47, lose=53, libout_num=0, win_rate:0.47 first_win_rate:0.87
+Blood vs Sword
+win=41, lose=59, libout_num=0, win_rate:0.41 first_win_rate:0.17
+
+Haven vs Blood
+win=55, lose=45, libout_num=0, win_rate:0.55 first_win_rate:0.71
+Blood vs Haven
+win=40, lose=60, libout_num=0, win_rate:0.4  first_win_rate:0.16
+
+Dragon vs Blood
+win=40, lose=60, libout_num=0, win_rate:0.4 first_win_rate:0.84
+Blood vs Dragon
+win=42, lose=58, libout_num=0, win_rate:0.42 first_win_rate:0.24
+
+Rune vs Blood
+win=24, lose=76, libout_num=0, win_rate:0.24 first_win_rate:0.48
+Blood vs Rune
+win=27, lose=73, libout_num=0, win_rate:0.27 first_win_rate:0.59
+
+
+Sword vs Shadow
+win=41, lose=59, libout_num=0, win_rate:0.41 first_win_rate:0.53
+Shadow vs Sword
+win=43, lose=57, libout_num=0, win_rate:0.43 first_win_rate:0.45
+
+Haven vs Shadow
+win=47, lose=53, libout_num=0, win_rate:0.47 first_win_rate:0.25
+Shadow vs Haven
+win=35, lose=65, libout_num=0, win_rate:0.35 first_win_rate:0.73
+
+Dragon vs Shadow
+win=3864, lose=6136, libout_num=1, win_rate:0.3864 first_win_rate:0.5268
+Shadow vs Dragon
+win=3580, lose=6420, libout_num=0, win_rate:0.358 first_win_rate:0.5462
+
+Rune vs Shadow
+win=3706, lose=6294, libout_num=0, win_rate:0.3706 first_win_rate:0.1988
+Shadow vs Rune
+win=3654, lose=6346, libout_num=0, win_rate:0.3654 first_win_rate:0.8032
+
+Blood vs Shadow
+win=33, lose=67, libout_num=0, win_rate:0.33 first_win_rate:0.23
+Shadow vs Blood
+win=37, lose=63, libout_num=0, win_rate:0.37 first_win_rate:0.85
+
+
+
+
+
+
+
+
+
+
+
+
+
+

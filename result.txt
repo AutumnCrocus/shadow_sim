@@ -1,0 +1,24 @@
+FGvG:win=71, lose=29, libout_num=0, win_rate:0.71
+GvFG:win=52, lose=48, libout_num=1, win_rate:0.52
+(GvG:win=60, lose=40, libout_num=0, win_rate:0.6)
+高速化した方が強い？
+
+
+
+FGvG_middle:win=64, lose=36, libout_num=1, win_rate:0.64
+GvFG_middle:win=65, lose=35, libout_num=1, win_rate:0.65
+(GvG_middle:win=64, lose=36, libout_num=0, win_rate:0.64)
+デッキのコストを重くすると有意差なし？
+
+
+
+G_min_costvG:win=57, lose=43, libout_num=0, win_rate:0.57
+
+state_value変更前(フォロワーの数に関する補正なし)
+FGvFG(進化あり):win=5224, lose=4776, libout_num=104, win_rate:0.5224
+
+GvG(進化あり):win=54, lose=46, libout_num=1, win_rate:0.54
+
+変更後
+FgvFG(進化あり)
+GvG(進化あり):win=52, lose=48, libout_num=2, win_rate:0.52
