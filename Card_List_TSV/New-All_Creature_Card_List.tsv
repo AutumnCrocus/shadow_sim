@@ -1,11 +1,7 @@
 1	Goblin	1	1	2		NEUTRAL	NONE
 2	Fighter	2	2	2		NEUTRAL	NONE
 3	Ax Fighter	3	2	3		NEUTRAL	NONE
-<<<<<<< HEAD
 4	Goliath	4	3	4		NEUTRAL	NONE
-=======
-4	Golyat	4	3	4		NEUTRAL	NONE
->>>>>>> origin/master
 5	Feena	5	4	5		NEUTRAL	NONE
 6	Novice Trooper	3	2	2	1	SWORD	OFFICER
 7	Spectre	2	2	1	2	SHADOW	NONE
@@ -164,11 +160,7 @@
 -15	Scrap Golem	1	0	2	3	0,0	RUNE	NONE
 -16	Fairy	1	1	1		FOREST	NONE
 -17	Crystalia Eve	4	4	4		FOREST	NONE
-<<<<<<< HEAD
 -18	Club Soldier	3	1	3	1	NEUTRAL	NONE
-=======
--18	Crab Soldier	3	1	3	1	NEUTRAL	NONE
->>>>>>> origin/master
 -19	Heart Guardian	3	1	3	3	NEUTRAL	NONE
 -20	Spade Raider	3	1	3	2	NEUTRAL	NONE
 -21	Skeleton	1	1	1		SHADOW	NONE
