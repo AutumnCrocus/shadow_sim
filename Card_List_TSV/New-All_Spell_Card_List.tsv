@@ -1,0 +1,61 @@
+1	Witch Snap	2	0,0	RUNE	NONE
+2	Insight	1	0,0	RUNE	NONE
+3	Nova Flare	4	0,0	RUNE	NONE
+4	Forge Weaponry	3	SWORD	NONE
+5	Themis's Decree	6	HAVEN	NONE
+6	Dance of Death	5	NEUTRAL	NONE
+7	Alwida's Command	6	SWORD	NONE
+8	Dragon Oracle	2	DRAGON	NONE
+9	Magic Missile	2	0,0	RUNE	NONE
+10	Conjure Golem	2	0,0	RUNE	NONE
+11	Wind Blast	2	1,0	RUNE	NONE
+12	Fate's Hand	5	1,1	RUNE	NONE
+13	Fiery Embrace	8	1,1	RUNE	NONE
+14	Fire Chain	4	1,0	RUNE	NONE
+15	Angelic Snipe	1	NEUTRAL	NONE
+16	Dimension Shift	20	1,1	RUNE	NONE
+17	Kaleidoscopic Glow	2	0,0	RUNE	NONE
+18	Blood Pact	2	BLOOD	NONE
+19	Razory Claw	2	BLOOD	NONE
+20	Diabolic Drain	5	BLOOD	NONE
+21	Revelation	8	BLOOD	NONE
+22	Undying Resentment	2	SHADOW	NONE
+23	Phantom Howl	4	SHADOW	NONE
+24	Death's Breath	6	SHADOW	NONE
+25	Blackened Scripture	2	HAVEN	NONE
+26	Nature's Guidance	1	FOREST	NONE
+27	Fairy Circle	1	FOREST	NONE
+28	Airbound Barrage	1	FOREST	NONE
+29	Sylvan Justice	2	FOREST	NONE
+30	Pixie Mischief	2	FOREST	NONE
+31	Will of the Forest	5	FOREST	NONE
+32	Blazing Breath	1	DRAGON	NONE
+33	Breath of the Salamander	2	DRAGON	NONE
+34	Draconic Fervor	5	DRAGON	NONE
+35	Lightning Blast	6	DRAGON	NONE
+36	Seraphic Blade	2	NEUTRAL	NONE
+37	Council of Card Knights	5	SWORD	NONE
+38	Round Table Assembly	5	SWORD	NONE
+39	Soul Conversion	1	SHADOW	NONE
+40	Unbridled Fury	2	SWORD	NONE
+41	Summon Snow	3	1,0	RUNE	NONE
+42	Conjure Twosome	4	0,0	RUNE	NONE
+43	Serpent Wrath	4	DRAGON	NONE
+44	Call of the Void	5	SHADOW	NONE
+45	Crimson Purge	4	BLOOD	NONE
+46	Hallowed Dogma	2	HAVEN	NONE
+47	Acolyte's Light	5	HAVEN	NONE
+48	Dimension Cut	2	PORTAL	NONE
+49	Puppeteer's Strings	4	PORTAL	NONE
+-1	Veridic Ritual	2	0,0	RUNE	NONE
+-2	Orichalcum Golem(Accelerate 1)	1	0,0	RUNE	NONE
+-3	Clarke, Knowledge Seeker(Accelerate 2)	2	0,0	RUNE	NONE
+-4	Conjure Guardian	2	0,0	RUNE	NONE
+50	Enchanted Sword	7	1,1	RUNE	NONE
+51	Golem Assault	2	0,0	RUNE	NONE
+52	Concentration	3	0,0	RUNE	NONE
+53	Homecoming	5	FOREST	NONE
+54	Altered Fate	2	NEUTRAL	NONE
+55	Zombie Party	2	SHADOW	NONE
+-5	Mimi	1	SHADOW	NONE
+-6	Coco	1	SHADOW	NONE
