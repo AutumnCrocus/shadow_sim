@@ -986,6 +986,13 @@ def check_score():
     #node_num = int(args.node_num)
     #net = New_Dual_Net(node_num)
     model_name = args.model_name
+    existed_output_list = os.listdir(path="./Battle_Result")
+    existed_output_list = [f for f in existed_output_list 
+        if os.path.isfile(os.path.join("./Battle_Result", f))]
+    result_name = "{}:{}".format(model_name.split(".")[0],args.deck_list)
+    same_name_count = len([ 1 for cell in existed_output_list if result_name in cell])
+    print("same_name_count:",same_name_count)
+    result_name += "_{:0>3}".format(same_name_count+1)
     PATH = 'model/' + model_name
     model_dict=torch.load(PATH)
     n_size=model_dict["final_layer.weight"].size()[1]
@@ -1078,9 +1085,10 @@ def check_score():
         print(cell)
         txt_dict[key] = cell
     print(Battle_Result)
-    result_name = model_name.split(".")[0] + ":" + args.deck_list
+    result_name = "{}:{}_{}".format(model_name.split(".")[0],args.deck_list,)
+#     result_name = model_name.split(".")[0] + ":" + args.deck_list + ""
     deck_num = len(deck_list)
-    os.makedirs("Battle_Result", exist_ok=True)
+    # os.makedirs("Battle_Result", exist_ok=True)
     with open("Battle_Result/" + result_name, "w") as f:
         writer = csv.writer(f, delimiter='\t', lineterminator='\n')
         row = ["{} vs {}".format(p1_name, p2_name)]

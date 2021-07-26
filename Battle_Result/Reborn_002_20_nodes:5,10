@@ -1,0 +1,7 @@
+ExIt(model_name=Reborn_002_20_nodes.pth)Policy vs GreedyExIt(model_name=Reborn_002_20_nodes.pth)Policy	Haven	DS_Rune
+Haven	(163, 83)	(198, 98)
+DS_Rune	(112, 54)	(190, 97)
+(5, 5):WR:81.50%,first_WR:83.00%
+(5, 10):WR:99.00%,first_WR:98.00%
+(10, 5):WR:56.00%,first_WR:54.00%
+(10, 10):WR:95.00%,first_WR:97.00%

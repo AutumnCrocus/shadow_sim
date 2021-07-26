@@ -1,0 +1,7 @@
+ExIt(model_name=Reborn_003_20_nodes.pth)Policy vs OM(n=100)_ISMCTSPolicy	Dragon_PDK	Mid-Shadow
+Dragon_PDK	(125, 70)	(105, 57)
+Mid-Shadow	(148, 78)	(122, 68)
+(4, 4):WR:62.50%,first_WR:70.00%
+(4, 12):WR:52.50%,first_WR:57.00%
+(12, 4):WR:74.00%,first_WR:78.00%
+(12, 12):WR:61.00%,first_WR:68.00%

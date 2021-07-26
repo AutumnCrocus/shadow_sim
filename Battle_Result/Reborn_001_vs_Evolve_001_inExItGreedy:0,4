@@ -1,0 +1,7 @@
+GreedyExIt(model_name=Reborn)Policy vs GreedyExIt(model_name=Evolve)Policy	Sword_Aggro	Dragon_PDK
+Sword_Aggro	(115, 56)	(132, 73)
+Dragon_PDK	(94, 49)	(123, 67)
+(0, 0):WR:57.50%,first_WR:56.00%
+(0, 4):WR:66.00%,first_WR:73.00%
+(4, 0):WR:47.00%,first_WR:49.00%
+(4, 4):WR:61.50%,first_WR:67.00%
