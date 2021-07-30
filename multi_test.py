@@ -71,15 +71,10 @@ parser.add_argument('--hidden_num', help='num of hidden_layer',default=[6,6],typ
 parser.add_argument('--greedy_mode', help='use self-play greedy model',)
 args = parser.parse_args()
 
-deck_flg = args.fixed_deck_ids#list(map(int,args.fixed_deck_ids.split(","))) if args.fixed_deck_ids is not None else None
+deck_flg = args.fixed_deck_ids
 weight_decay = args.weight_decay
 evaluate_num = args.evaluate_num
 
-
-#Detailed_State_data = namedtuple('Value', ('hand_ids', 'hand_card_costs', 'follower_card_ids',
-#                                           'amulet_card_ids', 'follower_stats', 'follower_abilities', 'able_to_evo',
-#                                           'life_data', 'pp_data', 'able_to_play', 'able_to_attack',
-#                                           'able_to_creature_attack'))
 cpu_num = args.cpu_num
 batch_num = int(args.batch_num) if args.batch_num is not None else None
 G = Game()
@@ -297,7 +292,7 @@ def multi_battle(episode_data):
         f.players = [p1, p2]
         p1.field = f
         p2.field = f
-        #x1 = datetime.datetime.now()
+
         f.players[0].draw(f.players[0].deck, 3)
         f.players[1].draw(f.players[1].deck, 3)
         win, lose, _, _ = G.start(f, virtual_flg=True)
@@ -428,6 +423,7 @@ if args.limit_OMP:
     os.environ["OMP_THREAD_LIMITS"] = half_cpu_num
 if args.OMP_NUM > 0:
     os.environ["OMP_NUM_THREADS"] = str(args.OMP_NUM)
+    
 def run_main():
     import subprocess
     from torch.utils.tensorboard import SummaryWriter
@@ -939,7 +935,7 @@ def run_main():
         t4 = datetime.datetime.now()
         print(t4-t3)
         # or (epoch_num > 4 and (epoch+1) % epoch_interval == 0 and epoch+1 < epoch_num)
-        if win_flg:
+        if win_flg and last_updated > 0:
             PATH = "model/{}_{}_{}in{}_{}_nodes.pth".format(t1.month, t1.day, epoch+1,epoch_num,node_num)
             if torch.cuda.is_available() and cuda_flg:
                 PATH = "model/{}_{}_{}in{}_{}_nodes_cuda.pth".format(t1.month, t1.day, epoch+1,epoch_num,node_num)
@@ -1085,7 +1081,7 @@ def check_score():
         print(cell)
         txt_dict[key] = cell
     print(Battle_Result)
-    result_name = "{}:{}_{}".format(model_name.split(".")[0],args.deck_list,)
+#     result_name = "{}:{}_{}".format(model_name.split(".")[0],args.deck_list,)
 #     result_name = model_name.split(".")[0] + ":" + args.deck_list + ""
     deck_num = len(deck_list)
     # os.makedirs("Battle_Result", exist_ok=True)
