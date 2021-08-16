@@ -179,12 +179,18 @@ creature_list = tsv_to_card_list("New-All_Creature_Card_List.tsv")
 creature_name_to_id = {}
 for key in tuple(creature_list.keys()):
     creature_name_to_id[creature_list[key][-1]] = key
-creature_fanfare_ability = tsv_2_ability_dict("All_fanfare_list.tsv", name_to_id=creature_name_to_id)
-creature_lastword_ability = tsv_2_ability_dict("All_lastword_list.tsv", name_to_id=creature_name_to_id)
-creature_end_of_turn_ability = tsv_2_ability_dict("All_end_of_turn_list.tsv", name_to_id=creature_name_to_id)
-creature_start_of_turn_ability = tsv_2_ability_dict("All_start_of_turn_list.tsv", name_to_id=creature_name_to_id)
-creature_has_target = tsv_2_ability_dict("All_fanfare_target_list.tsv", name_to_id=creature_name_to_id)
-creature_evo_effect = tsv_2_ability_dict("All_evo_effect_list.tsv", name_to_id=creature_name_to_id)
+creature_fanfare_ability = tsv_2_ability_dict("All_fanfare_list.tsv",
+                                              name_to_id=creature_name_to_id)
+creature_lastword_ability = tsv_2_ability_dict("All_lastword_list.tsv",
+                                               name_to_id=creature_name_to_id)
+creature_end_of_turn_ability = tsv_2_ability_dict("All_end_of_turn_list.tsv",
+                                                  name_to_id=creature_name_to_id)
+creature_start_of_turn_ability = tsv_2_ability_dict("All_start_of_turn_list.tsv",
+                                                    name_to_id=creature_name_to_id)
+creature_has_target = tsv_2_ability_dict("All_fanfare_target_list.tsv",
+                                         name_to_id=creature_name_to_id)
+creature_evo_effect = tsv_2_ability_dict("All_evo_effect_list.tsv",
+                                         name_to_id=creature_name_to_id)
 creature_has_evo_effect_target = {
     #29: 1,41: 1, 83: 2, 96: 1,
     creature_name_to_id["Dragon Warrior"]: Target_Type.ENEMY_FOLLOWER.value,
@@ -220,7 +226,11 @@ can_only_attack_check = lambda field, player: field.check_ward()[1 - player.play
 creature_can_only_attack_list = {#49: can_only_attack_check,
                                  creature_name_to_id["Lurching Corpse"]:can_only_attack_check,
                                  creature_name_to_id["Attendant of Night"]:can_only_attack_check}
-creature_trigger_ability_dict = {60: 1, 63: 4, 64: 5, 79: 6,
+creature_trigger_ability_dict = {# 60: 1, 63: 4, 64: 5, 79: 6,
+                                 creature_name_to_id["Yurius, Levin Duke"]:1,
+                                 creature_name_to_id["Holy Bowman Kel"]:4,
+                                 creature_name_to_id["Kel, Holy Marksman"]:5,
+                                 creature_name_to_id["Fervid Soldier"]:6,
                                  creature_name_to_id["Bladed Hedgehog"]: 7,
                                  creature_name_to_id["Ephemera, Angelic Slacker"]: 8,
                                  creature_name_to_id["Prime Dragon Keeper"]: 10,
@@ -417,7 +427,6 @@ class Card:
 
 
 class Creature(Card):
-    #@jit
     def __init__(self, card_id):
         self.time_stamp = 0
         self.card_id = card_id  # カードid
@@ -428,7 +437,7 @@ class Creature(Card):
         #self.power = creature_list[card_id][1]  # カードの攻撃力
         #self.toughness = creature_list[card_id][2]  # カードの体力
         #self.ability = creature_list[card_id][3][:]
-        self.cost,self.power,self.toughness,_, card_data = target_follower_data[0:5]
+        self.cost, self.power, self.toughness, _, card_data = target_follower_data[0:5]
         self.ability = target_follower_data[3][:]
         self.origin_cost = self.cost
         self.card_class = LeaderClass(card_data[0])#LeaderClass(creature_list[card_id][4][0])
