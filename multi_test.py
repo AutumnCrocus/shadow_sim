@@ -77,7 +77,6 @@ evaluate_num = args.evaluate_num
 
 cpu_num = args.cpu_num
 batch_num = int(args.batch_num) if args.batch_num is not None else None
-G = Game()
 fixed_opponent = args.fixed_opponent
 cuda_flg = args.cuda is not None
 from prepare_multi_test import *
