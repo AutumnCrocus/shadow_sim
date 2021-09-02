@@ -18,6 +18,7 @@ import os
 from torch.autograd import detect_anomaly
 from adabound import AdaBound,AdaBoundW
 G = Game()
+from multi_test import deck_flg
 def preparation(episode_data):
     episode = episode_data[0]
     f = Field(5)
