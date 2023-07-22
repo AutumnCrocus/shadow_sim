@@ -6,6 +6,6 @@ termcolor==1.1.0
 terminado==0.8.2
 testpath==0.4.2
 tqdm==4.32.2
-torch==1.6.0a0+9907a3e
+torch==1.13.1
 numba
 pandas
